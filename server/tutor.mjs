@@ -36,7 +36,8 @@ schema('tutor-1', `
   CREATE INDEX tutor_user ON tutor_messages(user_id, created_at);
 `);
 
-const LANG_NAMES = { en: 'English', hi: 'Hindi', ru: 'Russian' };
+// every course language Primer knows (server/langs.mjs), so the tutor answers in the learner's language
+import { LANG_NAMES } from './langs.mjs';
 
 const strip = (html) => String(html || '')
   .replace(/<[^>]+>/g, ' ')
