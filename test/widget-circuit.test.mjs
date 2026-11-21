@@ -373,3 +373,16 @@ test('the prompt\'s own examples pass the checks', () => {
   assert.ok(normTask(tasks[0], { prompt: tasks[0].prompt, hint: '', explain: '' }), circuit.why(tasks[0].spec, tasks[0].goal));
   assert.ok(circuit.prompt.length < 6000, 'short enough');
 });
+
+test('a block with nothing to try (no switch, no slider) is left out; a task may still use it', async () => {
+  const circuit = await import('../server/widgets/circuit.mjs');
+  const still = { nodes: { a: [0, 0], b: [4, 0], c: [4, 3], d: [0, 3] }, parts: [
+    { id: 'B1', type: 'cell', from: 'd', to: 'a', value: 3 },
+    { id: 'L1', type: 'bulb', from: 'a', to: 'b', value: 10 },
+    { id: 'L2', type: 'bulb', from: 'b', to: 'c', value: 10 },
+    { type: 'wire', from: 'c', to: 'd' }] };
+  assert.equal(circuit.block(still), null);
+  const withSwitch = { ...still, parts: [...still.parts.slice(0, 3), { id: 'S1', type: 'switch', from: 'c', to: 'd', closed: true }] };
+  assert.ok(circuit.block(withSwitch), 'a switch, even with "controls" left out, is something to try');
+  assert.equal(circuit.block({ ...withSwitch, controls: [] }), null, 'controls: [] takes it away again');
+});

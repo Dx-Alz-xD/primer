@@ -117,7 +117,12 @@ function note(what, err, data) {
 
 // A widget block's spec, checked; null leaves it out.
 export function block(spec) {
-  try { return core.normSpec(spec); } catch (err) {
+  try {
+    const out = core.normSpec(spec);
+    // a block is for trying things; one with no switch or slider is only a picture (lessons have figures for that)
+    if (!out.controls || !out.controls.length) throw new core.CircuitError('a block needs something to try: a switch or a slider');
+    return out;
+  } catch (err) {
     if (!(err instanceof core.CircuitError)) throw err;
     note('block', err, spec);
     return null;
