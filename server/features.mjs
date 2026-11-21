@@ -3,5 +3,6 @@
 // and `boot(user)`: extra settings for the page).
 // Add a line here to plug in a new feature.
 export default [
-  () => import('./tutor.mjs')
+  () => import('./tutor.mjs'),
+  () => import('./voice.mjs')
 ];

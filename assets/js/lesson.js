@@ -174,6 +174,7 @@
     prog.tries = prog.tries || {};
 
     renderHead();
+    if (P.voice) P.voice.init({ course, n, sections, sectionEl: (i) => $(`#sec-${i}`), unlocked: () => unlocked });
     renderSection(0, false);
     unlocked = 0;
     while (unlocked < sections.length - 1 && sectionComplete(unlocked)) {
@@ -245,6 +246,7 @@
     }
     $('#lbody').appendChild(el);
     P.math(el);
+    if (P.voice) P.voice.decorate(el, i);
     return el;
   }
 
@@ -338,10 +340,12 @@
     }
     prog.tries[q.id] = (prog.tries[q.id] || 0) + 1;
     if (res.correct) {
+      if (P.sfx) P.sfx.play('correct');
       record(q, { status: 'correct', value, tries: prog.tries[q.id] });
       showCorrect(q, w);
       afterAnswer(secIdx);
     } else {
+      if (P.sfx) P.sfx.play('wrong');
       save();
       P.api.recordMistake(course, n, meta.title, q, value);
       await showWrong(q, w, secIdx, value);
@@ -477,6 +481,7 @@
     }
     updateLock();
     updateSegs();
+    if (opened && !allComplete() && P.sfx) setTimeout(() => P.sfx.play('unlock'), 420);
     if (opened) {
       // bring the new part into view without yanking the answer off-screen
       setTimeout(() => {
@@ -511,6 +516,7 @@
 
   function finish() {
     if (!prog.done) {
+      if (P.sfx) setTimeout(() => P.sfx.play('complete'), 500);
       prog.done = true;
       prog.doneAt = Date.now();
       save();

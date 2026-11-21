@@ -102,6 +102,7 @@
     }
 
     box.querySelector('[data-cancel]').addEventListener('click', closeBox);
+    if (P.voice && P.voice.micButton) P.voice.micButton(ta, box.querySelector('.doubt__actions'));
     box.querySelector('[data-note]').addEventListener('click', () => {
       if (!current || !P.notebook) return;
       const quote = current.kind === 'drawing' ? current.context : current.quote;

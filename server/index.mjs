@@ -32,6 +32,7 @@ for (const extra of (await import('./features.mjs')).default) MODULES.push(await
 const ROUTES = MODULES.flatMap((m) => m.routes || []);
 const RAW_ROUTES = ROUTES.filter((r) => r[3] === 'raw');
 const PAGE_HOOKS = MODULES.flatMap((m) => m.pages || []);
+const BOOT_HOOKS = MODULES.map((m) => m.boot).filter(Boolean);
 
 const PORT = Number(process.env.PORT) || 5173;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -84,10 +85,10 @@ async function servePage(req, res, file, search) {
   if (!html) { html = await readFile(path.join(ROOT, file), 'utf8'); htmlCache.set(file, html); }
   const nonce = crypto.randomBytes(16).toString('base64');
   const code = auth.inviteCode();
-  const boot = scriptJSON({
+  const boot = scriptJSON(Object.assign({
     user: auth.publicUser(user), invite: Boolean(code), ai: Boolean(config().key),
     inviteHint: code.toUpperCase() === 'PRIMER' ? 'PRIMER' : null // only the public demo code is ever shown
-  });
+  }, ...BOOT_HOOKS.map((f) => f(user) || {})));
   html = html.replace('</head>', `<script nonce="${nonce}">window.__PRIMER__=${boot};</script>\n</head>`);
   send(res, 200, req.method === 'HEAD' ? undefined : html, TYPES['.html'], {
     ...SECURITY, 'Content-Security-Policy': csp(nonce), 'Cache-Control': 'no-store'
