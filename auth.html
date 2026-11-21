@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign up or sign in | Primer</title>
+<meta name="theme-color" content="#120b06">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23120b06'/%3E%3Ctext x='32' y='47' font-family='Georgia,serif' font-size='44' text-anchor='middle' fill='%23d6a554'%3EP%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&display=swap">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<script>
+  /* already signed in? skip this page */
+  (function () {
+    try {
+      if (!localStorage.getItem('primer.session')) return;
+      var n = new URLSearchParams(location.search).get('next');
+      location.replace(n && /^(app|lesson)\.html(\?[\w=&%.\-+~!*'()]*)?$/.test(n) ? n : 'app.html');
+    } catch (e) {}
+  })();
+</script>
+<script defer src="assets/js/core.js"></script>
+<script defer src="assets/js/backdrop.js"></script>
+<script defer src="assets/js/ripple.js"></script>
+<script defer src="assets/js/codeinput.js"></script>
+<script defer src="assets/js/auth.js"></script>
+</head>
+<body data-backdrop="full">
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop__photo"></div>
+    <div class="backdrop__vignette"></div>
+    <div class="backdrop__glow"></div>
+    <canvas class="backdrop__glitch"></canvas>
+  </div>
+
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="page">
+    <header class="nav wrap">
+      <a class="logo" href="index.html" aria-label="Primer home">
+        <svg viewBox="0 0 32 32" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M16 9.2c-3-2.3-7-2.7-11-1.6v16c4-1.1 8-.7 11 1.6 3-2.3 7-2.7 11-1.6v-16c-4-1.1-8-.7-11 1.6z"/><path d="M16 9.2v16"/></svg>
+        Primer
+      </a>
+      <nav class="nav__links" aria-label="Site">
+        <a class="nav__link" href="index.html">Back to home</a>
+      </nav>
+    </header>
+
+    <main id="main" class="wrap auth">
+      <aside class="auth__art" aria-hidden="true">
+        <div class="ripple" id="auth-ripple"></div>
+        <div class="auth__shade"></div>
+        <div class="auth__art-text">
+          <p class="auth__quote">Learn anything, credibly.</p>
+          <p class="auth__sub">Courses of 20 to 30 lessons, with checkpoints that make sure each idea lands before the next one opens.</p>
+        </div>
+      </aside>
+
+      <section class="auth__panel card card--solid" aria-label="Account">
+        <div class="tabs" role="tablist" aria-label="Account">
+          <button class="tab" type="button" role="tab" id="tab-signup" aria-controls="panel-signup" aria-selected="true" data-tab="signup">Sign up</button>
+          <button class="tab" type="button" role="tab" id="tab-signin" aria-controls="panel-signin" aria-selected="false" tabindex="-1" data-tab="signin">Sign in</button>
+        </div>
+
+        <!-- Sign up: invite -> account -> email code -->
+        <div role="tabpanel" id="panel-signup" aria-labelledby="tab-signup">
+          <ol class="progress" id="progress" aria-label="Sign-up steps">
+            <li data-step="invite"><span>Invite</span></li>
+            <li class="sep" aria-hidden="true"></li>
+            <li data-step="account"><span>Account</span></li>
+            <li class="sep" aria-hidden="true"></li>
+            <li data-step="otp"><span>Verify email</span></li>
+          </ol>
+
+          <div class="step" id="step-invite">
+            <h1>Got an invite code?</h1>
+            <p class="auth__text">Primer is letting readers in a few at a time. Enter the six-character code from your invite.</p>
+            <div class="code-wrap"><div id="invite-code"></div></div>
+            <p class="code-msg" id="invite-msg" role="status" aria-live="polite"></p>
+            <p class="code-hint" id="invite-hint">(Demo: try PRIMER)</p>
+            <div class="stamp-row"><div class="stamp" id="stamp" aria-hidden="true" hidden><b>ADMITTED</b><small id="stamp-date"></small></div></div>
+          </div>
+
+          <form class="step" id="step-account" novalidate hidden>
+            <h1>Create your account</h1>
+            <p class="auth__text">Invite accepted. Next, we’ll email you a code to confirm the address is yours.</p>
+            <div class="field" style="margin-top:1.3rem">
+              <label class="label" for="su-name">Your name</label>
+              <input class="input" id="su-name" name="name" type="text" autocomplete="name" maxlength="60" required>
+              <p class="field__error" id="su-name-err"></p>
+            </div>
+            <div class="field">
+              <label class="label" for="su-email">Gmail address</label>
+              <input class="input" id="su-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="you@gmail.com" required>
+              <p class="field__error" id="su-email-err"></p>
+            </div>
+            <div class="field">
+              <label class="label" for="su-pass">Password <small>at least 8 characters</small></label>
+              <div class="pw">
+                <input class="input" id="su-pass" name="password" type="password" autocomplete="new-password" minlength="8" required>
+                <button class="pw__toggle" type="button" aria-controls="su-pass" aria-pressed="false">Show</button>
+              </div>
+              <p class="field__error" id="su-pass-err"></p>
+            </div>
+            <button class="btn btn--block" type="submit">Email me a code</button>
+          </form>
+
+          <div class="step" id="step-otp" hidden>
+            <h1>Check your email</h1>
+            <p class="auth__text">We sent a 6-digit code to <strong id="otp-email"></strong>. It expires in 10 minutes.</p>
+            <div class="inbox" id="inbox">
+              <p class="inbox__tag">Demo inbox: the email is shown here until real email is connected.</p>
+              <div class="inbox__mail">
+                <p class="inbox__from"><strong>Primer</strong> &lt;no-reply@primer.app&gt;</p>
+                <p class="inbox__subject">Your Primer sign-up code</p>
+                <p class="inbox__body">Use this code to finish creating your account: <b class="inbox__code" id="otp-demo"></b></p>
+              </div>
+            </div>
+            <div class="code-wrap"><div id="otp-code"></div></div>
+            <p class="code-msg" id="otp-msg" role="status" aria-live="polite"></p>
+            <div class="otp-actions">
+              <button class="textlink" type="button" id="otp-resend">Send a new code</button>
+              <button class="textlink" type="button" id="otp-change">Use a different email</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sign in -->
+        <div role="tabpanel" id="panel-signin" aria-labelledby="tab-signin" hidden>
+          <form class="auth__form" id="signin-form" novalidate>
+            <h1>Welcome back</h1>
+            <p class="auth__text">Sign in to pick up where you left off. You don’t need an invite code for this.</p>
+            <div class="field" style="margin-top:1.3rem">
+              <label class="label" for="si-email">Email</label>
+              <input class="input" id="si-email" name="email" type="email" autocomplete="username" inputmode="email" required>
+            </div>
+            <div class="field">
+              <label class="label" for="si-pass">Password</label>
+              <div class="pw">
+                <input class="input" id="si-pass" name="password" type="password" autocomplete="current-password" required>
+                <button class="pw__toggle" type="button" aria-controls="si-pass" aria-pressed="false">Show</button>
+              </div>
+            </div>
+            <p class="field__error" id="signin-error" role="alert" style="margin-top:.8rem"></p>
+            <button class="btn btn--block" type="submit">Sign in</button>
+            <p class="auth__switch">New here? <a href="#signup" data-goto="signup">Sign up with an invite code</a></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot wrap">
+      <p>© 2026 Primer. Learn anything, credibly.</p>
+    </footer>
+  </div>
+</body>
+</html>

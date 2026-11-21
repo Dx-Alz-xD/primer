@@ -1,0 +1,11 @@
+{
+  "name": "primer",
+  "private": true,
+  "description": "Primer: type a topic, get a whole course.",
+  "scripts": {
+    "start": "node server/index.mjs"
+  },
+  "engines": {
+    "node": ">=20.12"
+  }
+}

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Primer: type a topic, get a whole course</title>
+<meta name="description" content="Primer breaks any subject into lessons, writes each one, and curates them into a single credible course you can learn from, practice, and download as a PDF.">
+<meta name="theme-color" content="#120b06">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23120b06'/%3E%3Ctext x='32' y='47' font-family='Georgia,serif' font-size='44' text-anchor='middle' fill='%23d6a554'%3EP%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&display=swap">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/landing.css">
+<script defer src="assets/js/core.js"></script>
+<script defer src="assets/js/backdrop.js"></script>
+<script defer src="assets/js/texttype.js"></script>
+<script defer src="assets/js/wall.js"></script>
+<script defer src="assets/js/landing.js"></script>
+</head>
+<body data-backdrop="full">
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop__photo"></div>
+    <div class="backdrop__vignette"></div>
+    <div class="backdrop__glow"></div>
+    <canvas class="backdrop__glitch"></canvas>
+  </div>
+
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="page">
+    <header class="nav wrap">
+      <a class="logo" href="index.html" aria-label="Primer home">
+        <svg viewBox="0 0 32 32" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M16 9.2c-3-2.3-7-2.7-11-1.6v16c4-1.1 8-.7 11 1.6 3-2.3 7-2.7 11-1.6v-16c-4-1.1-8-.7-11 1.6z"/><path d="M16 9.2v16"/></svg>
+        Primer
+      </a>
+      <nav class="nav__links" aria-label="Account">
+        <span data-when="guest"><a class="nav__link" href="auth.html#signin">Sign in</a></span>
+        <span data-when="guest"><a class="btn btn--small" href="auth.html#signup">Get early access</a></span>
+        <span data-when="user" hidden><a class="btn btn--small" href="app.html">Open Primer</a></span>
+      </nav>
+    </header>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <span class="pill">AI course builder · private beta</span>
+        <h1 id="hero-title"><span class="h1-line">Type a topic.</span> <span class="h1-line">Get a whole course.</span></h1>
+        <p class="lead">Primer breaks any subject into lessons, writes each one, and curates them into a single credible course you can learn from, practice, and download as a PDF.</p>
+
+        <form class="ask" id="ask" autocomplete="off" novalidate>
+          <label class="sr-only" for="topic">What do you want to learn?</label>
+          <div class="ask__field" id="ask-field">
+            <input class="input" id="topic" name="topic" type="text" maxlength="120" placeholder="What do you want to learn?" enterkeyhint="go">
+            <span class="ask__type" id="ask-type" aria-hidden="true"></span>
+          </div>
+          <button class="btn" type="submit">Build my course</button>
+        </form>
+
+        <div class="chips chips--hero" role="group" aria-label="Example topics">
+          <span class="chips__label">Or try</span>
+          <button class="chip" type="button" data-topic="Stoicism">Stoicism</button>
+          <button class="chip" type="button" data-topic="How black holes work">How black holes work</button>
+          <button class="chip" type="button" data-topic="Derivatives in calculus">Derivatives in calculus</button>
+          <button class="chip" type="button" data-surprise>🎲 Surprise me</button>
+        </div>
+        <p class="hero__note" data-when="guest">Building a course needs an account. <a href="auth.html#signup">Have an invite code?</a></p>
+      </section>
+
+      <!-- How it works -->
+      <section class="section wrap" id="how" aria-labelledby="how-title">
+        <div class="section__head">
+          <h2 id="how-title">How it works</h2>
+          <p>Four steps from a passing curiosity to a course you can finish.</p>
+        </div>
+        <ol class="steps">
+          <li class="step card">
+            <span class="step__num" aria-hidden="true">1</span>
+            <h3>Name your topic</h3>
+            <p>Add a range, like “from limits to the chain rule”, and say how you like to be taught.</p>
+          </li>
+          <li class="step card">
+            <span class="step__num" aria-hidden="true">2</span>
+            <h3>AI plans the lessons</h3>
+            <p>You get a detailed outline of 20 to 30 lessons, grouped into units, in the order to learn them.</p>
+          </li>
+          <li class="step card">
+            <span class="step__num" aria-hidden="true">3</span>
+            <h3>Learn in checkpoints</h3>
+            <p>Each lesson opens piece by piece as you answer. Get one wrong and it revises with you first.</p>
+          </li>
+          <li class="step card">
+            <span class="step__num" aria-hidden="true">4</span>
+            <h3>Ask about anything</h3>
+            <p>Select a line or sketch on the whiteboard to ask a doubt right where it came up.</p>
+          </li>
+        </ol>
+      </section>
+
+      <!-- Features -->
+      <section class="section wrap" id="features" aria-labelledby="features-title">
+        <div class="section__head">
+          <h2 id="features-title">Built for how you actually learn</h2>
+          <p>Reading is only half of it. These are the parts that make it stick.</p>
+        </div>
+        <ul class="features">
+          <li class="feature card"><h3>Set the range</h3><p>Start from the very beginning or from what you already know, and stop where you need to.</p></li>
+          <li class="feature card"><h3>Teaching instructions</h3><p>Ask for LaTeX, mnemonics, worked examples or “explain like I’m five”, and the lessons follow.</p></li>
+          <li class="feature card"><h3>Checkpoint lessons</h3><p>Questions sit inside the lesson. The next part opens only when you’ve answered.</p></li>
+          <li class="feature card"><h3>Revision when you slip</h3><p>A wrong answer brings back the key points of that section before you try again.</p></li>
+          <li class="feature card"><h3>Real maths notation</h3><p>Formulas render properly, so fractions and roots look the way they do in a textbook.</p></li>
+          <li class="feature card"><h3>Ask about any line</h3><p>Highlight a sentence and ask about exactly that part, without leaving the lesson.</p></li>
+          <li class="feature card"><h3>Whiteboard doubts</h3><p>Circle, underline or sketch on the notes, then ask about what you drew.</p></li>
+          <li class="feature card"><h3>Written answers</h3><p>Some questions want your own words, with a model answer to compare against.</p></li>
+        </ul>
+      </section>
+
+      <!-- Reading room -->
+      <section class="section wrap" id="reading-room" aria-labelledby="room-title">
+        <div class="section__head">
+          <h2 id="room-title">The reading room</h2>
+          <p>Titles surface from the stacks, then sink back. Pick one up to build a course on it.</p>
+        </div>
+        <div class="wall" id="wall">
+          <canvas aria-hidden="true"></canvas>
+          <div class="wall__words" role="group" aria-label="Topics in the reading room"></div>
+        </div>
+        <div class="wall__foot">
+          <span>Click anywhere on the wall to reshelve.</span>
+          <button class="textlink" type="button" id="wall-shuffle">Reshelve the titles</button>
+        </div>
+      </section>
+
+      <!-- Call to action -->
+      <section class="cta wrap card" aria-labelledby="cta-title" data-when="guest">
+        <h2 id="cta-title">Got an invite code?</h2>
+        <p>Primer is opening to a few readers at a time. Bring your six-character code to create an account.</p>
+        <div class="cta__actions">
+          <a class="btn" href="auth.html#signup">Get early access</a>
+          <a class="textlink" href="auth.html#signin">Already have an account? Sign in</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot wrap">
+      <p>© 2026 Primer. Learn anything, credibly.</p>
+    </footer>
+  </div>
+</body>
+</html>

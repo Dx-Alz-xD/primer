@@ -1,0 +1,12 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# dependencies, build output, AI cache
+node_modules/
+data/
+
+# OS clutter
+.DS_Store
+Thumbs.db
