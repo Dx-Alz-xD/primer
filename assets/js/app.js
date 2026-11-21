@@ -190,6 +190,7 @@
       }
     });
     offerImport();
+    if (P.classes) P.classes.mountLibrary();
     if (location.hash === '#library') requestAnimationFrame(() => $('#library').scrollIntoView());
     else topic.focus({ preventScroll: true });
   }
@@ -345,7 +346,7 @@
     view.querySelector('[data-epub]').addEventListener('click', (e) => P.epub.download(course.id, e.currentTarget));
     view.querySelector('[data-print]').addEventListener('click', () => window.print());
     view.querySelector('[data-delete]').addEventListener('click', async (e) => {
-      if (!window.confirm(`Delete “${course.title}” and all its progress? This can’t be undone.`)) return;
+      if (!window.confirm(`Delete “${course.title}” and all its progress? This can’t be undone.${P.classes ? P.classes.deleteWarning(course) : ''}`)) return;
       e.target.disabled = true;
       try {
         await P.courses.remove(course.id);
@@ -355,5 +356,6 @@
         P.toast('Couldn’t delete the course: ' + err.message, 'error');
       }
     });
+    if (P.classes) P.classes.mountCourse(view, course);
   }
 })();

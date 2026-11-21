@@ -1,0 +1,107 @@
+/* =====================================================================
+   Class mode on app.html: the teach / join dialogs, the class note on a
+   course page, "Your classes" in the library (assets/js/classes.js).
+   ===================================================================== */
+
+/* "Join a class" sits beside "New folder" */
+.library__head #class-join-btn{margin-left:auto}
+
+/* ---------- dialog ---------- */
+.cdialog{
+  position:fixed;inset:0;margin:auto;width:min(36rem, calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;
+  padding:2rem 2.1rem 1.8rem;color:var(--cream);background:rgba(24,15,8,.97);
+  border:1px solid var(--leather);border-radius:var(--radius);box-shadow:0 40px 90px -20px rgba(0,0,0,.95), 0 12px 26px -12px rgba(0,0,0,.7);
+}
+.cdialog::before{content:"";position:absolute;inset:5px;pointer-events:none;border:3px double var(--hairline);border-radius:3px}
+.cdialog::backdrop{background:rgba(8,4,1,.72);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.cdialog[open]{animation:cdialog-in .22s var(--ease-out)}
+@keyframes cdialog-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.cdialog__x{
+  position:absolute;top:14px;right:14px;z-index:1;display:grid;place-items:center;width:36px;height:36px;padding:0;
+  background:none;border:1px solid transparent;border-radius:50%;color:var(--muted);cursor:pointer;transition:color .15s, border-color .15s;
+}
+.cdialog__x:hover{color:var(--gold);border-color:var(--leather-soft)}
+.cdialog__title{font-size:clamp(1.7rem,4vw,2.1rem);text-shadow:none;padding-right:2.2rem}
+.cdialog__body{position:relative;margin-top:.9rem;display:grid;gap:1.1rem}
+.cdialog__lead{color:var(--cream-dim);font-size:1.1rem;line-height:1.45}
+.cdialog__lead strong{font-family:var(--font-head);font-weight:400;color:var(--gold-hi)}
+.cdialog__sub{font-family:var(--font-head);color:var(--gold);font-size:1.05rem}
+.cdialog__have{display:grid;gap:.4rem;padding:.8rem .95rem;border:1px solid var(--leather-soft);border-radius:4px;background:rgba(14,9,4,.5)}
+.cdialog__form{display:grid;gap:.45rem}
+.cdialog__actions{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem 1.4rem;margin-top:.5rem}
+.cdialog__state{font-family:var(--font-head);font-size:1.15rem;color:var(--gold-hi)}
+.cdialog__state.is-closed{font-family:var(--font-body);font-size:1.08rem;color:var(--error-soft)}
+.cdialog__made,.cdialog__preview{display:grid;gap:1.1rem}
+
+/* codes are set in Cormorant with lining figures: old-style digits and IM Fell's curly Q are hard to read out */
+.input--code{font-family:var(--font-body);font-weight:600;font-size:1.6rem;letter-spacing:.16em;text-transform:uppercase;font-variant-numeric:lining-nums}
+.input--code::placeholder{letter-spacing:.16em;font-style:normal;color:rgba(207,191,157,.35)}
+
+/* the join code, big enough to read out to a room */
+.codecard{
+  display:grid;justify-items:center;gap:.55rem;padding:1.2rem 1rem 1.1rem;text-align:center;
+  border:1px solid rgba(214,165,84,.5);border-radius:4px;background:radial-gradient(ellipse at 50% 0%, rgba(214,165,84,.12), rgba(14,9,4,.6) 70%);
+  box-shadow:inset 0 0 0 3px rgba(14,9,4,.5), inset 0 0 0 4px rgba(214,165,84,.14);
+}
+.codecard__label{font-style:italic;color:var(--muted);font-size:1rem}
+.codecard__code{font-family:var(--font-body);font-weight:600;font-size:clamp(2.3rem,9vw,3.2rem);line-height:1;letter-spacing:.14em;color:var(--gold-hi);
+  font-variant-numeric:lining-nums;white-space:nowrap;text-shadow:0 0 24px rgba(214,165,84,.25);padding-left:.14em}
+.codecard__actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.6rem 1.3rem;margin-top:.25rem}
+
+/* the class, as a slip of parchment, before joining */
+.joincard{
+  position:relative;padding:1.15rem 1.3rem 1.1rem;color:var(--ink);background-color:var(--parchment);
+  background-image:radial-gradient(ellipse at 15% 0%, rgba(255,250,235,.55), transparent 60%), radial-gradient(ellipse at 100% 100%, rgba(160,120,60,.18), transparent 55%);
+  border-radius:4px;box-shadow:0 18px 40px -18px rgba(0,0,0,.9), 0 0 0 1px #b39a6b, inset 0 0 60px rgba(150,110,60,.2);
+}
+.joincard__kicker{font-style:italic;color:var(--ink-gold);font-size:1rem}
+.joincard__name{margin-top:.1rem;font-size:clamp(1.6rem,4.4vw,2rem);color:var(--ink);text-shadow:none;overflow-wrap:anywhere}
+.joincard__line{margin-top:.35rem;color:var(--ink-soft);font-size:1.08rem;line-height:1.35}
+.joincard__line strong{font-family:var(--font-head);font-weight:400;color:var(--ink)}
+.joincard__line > span:first-child{font-style:italic;margin-right:.3rem}
+.joincard__count{font-style:italic}
+
+.consent{
+  display:flex;align-items:flex-start;gap:.65rem;padding:.75rem .9rem;border-left:3px solid var(--gold);border-radius:0 4px 4px 0;
+  background:rgba(214,165,84,.09);color:var(--cream);font-size:1.12rem;line-height:1.42;
+}
+.consent svg{flex:none;margin-top:.22rem;color:var(--gold)}
+
+/* ---------- the class note on a course page ---------- */
+.classnote{margin-top:.9rem;padding:.65rem .9rem .7rem;border-left:2px solid var(--gold);border-radius:0 4px 4px 0;background:rgba(214,165,84,.06)}
+.classnote__head{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .6rem}
+.classnote__kicker{font-style:italic;color:var(--gold);font-size:1rem}
+strong.classnote__name{font-family:var(--font-head);font-weight:400;font-size:1.25rem;color:var(--cream)}
+.classnote__line{margin-top:.1rem;color:var(--cream-dim);font-size:1.05rem}
+.classnote__line > span:first-child{font-style:italic;color:var(--muted)}
+.classnote__who{font-family:var(--font-head);color:var(--cream)}
+.classnote__help{margin-top:.35rem;color:var(--muted);font-style:italic;font-size:1rem;line-height:1.38}
+.classnote__list{list-style:none;margin:.35rem 0 0;padding:0;display:grid;gap:.4rem}
+.classnote__list li{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .8rem}
+a.classnote__name{font-family:var(--font-head);font-size:1.18rem;color:var(--cream);text-decoration:none;border-bottom:1px solid rgba(214,165,84,.35)}
+a.classnote__name:hover{border-bottom-color:var(--gold)}
+.classnote__code{font-family:var(--font-body);font-weight:600;font-variant-numeric:lining-nums;letter-spacing:.1em;font-size:1rem;color:var(--gold-hi);white-space:nowrap;
+  padding:.05rem .5rem;border:1px solid rgba(214,165,84,.42);border-radius:999px;background:rgba(60,40,18,.5)}
+.classnote__meta{color:var(--cream-dim);font-style:italic;font-size:1rem}
+.classnote__closed{font-size:.92rem;color:var(--error-soft);font-style:italic}
+.classnote__list .textlink{font-size:1rem}
+
+/* ---------- "Your classes" in the library ---------- */
+.classes{margin-top:1.4rem;padding:1.2rem 1.45rem 1.25rem}
+.classes__title{font-size:clamp(1.35rem,3vw,1.65rem);text-shadow:none}
+.classes__cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:.6rem 2rem;margin-top:.5rem}
+.classes__sub{font-style:italic;color:var(--muted);font-size:1rem}
+.classes__list{list-style:none;margin:.3rem 0 0;padding:0;display:grid;gap:.5rem}
+.classes__item{display:flex;flex-wrap:wrap;align-items:baseline;gap:.15rem .7rem}
+.classes__name{font-family:var(--font-head);font-size:1.18rem;color:var(--cream);text-decoration:none;border-bottom:1px solid rgba(214,165,84,.35)}
+.classes__name:hover{border-bottom-color:var(--gold)}
+.classes__meta{color:var(--cream-dim);font-size:1rem;font-style:italic}
+
+@media (max-width:640px){
+  .cdialog{padding:1.5rem 1.2rem 1.4rem}
+  .library__head #class-join-btn{margin-left:0}
+  .classes{padding:1.05rem 1rem}
+}
+@media print{
+  .classnote-slot,.classes{display:none !important}
+}

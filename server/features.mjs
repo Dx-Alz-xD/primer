@@ -9,5 +9,6 @@ export default [
   () => import('./folders.mjs'),
   () => import('./library.mjs'),
   () => import('./translate.mjs'),
+  () => import('./classes.mjs'),
   () => import('./ebook.mjs')
 ];
