@@ -9,7 +9,7 @@
 // =====================================================================
 import { q, schema, now, parseJSON } from './db.mjs';
 import { HttpError, sendJSON, readBody, text, longText, overLimit } from './http.mjs';
-import { requireUser } from './auth.mjs';
+import { requireUser, learnerLine } from './auth.mjs';
 import { askJSON, config, mathify } from './ai.mjs';
 import { doubtHooks, ownCourse, flatten } from './data.mjs';
 import { screen, courseSafety, promptNote, REFUSED } from './safety.mjs';
@@ -206,7 +206,7 @@ async function chat({ req, res }) {
     .map((m) => `${m.role === 'learner' ? 'Learner' : 'Tutor'}: ${m.role === 'tutor' ? strip(m.content) : m.content}`.slice(0, 700));
 
   const prompt = [
-    `The learner is ${u.name}.`,
+    learnerLine(u), // their name, and their age when they gave a date of birth
     courses.length ? `Their courses:\n${courses.join('\n')}` : 'They have no courses yet.',
     here,
     memory(u.id),

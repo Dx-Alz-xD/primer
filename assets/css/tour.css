@@ -1,0 +1,45 @@
+/* =====================================================================
+   The tour (assets/js/tour.js): a gold ring of light round the part of
+   the page a step is about, the rest dimmed, and a card that explains
+   it in large, plain type. On a phone the card sits at the bottom.
+   ===================================================================== */
+.tour{position:fixed;inset:0;z-index:300}
+.tour__shade{position:absolute;inset:0;background:rgba(8,4,1,.74);opacity:0;transition:opacity .3s}
+.tour.is-center .tour__shade{opacity:1}
+.tour__ring{
+  position:fixed;border-radius:10px;pointer-events:none;
+  box-shadow:0 0 0 3px rgba(241,205,132,.95), 0 0 0 7px rgba(241,205,132,.22), 0 0 0 9999px rgba(8,4,1,.74);
+  transition:left .35s var(--ease-out), top .35s var(--ease-out), width .35s var(--ease-out), height .35s var(--ease-out), opacity .25s;
+}
+.tour.is-center .tour__ring{opacity:0}
+
+.tour__card{
+  position:fixed;width:min(420px, calc(100vw - 24px));padding:1.2rem 1.3rem 1.1rem;
+  background:linear-gradient(180deg, rgba(38,25,13,.98), rgba(22,14,7,.99));color:var(--cream);
+  border:1px solid var(--gold-lo);border-radius:10px;
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.9), 0 0 0 1px rgba(241,205,132,.15) inset;
+}
+.tour__card::before{content:"";position:absolute;inset:5px;border:2px double var(--hairline);border-radius:7px;pointer-events:none}
+.tour.is-center .tour__card{left:50%;top:50%;transform:translate(-50%,-50%);width:min(480px, calc(100vw - 24px))}
+.tour__close{
+  position:absolute;top:.55rem;right:.6rem;z-index:1;width:44px;height:44px;border:0;border-radius:50%;cursor:pointer;
+  background:transparent;color:var(--muted);font-size:1.2rem;line-height:1
+}
+.tour__close:hover{color:var(--cream);background:rgba(214,165,84,.12)}
+[dir="rtl"] .tour__close{right:auto;left:.6rem}
+.tour__head{display:flex;align-items:center;gap:.7rem}
+.tour__icon{font-size:2.3rem;line-height:1}
+.tour__count{font-style:italic;color:var(--muted);font-size:1rem}
+.tour__title{margin-top:.55rem;font-size:clamp(1.45rem,3.6vw,1.75rem);line-height:1.15;outline:none;padding-right:2rem}
+.tour__text{margin-top:.5rem;font-size:clamp(1.14rem,2.6vw,1.24rem);line-height:1.5;color:var(--cream)}
+.tour__bar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1rem;margin-top:1rem}
+.tour__bar .tour__next{margin-inline-start:auto;min-width:8rem;font-size:1.15rem}
+.tour__bar .tour__back{font-size:1.08rem;min-height:44px}
+
+/* a phone: the card along the bottom, the part it is about above it */
+.tour.is-docked .tour__card{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom, 0px));top:auto !important;width:auto}
+.tour.is-docked.is-center .tour__card{top:auto !important;transform:none}
+.tour.is-docked.is-top .tour__card{top:calc(8px + env(safe-area-inset-top, 0px)) !important;bottom:auto}
+html.tour-open{scroll-behavior:auto}
+.app-head__tour{margin-top:.5rem}
+.app-head__tour .textlink{font-size:1.08rem}

@@ -8,6 +8,8 @@
   const P = window.Primer;
   const $ = P.$, $$ = P.$$, esc = P.esc;
   if (!P.auth.current()) return; // the inline guard is already redirecting
+  // a new account that hasn't been through the welcome yet (name, date of birth, language) goes there first
+  if (P.auth.current().welcome) { location.replace('welcome.html?next=' + encodeURIComponent(location.pathname.replace(/^\//, '') + location.search)); return; }
   P.mountUserNav();
 
   const SURPRISE = [

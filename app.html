@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="assets/css/offline.css">
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/garden.css">
+<link rel="stylesheet" href="assets/css/tour.css">
 <link rel="stylesheet" href="assets/css/tutor.css">
 <link rel="stylesheet" href="assets/css/classes.css">
 <link rel="stylesheet" href="assets/css/review.css">
@@ -54,6 +55,8 @@
 <script defer src="assets/vendor/gsap/gsap.min.js"></script>
 <script defer src="assets/js/garden.js"></script>
 <script defer src="assets/js/app.js"></script>
+<script defer src="assets/js/readaloud.js"></script>
+<script defer src="assets/js/tour.js"></script>
 <script defer src="assets/js/tutor.js"></script>
 </head>
 <body data-backdrop="calm">
@@ -86,6 +89,7 @@
         <header class="app-head">
           <h1 id="build-title">What do you want to learn?</h1>
           <p>Name a topic. A range and teaching instructions are optional, but they shape the whole course.</p>
+          <p class="app-head__tour"><button class="textlink" type="button" data-tour-start>New to Primer? Take a short tour</button></p>
         </header>
 
         <form class="builder card card--solid" id="builder" novalidate>

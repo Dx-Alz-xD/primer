@@ -1,0 +1,61 @@
+/* =====================================================================
+   The welcome after sign-up (welcome.html): one large, plain question at
+   a time, big buttons and big type, made for a phone first.
+   ===================================================================== */
+.welcome{display:flex;justify-content:center;padding:clamp(12px,4vh,48px) 0 clamp(40px,8vh,80px)}
+.wc{width:min(640px,100%);padding:clamp(20px,4vw,40px)}
+.wc__top{position:relative;display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.2rem}
+.wc__dots{display:flex;gap:8px;list-style:none;margin:0;padding:0}
+.wc__dots li{width:34px;height:6px;border-radius:999px;background:rgba(214,165,84,.22);transition:background-color .3s}
+.wc__dots li.is-done{background:var(--gold-lo)}
+.wc__dots li.is-on{background:var(--gold-hi)}
+.wc__count{color:var(--muted);font-style:italic;font-size:1.02rem}
+
+.wc__step{position:relative}
+.wc__icon{font-size:clamp(2.6rem,7vw,3.4rem);line-height:1;margin-bottom:.6rem}
+.wc__title{font-size:clamp(1.9rem,5vw,2.6rem);line-height:1.12;outline:none}
+.wc__q{display:block;margin-top:1rem;font-family:var(--font-head);font-size:clamp(1.3rem,3.4vw,1.6rem);color:var(--cream)}
+.wc__help{margin-top:.6rem;color:var(--cream-dim);font-size:1.15rem;line-height:1.5;max-width:34em}
+.wc__input{margin-top:.7rem;width:100%;font-size:1.35rem;padding:.85rem 1rem}
+
+/* date of birth: three big selects in a row (two rows on a narrow phone) */
+.wc__dob{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.4fr) minmax(0,1fr);gap:10px;margin-top:1.1rem}
+.wc__part{display:grid;gap:.3rem}
+.wc__part > span{font-family:var(--font-head);color:var(--cream);font-size:1.1rem}
+.wc__part .select{
+  width:100%;font-size:1.2rem;padding:.7rem .8rem;min-height:48px;color:var(--cream);font-family:var(--font-body);
+  background-color:rgba(14,9,4,.9);border:1px solid rgba(214,165,84,.45);border-radius:var(--btn-radius);
+  box-shadow:inset 0 0 0 3px rgba(14,9,4,.45)
+}
+.wc__part .select:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px}
+.wc__part .select option{background:#1c120a;color:var(--cream)}
+.wc__part[hidden]{display:none}
+.wc__check{display:inline-flex;align-items:center;gap:.6rem;margin-top:1rem;font-size:1.15rem;color:var(--cream);cursor:pointer;min-height:44px}
+.wc__check input{width:22px;height:22px;accent-color:var(--gold)}
+
+/* languages: a big button each, its name in its own script, the English name under it */
+.wc__langs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:1.1rem;max-height:min(46svh,420px);overflow:auto;padding:2px}
+.wc__lang{
+  display:flex;flex-direction:column;align-items:flex-start;gap:.15rem;min-height:64px;padding:.7rem .9rem;text-align:start;
+  background:rgba(16,10,5,.7);border:1px solid var(--leather-soft);border-radius:var(--radius);color:var(--cream);cursor:pointer;
+  transition:border-color .2s, background-color .2s, transform .2s var(--ease-out)
+}
+.wc__lang:hover{border-color:rgba(214,165,84,.65);transform:translateY(-1px)}
+.wc__lang[aria-checked="true"]{border-color:var(--gold);background:rgba(60,40,18,.78);box-shadow:inset 0 0 0 1px var(--gold), 0 0 0 3px rgba(241,205,132,.15)}
+.wc__lname{font-size:1.35rem;line-height:1.2}
+.wc__llabel{font-size:.92rem;color:var(--muted);font-style:italic}
+.wc__lang:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px}
+
+.wc__choices{display:grid;gap:12px;margin-top:1.4rem}
+.wc__choice{width:100%;font-size:1.25rem;padding:1rem 1.2rem;white-space:normal}
+
+.wc__actions{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem 1.2rem;margin-top:1.6rem}
+.wc__actions .wc__next{margin-inline-start:auto;font-size:1.2rem;padding:.85rem 1.8rem;min-width:9rem}
+.wc__actions .textlink{font-size:1.1rem;min-height:44px}
+
+@media (max-width:560px){
+  .wc__dob{grid-template-columns:1fr 1fr}
+  .wc__dob .wc__part:last-child{grid-column:1 / -1}
+  .wc__actions .wc__next{width:100%;margin-inline-start:0}
+  .wc__dots li{width:26px}
+}

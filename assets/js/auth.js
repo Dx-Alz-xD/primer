@@ -126,7 +126,8 @@
 
   // 2. account details, created by the server
   const form = $('#step-account');
-  const fName = $('#su-name'), fEmail = $('#su-email'), fPass = $('#su-pass');
+  // (the name is asked next, in the welcome: welcome.html)
+  const fEmail = $('#su-email'), fPass = $('#su-pass');
   const formErr = $('#su-form-err');
   const setErr = (input, html) => {
     const err = document.getElementById(input.id + '-err');
@@ -134,14 +135,13 @@
     input.setAttribute('aria-invalid', html ? 'true' : 'false');
     if (html) input.setAttribute('aria-describedby', err.id); else input.removeAttribute('aria-describedby');
   };
-  const fieldFor = { name: fName, email: fEmail, password: fPass };
+  const fieldFor = { email: fEmail, password: fPass };
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    [fName, fEmail, fPass].forEach((f) => setErr(f, ''));
+    [fEmail, fPass].forEach((f) => setErr(f, ''));
     formErr.textContent = '';
     let bad = null;
-    if (!P.clean(fName.value)) { setErr(fName, 'Enter your name.'); bad = bad || fName; }
     if (!P.auth.validEmail(fEmail.value)) { setErr(fEmail, 'Enter an email address, like you@gmail.com.'); bad = bad || fEmail; }
     if (fPass.value.length < 8) { setErr(fPass, 'Use at least 8 characters.'); bad = bad || fPass; }
     if (bad) { bad.focus(); P.shake(bad); return; }
@@ -150,11 +150,12 @@
     btn.classList.add('is-busy');
     btn.disabled = true;
     try {
-      await P.auth.signUp({ invite: P.session.get('primer.invite') || '', name: fName.value, email: fEmail.value, password: fPass.value });
+      await P.auth.signUp({ invite: P.session.get('primer.invite') || '', email: fEmail.value, password: fPass.value, lang: P.lang || 'en' });
       P.session.remove('primer.invite');
       fPass.value = '';
       btn.textContent = 'Account created. Opening Primer…';
-      setTimeout(() => { location.href = next; }, P.motion.reduce ? 100 : 500);
+      // a new account first meets the welcome: name, date of birth, language, and the offer of a tour
+      setTimeout(() => { location.href = 'welcome.html?next=' + encodeURIComponent(next); }, P.motion.reduce ? 100 : 500);
     } catch (err) {
       btn.classList.remove('is-busy');
       btn.disabled = false;
@@ -194,8 +195,9 @@
     const btn = signin.querySelector('button[type="submit"]');
     btn.disabled = true;
     try {
-      await P.auth.signIn(email.value, pass.value);
-      location.href = next;
+      const r = await P.auth.signIn(email.value, pass.value);
+      // an account that left the welcome half way picks it up again
+      location.href = r && r.user && r.user.welcome ? 'welcome.html?next=' + encodeURIComponent(next) : next;
     } catch (err) {
       btn.disabled = false;
       siErr.innerHTML = err.status === 401

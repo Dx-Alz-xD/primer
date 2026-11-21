@@ -38,7 +38,7 @@ const PORT = Number(process.env.PORT) || 5173;
 const HOST = process.env.HOST || '127.0.0.1';
 
 // page -> needs an account?
-const PAGES = new Map([['index.html', false], ['auth.html', false], ['app.html', true], ['lesson.html', true]]);
+const PAGES = new Map([['index.html', false], ['auth.html', false], ['app.html', true], ['lesson.html', true], ['welcome.html', true]]);
 PAGE_HOOKS.forEach((p) => PAGES.set(p.file, Boolean(p.protected)));
 const SAFE_NEXT = /^[a-z]+\.html(\?[\w=&%.\-+~!*'()]*)?$/;
 

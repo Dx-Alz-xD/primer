@@ -29,7 +29,7 @@
 import { randomBytes } from 'node:crypto';
 import { q, now, parseJSON } from './db.mjs';
 import { HttpError, sendJSON, readBody, readRaw, text, longText, overLimit } from './http.mjs';
-import { requireUser } from './auth.mjs';
+import { requireUser, learnerLine } from './auth.mjs';
 import { askJSON, config } from './ai.mjs';
 import { ownCourse, flatten } from './data.mjs';
 import { screen, courseSafety, promptNote, REFUSED } from './safety.mjs';
@@ -231,7 +231,7 @@ async function answer(u, message, ctx) {
   const past = q('SELECT role, content FROM (SELECT * FROM tutor_messages WHERE user_id = ? ORDER BY created_at DESC LIMIT 10) ORDER BY created_at').all(u.id)
     .map((m) => `${m.role === 'learner' ? 'Learner' : 'Tutor'}: ${m.role === 'tutor' ? strip(m.content) : m.content}`.slice(0, 600));
   const prompt = [
-    `The learner is ${u.name}. They are speaking to you; what they said was transcribed by speech recognition, so allow for a misheard word.`,
+    `${learnerLine(u)} They are speaking to you; what they said was transcribed by speech recognition, so allow for a misheard word.`,
     courses.length ? `Their courses:\n${courses.join('\n')}` : 'They have no courses yet.',
     here,
     memory(u.id),
