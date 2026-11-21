@@ -237,3 +237,14 @@ button{font:inherit;color:inherit}
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;animation-delay:0ms !important;transition-duration:.001ms !important;transition-delay:0ms !important}
   .backdrop__glow{animation:none}
 }
+
+/* language picker, and hiding the page for a moment while it's translated */
+.langpick{display:inline-flex;align-items:center;gap:.35rem;color:var(--cream-dim)}
+.langpick svg{color:var(--gold);flex:none}
+.langpick select{appearance:none;-webkit-appearance:none;background:transparent;border:1px solid rgba(214,165,84,.3);border-radius:999px;
+  padding:.22rem .7rem;font-family:var(--font-body);font-size:.98rem;color:var(--cream);cursor:pointer}
+.langpick select:hover{border-color:var(--gold)}
+.langpick select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.langpick option{background:#1c120a;color:var(--cream)}
+.sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+html.i18n-wait body{visibility:hidden}
