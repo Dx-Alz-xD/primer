@@ -4,7 +4,7 @@
 
 Primer turns one topic into a full course. You name the subject, say where to start and stop, and how you like to be taught. Primer plans the lessons in the order to learn them, writes each lesson the first time you open it, and checks that you understood each part before the next one opens.
 
-![A Primer lesson: the course in a sidebar, a parchment page with typeset maths and an “explain like I’m 5” callout](pitch/img/lesson.webp)
+![A Primer lesson: the course in a sidebar, a parchment page with typeset maths and an “explain like I’m 5” callout](docs/lesson.webp)
 
 ## What it does
 
@@ -80,9 +80,5 @@ server/folders.mjs, server/library.mjs          folders and the shared topic lib
 server/community.mjs                            posts, comments, votes, photos
 server/ebook.mjs, server/translate.mjs          the book view, lesson translation
 server/features.mjs                             the list of feature modules
-pitch/index.html                                the pitch deck
+docs/                                           images for this README
 ```
-
-## Pitch deck
-
-`pitch/index.html` is the pitch, built as a web page with live parts: a working checkpoint and a replay of a real server log. Open it in a browser. Arrow keys move between slides, `N` shows speaker notes, `G` shows all slides and `F` goes full screen.
