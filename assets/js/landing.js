@@ -47,7 +47,9 @@
     cursorStyle: 'bar',
     cursorGlide: true,
     showCursor: true,
-    prefix: 'Try: '
+    prefix: 'Try: ',
+    // the letters in the hero gather into each hint's subject (landing-fx.js)
+    onSentenceComplete: (s, i) => document.dispatchEvent(new CustomEvent('primer:hint', { detail: { index: i, text: s } }))
   });
   if (hints) input.placeholder = '';
 

@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&display=swap">
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/offline.css">
+<link rel="stylesheet" href="assets/css/garden.css">
 <link rel="stylesheet" href="assets/css/landing.css">
 <script defer src="assets/js/core.js"></script>
 <script defer src="assets/js/i18n.js"></script>
@@ -23,9 +24,15 @@
 <script defer src="assets/js/backdrop.js"></script>
 <script defer src="assets/js/texttype.js"></script>
 <script defer src="assets/js/wall.js"></script>
+<script defer src="assets/vendor/gsap/gsap.min.js"></script>
+<script defer src="assets/vendor/gsap/ScrollTrigger.min.js"></script>
+<script defer src="assets/vendor/gsap/SplitText.min.js"></script>
+<script defer src="assets/js/swarm.js"></script>
+<script defer src="assets/js/garden.js"></script>
 <script defer src="assets/js/landing.js"></script>
+<script defer src="assets/js/landing-fx.js"></script>
 </head>
-<body data-backdrop="full">
+<body data-backdrop="calm">
   <div class="backdrop" aria-hidden="true">
     <div class="backdrop__photo"></div>
     <div class="backdrop__vignette"></div>
@@ -53,7 +60,9 @@
       <!-- Hero -->
       <section class="hero wrap" aria-labelledby="hero-title">
         <span class="pill">AI course builder · private beta</span>
-        <h1 id="hero-title"><span class="h1-line">Type a topic.</span> <span class="h1-line">Get a whole course.</span></h1>
+        <h1 id="hero-title" data-split><span class="h1-line">Type a topic.</span> <span class="h1-line">Get a whole course.</span></h1>
+        <!-- the library's letters gather into the topic (assets/js/swarm.js) -->
+        <div class="hero__stage" aria-hidden="true"><canvas class="hero__swarm" id="swarm"></canvas></div>
         <p class="lead">Primer breaks any subject into lessons, writes each one, and curates them into a single credible course you can learn from, practice, and download as a PDF.</p>
 
         <form class="ask" id="ask" autocomplete="off" novalidate>
@@ -75,52 +84,124 @@
         <p class="hero__note" data-when="guest">Building a course needs an account. <a href="auth.html#signup">Have an invite code?</a></p>
       </section>
 
-      <!-- How it works -->
-      <section class="section wrap" id="how" aria-labelledby="how-title">
-        <div class="section__head">
-          <h2 id="how-title">How it works</h2>
-          <p>Four steps from a passing curiosity to a course you can finish.</p>
+      <!-- How it works: the product itself, played by scrolling (assets/js/landing-fx.js) -->
+      <section class="show" id="how" aria-labelledby="how-title">
+        <div class="show__pin wrap">
+          <div class="show__text">
+            <h2 id="how-title">How it works</h2>
+            <ol class="show__steps">
+              <li class="show__step is-on" data-step="0">
+                <span class="show__n" aria-hidden="true">1</span>
+                <div><h3>Name your topic</h3><p>Add a range, like “from limits to the chain rule”, and say how you like to be taught.</p></div>
+              </li>
+              <li class="show__step" data-step="1">
+                <span class="show__n" aria-hidden="true">2</span>
+                <div><h3>AI plans the lessons</h3><p>You get a detailed outline, as long as your range needs, grouped into units, in the order to learn them.</p></div>
+              </li>
+              <li class="show__step" data-step="2">
+                <span class="show__n" aria-hidden="true">3</span>
+                <div><h3>Learn in checkpoints</h3><p>Each lesson opens piece by piece as you answer. Get one wrong and it revises with you first.</p></div>
+              </li>
+              <li class="show__step" data-step="3">
+                <span class="show__n" aria-hidden="true">4</span>
+                <div><h3>Ask about anything</h3><p>Select a line or sketch on the whiteboard to ask a doubt right where it came up.</p></div>
+              </li>
+            </ol>
+          </div>
+
+          <!-- a picture of the app at work: four screens, the one that matches the step in front -->
+          <div class="frame" aria-hidden="true" data-no-i18n>
+            <div class="frame__bar"><span class="frame__logo">Primer</span><span class="frame__crumb">How black holes work</span></div>
+            <div class="frame__body">
+              <div class="scr scr--topic is-on" data-scr="0">
+                <p class="scr__label">What do you want to learn?</p>
+                <div class="scr__ask"><span class="scr__typed" data-typed>How black holes work</span><span class="scr__caret"></span></div>
+                <div class="scr__row">
+                  <span class="scr__chip">Range: from gravity to Hawking radiation</span>
+                  <span class="scr__chip">English</span>
+                </div>
+                <span class="scr__btn">Build my course</span>
+              </div>
+
+              <div class="scr scr--outline" data-scr="1">
+                <p class="scr__title">How black holes work</p>
+                <p class="scr__meta">12 lessons in 3 units</p>
+                <div class="scr__unit"><p class="scr__uh">Unit 1 · Gravity and light</p>
+                  <p class="scr__ls"><b>1</b> What gravity does to light</p><p class="scr__ls"><b>2</b> Escape velocity</p><p class="scr__ls"><b>3</b> How a star collapses</p></div>
+                <div class="scr__unit"><p class="scr__uh">Unit 2 · Inside a black hole</p>
+                  <p class="scr__ls"><b>4</b> The event horizon</p><p class="scr__ls"><b>5</b> Spacetime near a black hole</p><p class="scr__ls"><b>6</b> Singularities</p><p class="scr__ls"><b>7</b> Hawking radiation</p></div>
+                <div class="scr__unit"><p class="scr__uh">Unit 3 · Seeing the invisible</p>
+                  <p class="scr__ls"><b>8</b> Accretion disks</p><p class="scr__ls"><b>9</b> The first photograph</p><p class="scr__ls"><b>10</b> Gravitational waves</p><p class="scr__ls"><b>11</b> Black holes and galaxies</p><p class="scr__ls"><b>12</b> What we still don’t know</p></div>
+              </div>
+
+              <div class="scr scr--lesson" data-scr="2">
+                <div class="paper">
+                  <p class="paper__kicker">Lesson 4 · Part 1</p>
+                  <p class="paper__h">The event horizon</p>
+                  <p class="paper__p">Around every black hole is a boundary called the event horizon. Inside it, the pull of gravity is so strong that the speed needed to escape is greater than the speed of light.</p>
+                  <div class="check">
+                    <p class="check__k">Checkpoint</p>
+                    <p class="check__q">What can escape from inside the event horizon?</p>
+                    <p class="check__o">Light, but nothing slower</p>
+                    <p class="check__o check__o--right" data-pick>Nothing at all <span class="check__ok">Correct</span></p>
+                    <p class="check__o">Only radio waves</p>
+                  </div>
+                  <p class="paper__next" data-unlock><span>Part 2</span> Spacetime near a black hole</p>
+                </div>
+              </div>
+
+              <div class="scr scr--ask" data-scr="3">
+                <div class="paper paper--short">
+                  <p class="paper__h">The event horizon</p>
+                  <p class="paper__p">Inside it, <mark data-mark>the pull of gravity is so strong that the speed needed to escape is greater than the speed of light</mark>.</p>
+                </div>
+                <div class="tutor-demo">
+                  <p class="tutor-demo__me" lang="hi">यह हिस्सा आसान शब्दों में समझाइए।</p>
+                  <p class="tutor-demo__ai" lang="hi" data-reply>घटना क्षितिज वह सीमा है जिसके भीतर से प्रकाश भी बाहर नहीं निकल सकता। इसे पार करने वाली हर चीज़ ब्लैक होल के केंद्र की ओर ही जाती है।</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <ol class="steps">
-          <li class="step card">
-            <span class="step__num" aria-hidden="true">1</span>
-            <h3>Name your topic</h3>
-            <p>Add a range, like “from limits to the chain rule”, and say how you like to be taught.</p>
-          </li>
-          <li class="step card">
-            <span class="step__num" aria-hidden="true">2</span>
-            <h3>AI plans the lessons</h3>
-            <p>You get a detailed outline, as long as your range needs, grouped into units, in the order to learn them.</p>
-          </li>
-          <li class="step card">
-            <span class="step__num" aria-hidden="true">3</span>
-            <h3>Learn in checkpoints</h3>
-            <p>Each lesson opens piece by piece as you answer. Get one wrong and it revises with you first.</p>
-          </li>
-          <li class="step card">
-            <span class="step__num" aria-hidden="true">4</span>
-            <h3>Ask about anything</h3>
-            <p>Select a line or sketch on the whiteboard to ask a doubt right where it came up.</p>
-          </li>
-        </ol>
       </section>
 
-      <!-- Features -->
-      <section class="section wrap" id="features" aria-labelledby="features-title">
+      <!-- The garden: a course grows as it is learned (assets/js/garden.js) -->
+      <section class="grow wrap" id="grow" aria-labelledby="grow-title">
         <div class="section__head">
-          <h2 id="features-title">Built for how you actually learn</h2>
-          <p>Reading is only half of it. These are the parts that make it stick.</p>
+          <h2 id="grow-title">Your course grows as you learn</h2>
+          <p>Every lesson you finish puts out leaves. Every unit you finish opens a flower. Finish the course and it blooms.</p>
         </div>
-        <ul class="features">
-          <li class="feature card"><h3>Set the range</h3><p>Start from the very beginning or from what you already know, and stop where you need to.</p></li>
-          <li class="feature card"><h3>Teaching instructions</h3><p>Ask for LaTeX, mnemonics, worked examples or “explain like I’m five”, and the lessons follow.</p></li>
-          <li class="feature card"><h3>Checkpoint lessons</h3><p>Questions sit inside the lesson. The next part opens only when you’ve answered.</p></li>
-          <li class="feature card"><h3>Revision when you slip</h3><p>A wrong answer brings back the key points of that section before you try again.</p></li>
-          <li class="feature card"><h3>Real maths notation</h3><p>Formulas render properly, so fractions and roots look the way they do in a textbook.</p></li>
-          <li class="feature card"><h3>Ask about any line</h3><p>Highlight a sentence and ask about exactly that part, without leaving the lesson.</p></li>
-          <li class="feature card"><h3>Whiteboard doubts</h3><p>Circle, underline or sketch on the notes, then ask about what you drew.</p></li>
-          <li class="feature card"><h3>Written answers</h3><p>Some questions want your own words, with a model answer to compare against.</p></li>
-        </ul>
+        <div class="grow__plate">
+          <p class="grow__course" data-no-i18n>How black holes work</p>
+          <div class="grow__garden" id="grow-garden"></div>
+          <div class="grow__controls">
+            <label for="grow-range">Lessons done</label>
+            <input type="range" id="grow-range" min="0" max="12" value="12" step="1">
+            <output id="grow-out" for="grow-range"></output>
+          </div>
+        </div>
+      </section>
+
+      <!-- Contents: what is inside, set like a book's contents page -->
+      <section class="contents wrap" id="features" aria-labelledby="contents-title">
+        <div class="contents__page">
+          <h2 id="contents-title">Contents</h2>
+          <p class="contents__sub">Everything inside Primer, in the order you’ll meet it.</p>
+          <ol class="toc">
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">I</span><span class="toc__t">Lessons written when you open them</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">with maths and diagrams</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">II</span><span class="toc__t">Checkpoints inside every lesson</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">revision when you slip</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">III</span><span class="toc__t">A tutor that remembers</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">your doubts and mistakes</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">IV</span><span class="toc__t">Talk to it, hands-free</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">in your language</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">V</span><span class="toc__t">Twenty languages</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">Hindi, Bhojpuri, Tamil and more</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">VI</span><span class="toc__t">Watch mode and sign language</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">videos with quizzes</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">VII</span><span class="toc__t">Courses from your own knowledge</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">or a photo, or a textbook page</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">VIII</span><span class="toc__t">Sources for every lesson</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">and apps to practise in</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">IX</span><span class="toc__t">Unit exams and a skill passport</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">certificates anyone can check</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">X</span><span class="toc__t">Works offline</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">a whole course in one file</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">XI</span><span class="toc__t">Class mode for teachers</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">one code, a whole class</span></li>
+            <li class="toc__row"><span class="toc__n" aria-hidden="true">XII</span><span class="toc__t">Study methods and a timer</span><span class="toc__dots" aria-hidden="true"></span><span class="toc__p">Pomodoro to Feynman</span></li>
+          </ol>
+        </div>
       </section>
 
       <!-- Reading room -->

@@ -1,10 +1,24 @@
-/* Landing page */
-.hero{text-align:center;padding:clamp(64px,13vh,136px) 0 clamp(40px,6vh,72px)}
-.hero h1{font-size:clamp(2.6rem, 7.2vw, 5.4rem);line-height:1.04;letter-spacing:-.006em;margin:1.5rem auto 0}
-.h1-line{display:inline-block}
-.lead{max-width:33em;margin:1.4rem auto 0;font-size:clamp(1.18rem, 2.1vw, 1.38rem);line-height:1.5;color:var(--cream-dim);text-shadow:var(--shadow-text)}
+/* =====================================================================
+   Landing page. One idea per screen: the hero (the letters gather into
+   your topic), the app at work, the garden, the contents, the reading
+   room, the invitation. Motion lives in assets/js/landing-fx.js; every
+   section reads complete without it.
+   ===================================================================== */
 
-.ask{display:flex;gap:10px;max-width:630px;margin:2.3rem auto 0}
+/* ---------- hero ---------- */
+.hero{
+  text-align:center;min-height:calc(100svh - 84px);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:clamp(20px,5vh,64px) 0 clamp(24px,5vh,56px);
+}
+.hero h1{font-size:clamp(2.5rem,6.4vw,4.9rem);line-height:1.04;letter-spacing:-.006em;margin:1.2rem auto 0}
+.h1-line{display:inline-block}
+.hero__stage{position:relative;width:min(1180px, 100vw - 2 * var(--gutter));height:clamp(120px,24svh,250px);margin:clamp(.4rem,1.6vh,1.2rem) auto 0}
+/* a pool of shadow behind the word, so the gathered letters read before the shelves */
+.hero__stage::before{content:"";position:absolute;inset:-14% -4%;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(10,6,3,.82), rgba(10,6,3,.5) 55%, transparent 76%);pointer-events:none}
+.hero__swarm{position:absolute;inset:0;width:100%;height:100%;display:block}
+.lead{max-width:33em;margin:clamp(.4rem,1.4vh,1rem) auto 0;font-size:clamp(1.14rem,2vw,1.34rem);line-height:1.5;color:var(--cream-dim);text-shadow:var(--shadow-text)}
+
+.ask{display:flex;gap:10px;width:100%;max-width:630px;margin:clamp(1.2rem,3vh,2.1rem) auto 0}
 .ask__field{position:relative;flex:1;min-width:0;display:flex}
 .ask__field .input{font-size:1.2rem;padding:.78rem 1rem;box-shadow:inset 0 0 0 3px rgba(14,9,4,.45), inset 0 0 0 4px rgba(214,165,84,.08), 0 10px 30px -14px rgba(0,0,0,.9)}
 .ask__type{
@@ -15,32 +29,136 @@
 }
 .ask__type .text-type{white-space:nowrap}
 .ask__field.is-quiet .ask__type{opacity:0}
-.chips--hero{justify-content:center;margin:1.15rem auto 0;max-width:640px}
-.hero__note{margin-top:1.4rem;color:var(--muted);font-style:italic;font-size:1.05rem;text-shadow:var(--shadow-text)}
+.chips--hero{justify-content:center;margin:1.1rem auto 0;max-width:640px}
+.hero__note{margin-top:1.2rem;color:var(--muted);font-style:italic;font-size:1.05rem;text-shadow:var(--shadow-text)}
 .hero__note a{color:var(--gold)}
 
+/* ---------- one idea per screen: each section fills it, its content in the middle ---------- */
+.grow,.contents,#reading-room{min-height:100svh;display:flex;flex-direction:column;justify-content:center;padding-block:clamp(56px,9vh,96px)}
+
+/* ---------- shared section heads ---------- */
 .section{padding-top:clamp(64px,11vh,112px)}
 .section__head{margin-bottom:2rem}
 .section__head h2{font-size:clamp(2.05rem,4.6vw,3.05rem)}
 .section__head p{max-width:36rem;margin-top:.7rem;color:var(--cream-dim);font-size:1.15rem;text-shadow:var(--shadow-text)}
 
-.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.step{padding:1.65rem 1.45rem 1.6rem}
-.step__num{
-  display:grid;place-items:center;width:48px;height:48px;border-radius:50%;margin-bottom:1.15rem;
-  font-family:var(--font-head);font-size:1.5rem;line-height:1;color:var(--gold-ink);
-  background:radial-gradient(circle at 35% 28%, #f8dea3 0%, #d6a554 52%, #94692b 100%);
-  box-shadow:0 0 0 1px #8a6128, 0 0 0 5px rgba(214,165,84,.12), 0 8px 16px -6px rgba(0,0,0,.8);
-  text-shadow:0 1px 0 rgba(255,240,205,.55);
+/* ---------- how it works: the app at work ---------- */
+.show{padding-top:clamp(64px,11vh,112px)}
+.show__pin{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:clamp(24px,4vw,56px);align-items:center}
+.show.is-pinned .show__pin{min-height:100svh;padding-block:6vh}
+.show__text h2{font-size:clamp(2.05rem,4.6vw,3.05rem);margin-bottom:1.3rem}
+.show__steps{list-style:none;margin:0;padding:0;display:grid;gap:.35rem}
+.show__step{
+  display:grid;grid-template-columns:42px minmax(0,1fr);gap:.95rem;align-items:start;padding:.85rem 1rem;
+  border:1px solid transparent;border-radius:var(--radius);opacity:.46;
+  transition:opacity .4s var(--ease-out), background-color .4s var(--ease-out), border-color .4s var(--ease-out);
 }
-.step h3{font-size:1.42rem;margin-bottom:.45rem;text-shadow:none}
-.step p{color:var(--cream-dim);font-size:1.06rem;line-height:1.45}
+.show__step.is-on,.show.is-static .show__step{opacity:1}
+.show__step.is-on{background:rgba(30,19,11,.74);border-color:var(--hairline)}
+.show__n{
+  display:grid;place-items:center;width:42px;height:42px;border-radius:50%;
+  font-family:var(--font-head);font-size:1.3rem;line-height:1;color:var(--gold-ink);
+  background:radial-gradient(circle at 35% 28%, #f8dea3 0%, #d6a554 52%, #94692b 100%);
+  box-shadow:0 0 0 1px #8a6128, 0 0 0 4px rgba(214,165,84,.12), 0 8px 16px -6px rgba(0,0,0,.8);
+}
+.show__step h3{font-size:1.3rem;margin-bottom:.25rem;text-shadow:none}
+.show__step p{color:var(--cream-dim);font-size:1.04rem;line-height:1.45}
 
-.features{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.feature{padding:1.5rem 1.4rem 1.45rem}
-.feature h3{font-size:1.32rem;margin-bottom:.4rem;text-shadow:none}
-.feature p{color:var(--cream-dim);font-size:1.05rem;line-height:1.42}
+.frame{background:var(--panel-solid);border:1px solid var(--leather);border-radius:8px;box-shadow:var(--shadow-card);overflow:hidden}
+.frame__bar{display:flex;align-items:baseline;gap:.9rem;padding:.6rem 1.1rem;border-bottom:1px solid var(--hairline);background:rgba(16,10,5,.92)}
+.frame__logo{font-family:var(--font-head);font-size:1.1rem;color:var(--cream)}
+.frame__crumb{font-style:italic;color:var(--muted);font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frame__body{position:relative;padding:1.3rem}
+.show.is-pinned .frame__body{height:min(540px, 66svh)}
+.show.is-pinned .scr{position:absolute;inset:1.3rem;display:flex;flex-direction:column;justify-content:center}
+.show.is-pinned .scr--outline{justify-content:flex-start}
+.scr--topic{align-items:flex-start}
+.scr + .scr{margin-top:1.3rem;padding-top:1.3rem;border-top:1px dashed var(--hairline)}
+.show.is-pinned .scr + .scr{margin:0;padding:0;border:0}
 
+/* screen 1: naming the topic */
+.scr__label{font-family:var(--font-head);font-size:1.45rem;color:var(--cream)}
+.scr__ask{
+  display:flex;align-items:center;margin-top:.9rem;padding:.75rem 1rem;font-size:1.25rem;color:var(--cream);
+  background:rgba(14,9,4,.85);border:1px solid var(--leather);border-radius:var(--btn-radius);
+  box-shadow:inset 0 0 0 3px rgba(14,9,4,.45);
+}
+.scr__caret{display:inline-block;width:2px;height:1.2em;margin-left:2px;background:var(--gold);animation:caret 1s steps(1) infinite}
+@keyframes caret{50%{opacity:0}}
+.scr__row{display:flex;flex-wrap:wrap;gap:8px;margin-top:.9rem}
+.scr__chip{padding:.3rem .75rem;border:1px solid var(--leather-soft);border-radius:999px;color:var(--cream-dim);font-size:1rem;background:rgba(30,19,10,.6)}
+.scr__btn{
+  display:inline-block;margin-top:1.2rem;padding:.65rem 1.3rem;border-radius:var(--btn-radius);
+  font-family:var(--font-head);font-size:1.15rem;color:var(--gold-ink);
+  background:linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, var(--gold-lo));box-shadow:0 8px 18px -8px rgba(0,0,0,.8);
+}
+
+/* screen 2: the outline */
+.scr__title{font-family:var(--font-head);font-size:1.6rem;color:var(--cream);line-height:1.1}
+.scr__meta{font-style:italic;color:var(--muted);margin-top:.15rem}
+.scr__unit{margin-top:.75rem}
+.scr__uh{font-family:var(--font-head);color:var(--gold);font-size:1.08rem;margin-bottom:.15rem}
+.scr__ls{display:flex;align-items:baseline;gap:.6rem;color:var(--cream-dim);font-size:1rem;line-height:1.55}
+.scr__ls b{display:inline-grid;place-items:center;min-width:1.5rem;font-weight:500;font-size:.85rem;color:var(--gold-ink);background:rgba(214,165,84,.8);border-radius:999px;padding:0 .3rem;line-height:1.5}
+
+/* screens 3 and 4: a lesson on its paper */
+.paper{
+  background:linear-gradient(180deg, var(--parchment), var(--parchment-2));color:var(--ink);
+  border-radius:4px;padding:1.1rem 1.3rem;box-shadow:inset 0 0 40px rgba(120,90,40,.22), 0 12px 26px -14px rgba(0,0,0,.9);
+}
+.paper__kicker{font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-gold)}
+.paper__h{font-family:var(--font-head);font-size:1.5rem;color:var(--ink);line-height:1.15;margin-top:.15rem}
+.paper__p{margin-top:.5rem;font-size:1.08rem;line-height:1.5}
+.check{margin-top:.85rem;padding:.75rem .95rem;background:rgba(201,180,138,.35);border:1px solid var(--parchment-edge);border-radius:4px}
+.check__k{font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-gold)}
+.check__q{font-weight:600;margin:.2rem 0 .45rem}
+.check__o{display:flex;justify-content:space-between;gap:.5rem;padding:.32rem .7rem;margin-top:.3rem;border:1px solid rgba(91,71,48,.35);border-radius:3px;background:rgba(255,250,235,.35)}
+.check__o--right{border-color:var(--ink-green);background:rgba(61,106,44,.14)}
+.check__ok{font-size:.9rem;font-style:italic;color:var(--ink-green)}
+.paper__next{margin-top:.7rem;padding-top:.55rem;border-top:1px solid rgba(91,71,48,.25);color:var(--ink-soft);font-family:var(--font-head);font-size:1.12rem}
+.paper__next span{font-family:var(--font-body);font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-gold);margin-right:.4rem}
+.paper mark{color:inherit;background:linear-gradient(transparent 52%, rgba(214,165,84,.6) 52%) no-repeat;background-size:100% 100%;padding:0 .05em}
+.tutor-demo{display:grid;gap:.6rem;margin-top:1rem}
+.tutor-demo p{max-width:88%;padding:.6rem .85rem;border-radius:6px;font-size:1.06rem;line-height:1.55;font-family:var(--font-body), "Nirmala UI", "Noto Sans Devanagari", sans-serif}
+.tutor-demo__me{justify-self:end;background:var(--leather);color:var(--cream)}
+.tutor-demo__ai{justify-self:start;background:rgba(30,19,11,.9);color:var(--cream);border-left:3px solid var(--gold)}
+
+/* ---------- the garden ---------- */
+.grow__plate{
+  position:relative;padding:clamp(22px,4vw,48px) clamp(16px,4vw,48px) clamp(20px,3vw,36px);
+  background:radial-gradient(ellipse at 50% 25%, rgba(90,62,38,.6), rgba(22,14,7,.95) 72%);
+  border:1px solid var(--leather);border-radius:8px;box-shadow:var(--shadow-card);
+}
+/* the double fillet of a gilded binding */
+.grow__plate::after{content:"";position:absolute;inset:9px;border:3px double rgba(214,165,84,.34);border-radius:4px;pointer-events:none}
+.grow__course{
+  text-align:center;font-family:var(--font-head);font-size:clamp(1.8rem,4.2vw,2.9rem);line-height:1.1;color:var(--gold-hi);
+  text-shadow:0 1px 0 rgba(0,0,0,.85), 0 0 22px rgba(214,165,84,.28);
+}
+.grow__garden{margin-top:.4rem}
+.grow__controls{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.6rem 1rem;margin-top:.8rem}
+.grow__controls label{font-family:var(--font-head);font-size:1.12rem;color:var(--cream)}
+.grow__controls input[type=range]{width:min(340px, 100%);accent-color:var(--gold);min-height:44px;cursor:pointer}
+.grow__controls output{font-style:italic;color:var(--cream-dim);min-width:11ch}
+
+/* ---------- contents: a book's contents page ---------- */
+.contents__page{
+  position:relative;color:var(--ink);border-radius:4px;padding:clamp(30px,6vw,72px) clamp(18px,6vw,84px);
+  background:radial-gradient(ellipse at 50% 40%, var(--parchment) 55%, var(--parchment-2) 100%);
+  box-shadow:0 34px 70px -34px rgba(0,0,0,.95), inset 0 0 70px rgba(120,90,40,.28);
+}
+.contents h2{color:var(--ink);text-shadow:none;text-align:center;font-size:clamp(2.3rem,5vw,3.3rem);letter-spacing:.03em}
+.contents__sub{text-align:center;font-style:italic;color:var(--ink-soft);margin-top:.35rem;font-size:1.12rem}
+.toc{list-style:none;margin:clamp(1.4rem,3vw,2.4rem) auto 0;padding:0;max-width:780px}
+.toc__row{display:flex;align-items:baseline;gap:.7rem;padding:.5rem 0;font-size:clamp(1.06rem,1.8vw,1.24rem)}
+.toc__n{flex:0 0 2.8rem;font-family:var(--font-head);color:var(--ink-gold);text-align:right}
+.toc__t{font-family:var(--font-head);color:var(--ink);transition:color .25s var(--ease-out)}
+.toc__dots{flex:1 1 1.5rem;min-width:1.5rem;height:0;border-bottom:2px dotted rgba(91,71,48,.42);transform:translateY(-.28em);transition:border-color .25s var(--ease-out)}
+.toc__p{font-style:italic;color:var(--ink-soft);text-align:right}
+.toc__row:hover .toc__t{color:var(--ink-red)}
+.toc__row:hover .toc__dots{border-bottom-color:var(--ink-gold)}
+
+/* ---------- reading room ---------- */
 .wall{
   position:relative;height:clamp(300px,40vw,400px);overflow:hidden;cursor:pointer;
   background:rgba(13,8,4,.82);border:1px solid var(--leather);border-radius:var(--radius);
@@ -53,17 +171,24 @@
 .wall__word:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .wall__foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem 1rem;margin-top:.9rem;color:var(--muted);font-style:italic;font-size:1.02rem;text-shadow:var(--shadow-text)}
 
+/* ---------- invitation ---------- */
 .cta{text-align:center;padding:clamp(56px,9vw,88px) var(--gutter);margin-top:clamp(64px,11vh,112px)}
 .cta h2{font-size:clamp(2.05rem,4.6vw,3.05rem)}
 .cta p{max-width:32rem;margin:.8rem auto 0;color:var(--cream-dim);font-size:1.15rem}
 .cta__actions{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:1rem 1.6rem;margin-top:1.8rem}
 
-@media (max-width:900px){
-  .steps,.features{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* ---------- smaller screens ---------- */
+@media (max-width:899px){
+  .show__pin{grid-template-columns:1fr}
+  .show__step{opacity:1}
 }
 @media (max-width:560px){
   .h1-line{display:inline}
   .ask{flex-direction:column}
-  .steps,.features{grid-template-columns:1fr}
   .nav__link--hide-sm{display:none}
+  .toc__row{flex-wrap:wrap;gap:.15rem .7rem}
+  .toc__dots{display:none}
+  .toc__t{flex:1 1 0}
+  .toc__p{flex:1 0 100%;padding-left:3.5rem;text-align:left;font-size:.98rem}
+  .frame__body{padding:1rem}
 }
