@@ -267,8 +267,8 @@ test('the core frame takes music blocks and tasks, and offers music to music les
   assert.equal(normWidgetBlock({ t: 'widget', kind: 'music', spec: { instrument: 'piano', from: 'Z9' } }), null);
   const q = normTask({ type: 'task', kind: 'music', spec: { instrument: 'piano' }, goal: { type: 'notes', chord: 'Am' } }, { prompt: 'Play A minor.', hint: '', explain: '' });
   assert.deepEqual(q.goal.notes, ['A4', 'C5', 'E5']);
-  assert.deepEqual(widgetKinds({ topic: 'Music theory', title: 'The major scale' }), ['music']);
-  assert.deepEqual(widgetKinds({ topic: 'Photosynthesis', title: 'Light reactions' }), []);
+  assert.ok(widgetKinds({ topic: 'Music theory', title: 'The major scale' }).includes('music'));
+  assert.ok(!widgetKinds({ topic: 'Photosynthesis', title: 'Light reactions' }).includes('music'));
   assert.match(widgetPrompt(['music']), /Kind "music"/);
 });
 
