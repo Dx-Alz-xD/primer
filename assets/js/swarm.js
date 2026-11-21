@@ -18,24 +18,27 @@
   const P = window.Primer = window.Primer || {};
   const LATIN = Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789&§¶');
   // a word in another script gathers from that script's own letters (its consonants)
+  // [first and last code point of the script's block, then of its consonants]
   const SCRIPTS = [
-    [/[ऀ-ॿ]/, 0x0915, 0x0939], // Devanagari: Hindi, Marathi, Bhojpuri, Maithili, Nepali
-    [/[ঀ-৿]/, 0x0995, 0x09B9], // Bengali, Assamese
-    [/[਀-੿]/, 0x0A15, 0x0A39], // Gurmukhi
-    [/[઀-૿]/, 0x0A95, 0x0AB9], // Gujarati
-    [/[଀-୿]/, 0x0B15, 0x0B39], // Odia
-    [/[஀-௿]/, 0x0B95, 0x0BB9], // Tamil
-    [/[ఀ-౿]/, 0x0C15, 0x0C39], // Telugu
-    [/[ಀ-೿]/, 0x0C95, 0x0CB9], // Kannada
-    [/[ഀ-ൿ]/, 0x0D15, 0x0D39], // Malayalam
-    [/[؀-ۿ]/, 0x0628, 0x064A], // Arabic, Urdu
-    [/[Ѐ-ӿ]/, 0x0410, 0x042F]  // Cyrillic
+    [0x0900, 0x097F, 0x0915, 0x0939], // Devanagari: Hindi, Marathi, Bhojpuri, Maithili, Nepali
+    [0x0980, 0x09FF, 0x0995, 0x09B9], // Bengali, Assamese
+    [0x0A00, 0x0A7F, 0x0A15, 0x0A39], // Gurmukhi
+    [0x0A80, 0x0AFF, 0x0A95, 0x0AB9], // Gujarati
+    [0x0B00, 0x0B7F, 0x0B15, 0x0B39], // Odia
+    [0x0B80, 0x0BFF, 0x0B95, 0x0BB9], // Tamil
+    [0x0C00, 0x0C7F, 0x0C15, 0x0C39], // Telugu
+    [0x0C80, 0x0CFF, 0x0C95, 0x0CB9], // Kannada
+    [0x0D00, 0x0D7F, 0x0D15, 0x0D39], // Malayalam
+    [0x0600, 0x06FF, 0x0628, 0x064A], // Arabic, Urdu
+    [0x0400, 0x04FF, 0x0410, 0x042F]  // Cyrillic
   ];
+  const LETTER = new RegExp(String.fromCharCode(92) + 'p{L}', 'u'); // any letter (skips the block's unassigned places)
+  const inBlock = (text, lo, hi) => Array.from(text).some((ch) => { const c = ch.codePointAt(0); return c >= lo && c <= hi; });
   function glyphsFor(text) {
-    for (const [re, a, b] of SCRIPTS) {
-      if (!re.test(text)) continue;
+    for (const [lo, hi, a, b] of SCRIPTS) {
+      if (!inBlock(text, lo, hi)) continue;
       const out = [];
-      for (let c = a; c <= b; c++) { const ch = String.fromCodePoint(c); if (/\p{L}/u.test(ch)) out.push(ch); }
+      for (let c = a; c <= b; c++) { const ch = String.fromCodePoint(c); if (LETTER.test(ch)) out.push(ch); }
       if (out.length > 8) return out;
     }
     return LATIN;

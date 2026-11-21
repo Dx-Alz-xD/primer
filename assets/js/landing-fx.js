@@ -27,7 +27,14 @@
   const reduce = () => Boolean(P.motion && P.motion.reduce);
   const t = (s) => (P.t ? P.t(s) : s);
   const fill = (s, v) => t(s).replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
-  const ready = Promise.race([P.tReady || Promise.resolve(), new Promise((r) => setTimeout(r, 1500))]);
+  // the page is translated by i18n.js once the dictionary is in and the page has loaded (DOMContentLoaded);
+  // wait for that pass (a cached dictionary can arrive first), so the headline is split in its own language
+  const translated = new Promise((resolve) => {
+    const after = () => Promise.resolve(P.tReady).then(() => setTimeout(resolve, 0));
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', after, { once: true });
+    else after();
+  });
+  const ready = Promise.race([translated, new Promise((r) => setTimeout(r, 1500))]);
   if (g && ST) g.registerPlugin(ST);
   if (g && Split) g.registerPlugin(Split);
   const live = () => Boolean(g) && !reduce();
@@ -39,12 +46,18 @@
     g.set([h1, ...rest], { autoAlpha: 0 }); // nothing shows before its entrance (the text may still be translated)
     ready.then(() => {
       g.set(h1, { autoAlpha: 1 });
-      if (Split) {
-        Split.create(h1, {
-          type: 'words,chars', mask: 'words', autoSplit: true,
-          onSplit: (self) => g.from(self.chars, { yPercent: 115, duration: 1.05, ease: 'power4.out', stagger: 0.017 })
-        });
-      }
+      // the headline letter by letter; whatever happens there, the rest of the hero still comes in
+      // (Latin and Cyrillic letter by letter; any other script word by word, since splitting
+      // Devanagari or Tamil between letters tears off vowel signs, and Arabic letters must join)
+      try {
+        if (Split) {
+          const byLetter = Array.from(h1.textContent).every((ch) => { const c = ch.codePointAt(0); return c <= 0x024F || (c >= 0x0400 && c <= 0x04FF) || (c >= 0x2000 && c <= 0x206F); });
+          Split.create(h1, {
+            type: byLetter ? 'words,chars' : 'words', mask: 'words', autoSplit: true,
+            onSplit: (self) => g.from(byLetter ? self.chars : self.words, { yPercent: 115, duration: 1.05, ease: 'power4.out', stagger: byLetter ? 0.017 : 0.09 })
+          });
+        }
+      } catch (e) { /* the headline simply shows */ }
       g.fromTo(rest, { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.9, ease: 'power3.out', stagger: 0.07, delay: 0.4, clearProps: 'transform' });
     });
   }
