@@ -113,7 +113,7 @@
       const d = await P.get('/api/tutor');
       log.innerHTML = '';
       if (!d.ai) {
-        log.innerHTML = '<li class="tutor__empty"><p>The tutor needs an AI key on the server. Add OPENROUTER_API_KEY to .env and restart Primer.</p></li>';
+        log.innerHTML = '<li class="tutor__empty"><p>The tutor needs an AI key on the server. Add a Gemini, Groq, Requesty or OpenRouter key to .env and restart Primer.</p></li>';
         form.hidden = true;
         return;
       }

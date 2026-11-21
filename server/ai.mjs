@@ -1,8 +1,10 @@
 // =====================================================================
-// Primer AI: course outlines and lessons from OpenRouter's free models.
+// Primer AI: course outlines and lessons from free models at several
+// providers (Gemini, Groq, Requesty, OpenRouter).
 //
-// - Tries each model in OPENROUTER_MODELS in order; a busy or failing
-//   model falls through to the next one.
+// - Every provider is optional: one without a key is skipped. They are
+//   tried in PRIMER_AI_ORDER, and each one's models in its *_MODELS
+//   order; a busy or failing model falls through to the next one.
 // - Asks for JSON in Primer's lesson format, repairs the usual LaTeX
 //   escaping mistakes, and checks the shape before accepting it.
 // - Caches every outline and lesson in data/cache, so the same request
@@ -17,12 +19,78 @@ import { promptNote, safetyKey } from './safety.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache');
-const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
+// Every provider speaks OpenAI's chat-completions format. `keys` are the .env names its key
+// may have (the first one set wins); `models` are tried in order unless `modelsVar` lists others.
+// The default models are free ones that wrote a full lesson in Primer's format when tested.
+export const PROVIDERS = {
+  groq: {
+    name: 'Groq',
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    catalog: 'https://api.groq.com/openai/v1/models',
+    keys: ['GROQ_KEY', 'GROQ_API_KEY'],
+    modelsVar: 'GROQ_MODELS',
+    models: ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b']
+  },
+  gemini: {
+    name: 'Gemini',
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    catalog: 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',
+    keys: ['GEM_KEY', 'GEMINI_API_KEY'],
+    modelsVar: 'GEMINI_MODELS',
+    models: ['gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest']
+  },
+  requesty: {
+    name: 'Requesty',
+    url: 'https://router.requesty.ai/v1/chat/completions',
+    catalog: 'https://router.requesty.ai/v1/models',
+    keys: ['REQ_KEY', 'REQUESTY_API_KEY'],
+    modelsVar: 'REQUESTY_MODELS',
+    models: ['nvidia/nemotron-3-ultra-550b-a55b', 'nvidia/nemotron-3.5-lightning-30b-a3b']
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    keys: ['OPENROUTER_API_KEY'],
+    modelsVar: 'OPENROUTER_MODELS',
+    models: ['openrouter/free']
+  }
+};
+// Groq first: it wrote every test lesson in 3 to 8 seconds and fails fast when busy. Gemini writes
+// fuller lessons but is often "experiencing high demand"; Requesty's free models are slow (about
+// a minute a lesson); OpenRouter's free models allow only 50 requests a day.
+export const DEFAULT_ORDER = ['groq', 'gemini', 'requesty', 'openrouter'];
+
+const env = (name) => (process.env[name] || '').trim();
+const csv = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
+
+// The key for a provider and the name it was found under, or null. Never leaves this file.
+function keyOf(id) {
+  for (const name of PROVIDERS[id].keys) if (env(name)) return { key: env(name), name };
+  return null;
+}
+
+// Keys (and account ids, which Groq puts in its errors) are taken out of anything a provider
+// says back before it is logged.
+function hideKeys(message) {
+  let out = String(message || '');
+  for (const p of Object.values(PROVIDERS)) for (const name of p.keys) { const k = env(name); if (k.length >= 8) out = out.split(k).join('[key]'); }
+  return out.replace(/\borg_[A-Za-z0-9]{6,}/g, 'org_…');
+}
+
+// Which providers have a key, in the order they are tried. Contains no keys, so it is safe to show.
+// PRIMER_AI_ORDER (e.g. "gemini,groq,openrouter,requesty") sets the order; a provider it leaves out is not used.
 export function config() {
+  const asked = [...new Set(csv(env('PRIMER_AI_ORDER').toLowerCase()))].filter((id) => PROVIDERS[id]);
+  const providers = (asked.length ? asked : DEFAULT_ORDER)
+    .filter((id) => keyOf(id))
+    .map((id) => ({ id, name: PROVIDERS[id].name, models: env(PROVIDERS[id].modelsVar) ? csv(env(PROVIDERS[id].modelsVar)) : PROVIDERS[id].models }))
+    .filter((p) => p.models.length);
   return {
-    key: (process.env.OPENROUTER_API_KEY || '').trim(),
-    models: (process.env.OPENROUTER_MODELS || 'openrouter/free').split(',').map((s) => s.trim()).filter(Boolean),
+    ai: providers.length > 0,
+    key: providers.length > 0, // for older callers that check config().key: true when any provider has a key (never a key)
+    providers,
+    models: providers.flatMap((p) => p.models.map((m) => `${p.id}:${m}`)),
     appName: process.env.OPENROUTER_APP_NAME || 'Primer',
     siteUrl: process.env.OPENROUTER_SITE_URL || 'http://localhost:5173'
   };
@@ -348,10 +416,63 @@ export function normalizeLesson(raw, lessonTitle = 'this lesson') {
 }
 
 /* ------------------------------------------------------------------ */
-/* OpenRouter                                                          */
+/* Calling the providers                                               */
 /* ------------------------------------------------------------------ */
 
 const short = (s) => String(s || '').replace(/\s+/g, ' ').slice(0, 160);
+const bare = (model) => String(model).replace(/^models\//, '');
+
+// Each provider's own model list (Groq, Gemini, Requesty), fetched with its key every 6 hours.
+// It says which ids exist (one it doesn't list is skipped), how many tokens each may write, and
+// for Requesty which ones take JSON mode and how far thinking can be turned down.
+// If the list can't be fetched, nothing is skipped or capped, and it is asked for again in 5 minutes.
+const catalogs = new Map(); // provider -> { at, map, job }
+function readCatalog(id, data) {
+  const map = new Map();
+  if (id === 'gemini') {
+    for (const m of data.models || []) {
+      if (m && m.name && (m.supportedGenerationMethods || ['generateContent']).includes('generateContent')) map.set(bare(m.name), { maxOut: Number(m.outputTokenLimit) || 0 });
+    }
+  } else {
+    for (const m of data.data || []) {
+      if (!m || !m.id || m.active === false) continue;
+      map.set(m.id, {
+        maxOut: Number(m.max_completion_tokens ?? m.max_output_tokens) || 0,
+        efforts: (m.reasoning && m.reasoning.supported_efforts) || [],
+        json: id === 'requesty' ? Boolean(m.supports_output_json_object) : true
+      });
+    }
+  }
+  if (!map.size) throw new Error('empty model list');
+  return map;
+}
+async function catalogFor(id) {
+  const p = PROVIDERS[id];
+  if (!p.catalog) return null;
+  const c = catalogs.get(id);
+  if (c && c.job) return c.job;
+  if (c && Date.now() - c.at < (c.map ? 6 * 3600_000 : 5 * 60_000)) return c.map;
+  const job = (async () => {
+    let map = null;
+    try {
+      const { key } = keyOf(id) || {};
+      const res = await fetch(p.catalog, {
+        headers: id === 'gemini' ? { 'x-goog-api-key': key } : { Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(15000)
+      });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      map = readCatalog(id, await res.json());
+    } catch (err) {
+      console.log(`[ai] couldn't read ${p.name}'s model list (${hideKeys(err.message)})${c && c.map ? ', so the last one is used' : ', so its models are tried unchecked'}`);
+    }
+    if (map) catalogs.set(id, { at: Date.now(), map });
+    else if (c && c.map) catalogs.set(id, { at: Date.now() - 6 * 3600_000 + 5 * 60_000, map: c.map }); // keep the old list, ask again in 5 minutes
+    else catalogs.set(id, { at: Date.now(), map: null });
+    return catalogs.get(id).map;
+  })();
+  catalogs.set(id, { ...c, job });
+  return job;
+}
 
 // Every free model on OpenRouter can "think" before answering, which is slow and can use up the
 // whole answer budget. The public catalog says which models let us switch thinking off.
@@ -376,40 +497,79 @@ async function reasoningFor(model) {
   return efforts.length ? { effort: efforts[efforts.length - 1] } : undefined; // lowest it allows
 }
 
-async function callModel(model, messages, maxTokens, timeoutMs) {
-  const reasoning = await reasoningFor(model);
+// What each provider needs besides the common fields, for one model:
+// - thinking kept low, each in the provider's own way, so it doesn't eat the answer budget
+//   (only OpenRouter gets OpenRouter's `reasoning` field; the others take `reasoning_effort`);
+// - JSON mode where the model supports it;
+// - the model's own output limit, from the provider's model list.
+// { missing: true } means the provider's list doesn't have the model.
+async function requestFor(id, model) {
+  if (id === 'openrouter') {
+    const reasoning = await reasoningFor(model);
+    return { json: true, maxOut: 0, extra: reasoning ? { reasoning: { ...reasoning, exclude: true } } : {} };
+  }
+  const list = await catalogFor(id);
+  const info = list ? list.get(bare(model)) : null;
+  if (list && !info) return { missing: true };
+  const out = { json: info ? info.json !== false : id !== 'requesty', maxOut: (info && info.maxOut) || 0, extra: {} };
+  if (id === 'groq') {
+    // gpt-oss always thinks a little ("low" is its least); qwen3 can skip it
+    if (/gpt-oss/i.test(model)) out.extra = { reasoning_effort: 'low', include_reasoning: false };
+    else if (/qwen3/i.test(model)) out.extra = { reasoning_effort: 'none' };
+  } else if (id === 'gemini') {
+    // Gemini 2.5 Flash can switch thinking off; the others refuse "none" but all take "low" (a small thinking budget)
+    if (/^gemini-2\.5-flash/i.test(bare(model))) out.extra = { reasoning_effort: 'none' };
+    else if (/^gemini-/i.test(bare(model))) out.extra = { reasoning_effort: 'low' };
+  } else if (id === 'requesty') {
+    const effort = info && ['none', 'minimal', 'low'].find((e) => info.efforts.includes(e));
+    if (effort) out.extra = { reasoning_effort: effort };
+  }
+  return out;
+}
+
+async function callModel(id, model, messages, maxTokens, timeoutMs) {
+  const p = PROVIDERS[id];
+  const opts = await requestFor(id, model);
+  if (opts.missing) return { ok: false, status: 404, message: `${model} isn't in ${p.name}'s model list` };
+  const { key } = keyOf(id) || {};
   const cfg = config();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(p.url, {
       method: 'POST',
       signal: ctrl.signal,
       headers: {
-        Authorization: `Bearer ${cfg.key}`,
+        Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': cfg.siteUrl,
-        'X-Title': cfg.appName
+        ...(id === 'openrouter' ? { 'HTTP-Referer': cfg.siteUrl, 'X-Title': cfg.appName } : {})
       },
       body: JSON.stringify({
         model,
         messages,
-        max_tokens: maxTokens,
+        max_tokens: opts.maxOut ? Math.min(maxTokens, opts.maxOut) : maxTokens,
         temperature: 0.4,
-        response_format: { type: 'json_object' },
-        ...(reasoning ? { reasoning: { ...reasoning, exclude: true } } : {})
+        ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
+        ...opts.extra
       })
     });
     const text = await res.text();
     let data = null;
     try { data = JSON.parse(text); } catch { /* not JSON */ }
-    if (!res.ok || !data || data.error) {
-      const status = !res.ok ? res.status : Number(data && data.error && data.error.code) || 502;
-      return { ok: false, status, message: (data && data.error && data.error.message) || text };
+    // Gemini sometimes wraps its error in a list
+    const error = data && (Array.isArray(data) ? data[0] && data[0].error : data.error);
+    // Groq checks JSON-mode replies itself and refuses ones that don't parse, but sends the reply
+    // along: the usual LaTeX slips in it are exactly what parseJSON repairs.
+    if (error && typeof error.failed_generation === 'string' && error.failed_generation.includes('{')) {
+      return { ok: true, content: error.failed_generation, finish: 'invalid_json', model };
+    }
+    if (!res.ok || !data || error) {
+      const status = !res.ok ? res.status : Number(error && error.code) || 502;
+      return { ok: false, status, message: hideKeys((error && error.message) || text), retryAfter: Number(res.headers.get('retry-after')) || 0 };
     }
     const choice = data.choices && data.choices[0];
     let content = choice && choice.message && choice.message.content;
-    if (Array.isArray(content)) content = content.map((p) => p.text || '').join('');
+    if (Array.isArray(content)) content = content.map((part) => part.text || '').join('');
     if (!content) {
       const u = data.usage || {};
       const thought = (u.completion_tokens_details && u.completion_tokens_details.reasoning_tokens) || 0;
@@ -418,40 +578,87 @@ async function callModel(model, messages, maxTokens, timeoutMs) {
     return { ok: true, content, finish: choice.finish_reason, model: data.model || model };
   } catch (err) {
     const timedOut = err.name === 'AbortError';
-    return { ok: false, status: timedOut ? 504 : 502, message: timedOut ? 'timed out' : err.message };
+    return { ok: false, status: timedOut ? 504 : 502, message: timedOut ? 'timed out' : hideKeys(err.message) };
   } finally {
     clearTimeout(timer);
   }
 }
 
+// A model that was just busy, timed out, missing or refused goes to the back of the queue for a
+// while, so the next request starts with one that is likely to answer. It is still tried if
+// everything before it fails: this only changes the order, never what is tried.
+const resting = new Map(); // "provider:model" -> until when
+function rest(id, model, r) {
+  const ms = r.status === 429 ? Math.min(10 * 60_000, (r.retryAfter || 60) * 1000)
+    : r.status === 404 ? 6 * 3600_000
+    : r.status === 401 || r.status === 402 || r.status === 403 ? 10 * 60_000
+    : r.status === 503 || r.status === 504 ? 2 * 60_000
+    : 0;
+  if (ms) resting.set(`${id}:${model}`, Date.now() + ms);
+}
+function candidates(cfg) {
+  const all = cfg.providers.flatMap((p) => p.models.map((model) => ({ id: p.id, model })));
+  const t = Date.now();
+  const tired = (c) => (resting.get(`${c.id}:${c.model}`) || 0) > t;
+  return [...all.filter((c) => !tired(c)), ...all.filter(tired)];
+}
+
+// For tests: forget model lists and resting models.
+export function resetAI() {
+  catalogs.clear();
+  resting.clear();
+  catalog = null;
+  catalogAt = 0;
+}
+
+function accountError({ id, status }) {
+  const p = PROVIDERS[id];
+  const name = (keyOf(id) || {}).name || p.keys[0];
+  if (id === 'openrouter' && status === 402) return new AIError('OpenRouter refused the request because your credit balance is below zero. Add any amount of credit at openrouter.ai/settings/credits, then try again.', 502);
+  if (id === 'requesty' && status === 402) return new AIError('Requesty refused the request because the account’s balance is too low. Add credit at app.requesty.ai, or list only its free models in REQUESTY_MODELS.', 502);
+  if (status === 402) return new AIError(`${p.name} refused the request because the account has no credit left.`, 502);
+  return new AIError(`${p.name} rejected the key. Check ${name} in .env, then restart the server.`, 502);
+}
+
 async function generate({ system, user, maxTokens, timeoutMs, deadlineMs, validate, label }) {
   const cfg = config();
-  if (!cfg.key) throw new AIError('There is no OpenRouter key yet. Add OPENROUTER_API_KEY to .env and restart the server.', 503);
+  if (!cfg.ai) throw new AIError('There is no AI key yet. Add OPENROUTER_API_KEY, GROQ_KEY, GEM_KEY or REQ_KEY to .env and restart the server.', 503);
   const failures = [];
+  const refused = new Set(); // providers that rejected the key (or, for OpenRouter, have no credit) during this request
   const started = Date.now();
-  for (const model of cfg.models) {
+  for (const { id, model } of candidates(cfg)) {
+    if (refused.has(id)) continue;
+    const name = PROVIDERS[id].name;
     const left = deadlineMs - (Date.now() - started);
     if (left < 15000) { console.log(`[ai] ${label}: out of time, skipping the remaining models`); break; }
     const t0 = Date.now();
-    const r = await callModel(model, [{ role: 'system', content: system }, { role: 'user', content: user }], maxTokens, Math.min(timeoutMs, left));
+    const r = await callModel(id, model, [{ role: 'system', content: system }, { role: 'user', content: user }], maxTokens, Math.min(timeoutMs, left));
     const secs = ((Date.now() - t0) / 1000).toFixed(1);
     if (!r.ok) {
-      console.log(`[ai] ${label}: ${model} failed (${r.status}) after ${secs}s: ${short(r.message)}`);
-      if (r.status === 401) throw new AIError('OpenRouter rejected the key. Check OPENROUTER_API_KEY in .env, then restart the server.', 502);
-      if (r.status === 402) throw new AIError('OpenRouter refused the request because your credit balance is below zero. Add any amount of credit at openrouter.ai/settings/credits, then try again.', 502);
-      failures.push(r.status);
+      console.log(`[ai] ${label}: ${name} ${model} failed (${r.status}) after ${secs}s: ${short(r.message)}`);
+      failures.push({ id, status: r.status });
+      if (r.status === 401 || r.status === 403 || (r.status === 402 && id === 'openrouter')) {
+        refused.add(id);
+        for (const m of cfg.providers.find((x) => x.id === id).models) rest(id, m, r);
+      } else {
+        rest(id, model, r);
+      }
       continue;
     }
     try {
       const value = validate(parseJSON(r.content));
-      console.log(`[ai] ${label}: ${r.model} answered in ${secs}s`);
-      return { value, model: r.model };
+      console.log(`[ai] ${label}: ${name} ${r.model} answered in ${secs}s`);
+      return { value, model: r.model, provider: id };
     } catch (err) {
-      console.log(`[ai] ${label}: ${model} gave an unusable reply after ${secs}s (${err.message}${r.finish === 'length' ? ', reply was cut off' : ''})`);
-      failures.push('bad');
+      console.log(`[ai] ${label}: ${name} ${model} gave an unusable reply after ${secs}s (${err.message}${r.finish === 'length' ? ', reply was cut off' : ''})`);
+      failures.push({ id, status: 'bad' });
     }
   }
-  if (failures.length && failures.every((f) => f === 429)) {
+  // a key problem only matters to the learner when nothing else could answer
+  const account = (f) => f.status === 401 || f.status === 402 || f.status === 403;
+  if (failures.length && failures.every(account)) throw accountError(failures[0]);
+  const others = failures.filter((f) => !account(f));
+  if (others.length && others.every((f) => f.status === 429 || f.status === 503)) {
     throw new AIError('Every free model is busy, or today’s free requests are used up. Try again in a minute, or later today.', 429);
   }
   throw new AIError('None of the free models gave a usable answer this time. Try again in a moment.', 502);
