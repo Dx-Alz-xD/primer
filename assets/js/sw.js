@@ -20,6 +20,11 @@
      they downloaded, the course, its written lessons, notes, doubts and
      the book. Network first (a written lesson: the saved copy at once,
      refreshed quietly), the saved copy when offline.
+   - Lesson photos (/media/, server/photos.mjs): whenever a downloaded
+     course's lesson or book is kept, the photos it shows are kept with
+     it, in the learner's cache; they are served from there first (the
+     files never change). Removing a download drops the photos no other
+     downloaded course uses.
    - Saves made offline (lesson progress, notes, wrong answers) wait in
      IndexedDB and are sent when the connection is back: on the next page
      load, on the 'online' event, or by Background Sync. They're applied
@@ -46,7 +51,9 @@ const RE = {
   book: /^\/api\/courses\/([A-Za-z0-9_-]{4,64})\/book$/,
   notes: /^\/api\/notes\/([A-Za-z0-9_-]{4,64})\/(\d+)$/,
   progress: /^\/api\/courses\/([A-Za-z0-9_-]{4,64})\/progress\/(\d+)$/,
-  boot: /window\.__PRIMER__=(.*?);<\/script>/
+  boot: /window\.__PRIMER__=(.*?);<\/script>/,
+  media: /\/media\/[a-f0-9]{32}\.(?:jpg|png|webp|gif)/g,
+  withMedia: /^\/api\/courses\/[A-Za-z0-9_-]{4,64}(?:\/lessons\/\d+|\/book)?$/
 };
 
 // Shown in the page when something needs the internet (the page translates them).
@@ -259,6 +266,31 @@ async function keepJSON(owner, key, res) {
     waiting.forEach((it) => overlay(path, data, it));
     await (await caches.open(USER + owner)).put(key, jsonRes(data));
   });
+  // a downloaded course's lesson or book: the photos it shows are kept too
+  if (RE.withMedia.test(path)) await keepMedia(owner, mediaIn(data)).catch(() => {});
+}
+
+/* ---------------- lesson photos (/media/) ---------------- */
+
+const mediaIn = (data) => Array.from(new Set(JSON.stringify(data || null).match(RE.media) || []));
+
+async function keepMedia(owner, paths) {
+  for (const p of paths) {
+    const key = abs(p);
+    const cache = await caches.open(USER + owner);
+    if (await cache.match(key)) continue;
+    const res = await fetch(key, { credentials: 'same-origin' }).catch(() => null);
+    if (!res || !res.ok || !/^image\//.test(res.headers.get('Content-Type') || '')) continue;
+    await serial(async () => { if ((await getOwner()) === owner) await cache.put(key, res); });
+  }
+}
+
+// Photos never change, so a kept copy is used first; others come from the network as usual.
+async function mediaFile(req, url) {
+  const u = await userCache();
+  const hit = u ? await u.cache.match(abs(url.pathname)) : null;
+  if (hit) return hit;
+  try { return await fetch(req); } catch (e) { setNet(true); return new Response('', { status: 504 }); }
 }
 
 /* ---------------- sending the waiting saves ---------------- */
@@ -654,6 +686,16 @@ async function removeDownload(courseId) {
     const all = await readDownloads(cache);
     delete all[courseId];
     await cache.put(DOWNLOADS_KEY, jsonRes(all));
+    // the photos only this course used go with it
+    const keys = await cache.keys();
+    const used = new Set();
+    for (const k of keys) {
+      if (RE.withMedia.test(new URL(k.url).pathname)) mediaIn(await readJSON(cache, k.url)).forEach((m) => used.add(m));
+    }
+    for (const k of keys) {
+      const path = new URL(k.url).pathname;
+      if (path.startsWith('/media/') && !used.has(path)) await cache.delete(k);
+    }
   });
 }
 
@@ -748,6 +790,7 @@ self.addEventListener('fetch', (event) => {
     if (p.startsWith('/api/')) event.respondWith(safe(apiGet(event, req, url), req));
     else if (isPage(p)) event.respondWith(safe(page(event, req, url), req));
     else if (p.startsWith('/assets/') || p === '/manifest.webmanifest') event.respondWith(safe(siteFile(event, req), req));
+    else if (p.startsWith('/media/')) event.respondWith(safe(mediaFile(req, url), req));
     return;
   }
   if (p.startsWith('/api/')) {

@@ -1,0 +1,60 @@
+/* =====================================================================
+   Photos in lessons (assets/js/photos.js): a framed print on the
+   parchment, its caption, and a small credit line.
+   ===================================================================== */
+.photo{--photo-max-h:540px;margin:1.7rem auto 1.9rem;text-align:center}
+.photo__frame{
+  position:relative;display:block;box-sizing:border-box;margin:0 auto;
+  width:100%;max-width:min(100%, calc(var(--photo-max-h) * var(--photo-ar, 1.5) + 24px));
+  padding:10px;background:#f7f0de;
+  border:1px solid #a88b5c;border-radius:3px;
+  box-shadow:0 22px 34px -22px rgba(43,29,17,.8), 0 1px 0 rgba(255,250,235,.6) inset;
+}
+/* a gold hairline round the mat, like the double rule round a checkpoint */
+.photo__frame::before{content:"";position:absolute;inset:4px;border:1px solid rgba(138,97,40,.42);border-radius:2px;pointer-events:none}
+.photo__img{display:block;width:100%;height:auto;background:#e6dabd;border-radius:1px;box-shadow:0 0 0 1px rgba(43,29,17,.18)}
+.photo__cap{display:flex;flex-direction:column;align-items:center;gap:.25rem;margin-top:.7rem;text-align:center}
+.photo__text{max-width:36em;font-style:italic;color:var(--ink-soft);font-size:1.06rem;line-height:1.45}
+.photo__credit{display:block;max-width:40em;font-size:.84rem;line-height:1.4;color:#77613f;letter-spacing:.01em}
+.photo__credit a{color:var(--ink-gold);text-decoration:none;border-bottom:1px solid rgba(138,97,40,.35);white-space:nowrap}
+.photo__credit a:hover{border-bottom-color:var(--ink-gold)}
+.photo__credit a:focus-visible{outline:2px solid var(--ink-gold);outline-offset:1px;border-radius:2px}
+.photo__author{font-style:italic}
+.photo.is-missing{display:none}
+
+/* the book: under half a page tall, never split across pages */
+.flow .photo{--photo-max-h:calc(var(--text-h, 640px) * .44);margin:.9em auto 1em;break-inside:avoid}
+.flow .photo__frame{padding:7px}
+.flow .photo__frame::before{inset:3px}
+.flow .photo__cap{margin-top:.45em;gap:.15em}
+.flow .photo__text{font-size:.9em}
+.flow .photo__credit{font-size:.7em}
+
+/* course covers on app.html: a mounted print in the course header, a plate at the top of a library card */
+.course-head:has(.ccover){display:flow-root}
+.ccover--head{
+  float:right;width:min(290px, 40%);margin:0 0 1.1rem 1.7rem;padding:8px;
+  background:#f7f0de;border:1px solid #a88b5c;border-radius:3px;
+  box-shadow:0 24px 40px -22px rgba(0,0,0,.95);transform:rotate(.6deg);
+}
+.ccover--head .ccover__img{max-height:300px;object-fit:cover}
+.ccover--head .ccover__credit{display:block;margin-top:.45rem;text-align:center;font-size:.8rem;line-height:1.35;color:#6b5636}
+.ccover--head .photo__credit{font-size:inherit;color:inherit}
+.ccover--card{position:relative;z-index:0;margin:calc(10px - 1.4rem) calc(10px - 1.4rem) .45rem;height:130px;border-radius:3px;overflow:hidden;background:#24170c}
+.ccover--card .ccover__img{width:100%;height:100%;object-fit:cover;filter:saturate(.88) sepia(.08);box-shadow:none;border-radius:0;background:transparent}
+.ccover--card::after{content:"";position:absolute;inset:45% 0 0;background:linear-gradient(rgba(16,10,5,0), rgba(16,10,5,.82));pointer-events:none}
+.ccover--card .ccover__credit{position:absolute;right:.55rem;bottom:.35rem;left:.55rem;z-index:1;text-align:right;font-size:.74rem;line-height:1.25;color:rgba(239,226,198,.78);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+@media (max-width:720px){
+  .ccover--head{float:none;width:auto;margin:0 0 1.1rem;transform:none}
+  .ccover--head .ccover__img{max-height:200px}
+  .photo{--photo-max-h:420px}
+  .photo__frame{padding:7px}
+  .photo__frame::before{inset:3px}
+}
+@media print{
+  .ccover{display:none}
+  .photo,.flow .photo{--photo-max-h:95mm;break-inside:avoid}
+  .photo__frame{box-shadow:none}
+  .photo__credit a{border-bottom:0}
+}

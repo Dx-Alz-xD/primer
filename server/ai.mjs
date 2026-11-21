@@ -82,6 +82,8 @@ Content blocks:
 - {"t": "callout", "kind": "example", "title": "Worked example", "html": "..."}   (kind is one of: example, mnemonic, eli5, note)
 - {"t": "figure", "svg": "<svg viewBox=\"0 0 360 240\" xmlns=\"http://www.w3.org/2000/svg\">...</svg>", "caption": "..."}
   Use a figure only when a simple diagram genuinely helps (graphs, geometry, processes). Use only svg, g, line, path, circle, ellipse, rect, polygon, polyline and text elements, colours #2b1d11 (ink), #8a6128 (gold) and #9a3324 (red), and label the parts with text.
+- {"t": "photo", "query": "an English Wikipedia article title, or a short search phrase, for a real photograph or illustration", "caption": "one sentence saying what the learner should notice in it"}
+  Use a photo only where a real image genuinely helps: a person, a place, an object, an organism, an artwork, a historical scene or a real-world example. At most 2 per lesson, and never in a lesson that is pure maths. The query is always in English (for example "Marie Curie", "Taj Mahal", "Monarch butterfly"); the caption is in the lesson's language. The app finds a freely licensed image on Wikimedia Commons and credits it, and leaves the block out if none fits, so never refer to the photo anywhere else in the lesson.
 
 Question types:
 - {"type": "numeric", "prompt": "...", "answer": 7, "tolerance": 0.01, "unit": "km/s", "hint": "...", "explain": "..."}
@@ -316,6 +318,11 @@ function normBlock(b) {
     const svg = str(b.svg, 16000);
     return /^<svg[\s>]/i.test(svg) && /<\/svg>\s*$/i.test(svg) ? { t: 'figure', svg, caption: str(b.caption, 400) } : null;
   }
+  if (t === 'photo' || t === 'image' || t === 'picture') {
+    // only the request: photos.mjs looks it up on Wikimedia Commons when the lesson is saved
+    const query = str(b.query || b.search, 200).replace(/[\p{Cc}[\]{}|<>#_]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+    return query.length >= 2 ? { t: 'photo', query, caption: str(b.caption, 300) } : null;
+  }
   return null;
 }
 
@@ -522,7 +529,8 @@ export function generateLesson(input) {
       maxTokens: 12000,
       timeoutMs: 110000,
       deadlineMs: 300000,
-      validate: (raw) => normalizeLesson(raw, me.title),
+      // photoCheck: this lesson chose its own photos, so none is guessed for it later (photos.mjs)
+      validate: (raw) => Object.assign(normalizeLesson(raw, me.title), { photoCheck: 'ai' }),
       label: `lesson ${input.n} "${me.title}"`
     });
     return { lesson: value, model };
@@ -680,22 +688,46 @@ export function pickLibraryCut({ subject, outline, from, to }) {
 
 const TRANSLATE_SYSTEM = String.raw`You translate one lesson of an online course, given as JSON, for a learner who reads another language.
 Return ONLY the same JSON object (no prose, no code fences) with every piece of text a learner reads translated:
-section titles, paragraph "html" (keep every HTML tag exactly), list items, callout titles and "html", figure captions (never change "svg"), recap points, question prompts, choices, hints, explanations and model answers.
+section titles, paragraph "html" (keep every HTML tag exactly), list items, callout titles and "html", figure and photo captions (never change "svg"), recap points, question prompts, choices, hints, explanations and model answers.
 Keep exactly the same structure: the same sections, blocks, questions and choices, in the same order.
 Never change: maths inside \( \) and in "tex", numbers, "answer", "tolerance", "type", "t", "kind", "id", or "unit" symbols.
 For "text" questions, put the translated accepted answers first in "accept" and keep the original ones after them.
 Natural, warm, precise wording, the way a good teacher writes in that language. This is JSON: every backslash in LaTeX must be written twice.`;
 
-export function translateLesson({ lesson, lang, title }) {
+// A lesson's photos go to the translator as their captions alone (so a lesson without photos is
+// sent, and cached, exactly as before); the image and its credit are put back unchanged after.
+const isPhotoBlock = (b) => Boolean(b && typeof b === 'object' && str(b.t || b.type, 20).toLowerCase() === 'photo');
+const captionsOnly = (lesson) => ({
+  sections: arr(lesson.sections).map((s) => (arr(s.blocks).some(isPhotoBlock)
+    ? { ...s, blocks: s.blocks.map((b) => (isPhotoBlock(b) ? { t: 'photo', caption: str(b.caption, 300) } : b)) }
+    : s))
+});
+function photosBack(translated, original) {
+  return {
+    ...translated,
+    sections: arr(translated.sections).map((s, i) => {
+      const mine = arr(arr(original.sections)[i] && original.sections[i].blocks).filter(isPhotoBlock);
+      let k = 0;
+      return { ...s, blocks: arr(s.blocks).flatMap((b) => {
+        if (!isPhotoBlock(b)) return [b];
+        const o = mine[k++];
+        return o ? [{ ...o, caption: b.caption || o.caption || '' }] : [];
+      }) };
+    })
+  };
+}
+
+export async function translateLesson({ lesson, lang, title }) {
   const target = LANG_NAMES[lang];
   if (!target) throw new AIError('That language isn’t available yet.', 400);
   const counts = (l) => (l.sections || []).map((s) => (s.checkpoint || []).length).join(',');
   const want = counts(lesson);
-  const key = { v: 1, lang, lesson: createHash('sha256').update(JSON.stringify(lesson)).digest('hex').slice(0, 24) };
-  return cached('translate', key, async () => {
+  const send = captionsOnly(lesson);
+  const key = { v: 1, lang, lesson: createHash('sha256').update(JSON.stringify(send)).digest('hex').slice(0, 24) };
+  const out = await cached('translate', key, async () => {
     const { value, model } = await generate({
       system: TRANSLATE_SYSTEM,
-      user: `Translate into ${target}.\n\n${JSON.stringify({ sections: lesson.sections })}`,
+      user: `Translate into ${target}.\n\n${JSON.stringify(send)}`,
       maxTokens: 14000,
       timeoutMs: 120000,
       deadlineMs: 300000,
@@ -703,10 +735,24 @@ export function translateLesson({ lesson, lang, title }) {
         const out = normalizeLesson(raw, title);
         // the learner's saved answers are keyed by question order, so the shape must not move
         if (out.sections.length !== lesson.sections.length || counts(out) !== want) throw new Error('the translation changed the lesson’s shape');
+        // normalizeLesson drops caption-only photos: put the translated captions back where the photos were
+        send.sections.forEach((s, i) => {
+          if (!s.blocks.some(isPhotoBlock)) return;
+          const said = arr(arr(raw && raw.sections)[i] && raw.sections[i].blocks).filter(isPhotoBlock);
+          const blocks = out.sections[i].blocks.filter((b) => !isPhotoBlock(b));
+          let k = 0;
+          s.blocks.forEach((b, j) => {
+            if (!isPhotoBlock(b)) return;
+            const tr = said[k++];
+            blocks.splice(Math.min(j, blocks.length), 0, { t: 'photo', caption: str(tr && tr.caption, 300) || b.caption });
+          });
+          out.sections[i].blocks = blocks;
+        });
         return out;
       },
       label: `translate lesson "${title}" to ${target}`
     });
     return { lesson: value, model };
   });
+  return { ...out, lesson: photosBack(out.lesson, lesson) };
 }

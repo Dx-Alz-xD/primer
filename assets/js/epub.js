@@ -9,11 +9,14 @@
      OEBPS/title.xhtml        the title page
      OEBPS/chapter-001.xhtml  one per written lesson, with its exercises
      OEBPS/answers.xhtml      the answer key
+     OEBPS/images/<hash>.jpg  the lessons' photos (from this site's /media/)
      OEBPS/style.css
 
    Every XHTML file is built as a real XML document and written with
    XMLSerializer, so it is well-formed. Maths becomes MathML through
-   KaTeX (output: 'mathml'); figures stay inline SVG.
+   KaTeX (output: 'mathml'); figures stay inline SVG. Photos are copied
+   into the book with their captions and credits; one that can't be
+   fetched is left out.
 
    P.epub.download(courseIdOrBook, button) is all a page needs: on first
    use it loads KaTeX, the ZIP writer and the book renderer itself.
@@ -56,6 +59,7 @@
       readying = Promise.all([
         P.zip ? null : loadScript('assets/js/zip.js'),
         P.book ? null : loadScript('assets/js/book-content.js'),
+        P.photos ? null : loadScript('assets/js/photos.js'),
         // Without KaTeX the maths is kept as TeX source rather than failing the whole export.
         window.katex ? null : loadScript(KATEX_JS, true).catch(() => console.warn('[Primer] KaTeX didn’t load, so the EPUB keeps maths as TeX.'))
       ]).catch((err) => { readying = null; throw err; });
@@ -209,6 +213,40 @@
     return doc;
   }
 
+  // The photos the chapters show, copied into the book (OEBPS/images/), with each <img> pointed at
+  // its copy. A photo that can't be fetched leaves the book along with its caption and credit.
+  const PHOTO_SRC = /^\/media\/([a-f0-9]{32}\.(jpg|png|webp|gif))$/;
+  const IMAGE_TYPES = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
+  async function embedPhotos(docs) {
+    const uses = new Map(); // src -> [img]
+    docs.forEach((doc) => Array.from(doc.getElementsByTagNameNS(NS.xhtml, 'img')).forEach((img) => {
+      const src = img.getAttribute('src') || '';
+      if (!PHOTO_SRC.test(src)) { (img.closest('figure') || img).remove(); return; }
+      if (!uses.has(src)) uses.set(src, []);
+      uses.get(src).push(img);
+    }));
+    const files = [];
+    await Promise.all(Array.from(uses, async ([src, imgs]) => {
+      const [, name, ext] = PHOTO_SRC.exec(src);
+      let data = null;
+      try {
+        const res = await fetch(src, { credentials: 'same-origin' });
+        if (res.ok) data = new Uint8Array(await res.arrayBuffer());
+      } catch (e) { data = null; }
+      if (!data || !data.length) { imgs.forEach((img) => (img.closest('figure') || img).remove()); return; }
+      imgs.forEach((img) => {
+        img.setAttribute('src', 'images/' + name);
+        img.removeAttribute('loading');
+        img.removeAttribute('decoding');
+        if (img.parentNode && img.parentNode.removeAttribute) img.parentNode.removeAttribute('style');
+      });
+      files.push({ id: 'img-' + name.slice(0, 16), href: 'images/' + name, type: IMAGE_TYPES[ext], data });
+    }));
+    // links open in the reading app's own way
+    docs.forEach((doc) => Array.from(doc.getElementsByTagNameNS(NS.xhtml, 'a')).forEach((a) => a.removeAttribute('target')));
+    return files.sort((a, b) => a.href.localeCompare(b.href));
+  }
+
   function answersDoc(book) {
     const { doc, body } = newDoc('Answers', book.lang);
     setType(body, 'backmatter');
@@ -324,6 +362,12 @@ math[display="block"] { display: block; margin: 0.4em auto; }
 .fig { margin: 1.2em 0; text-align: center; page-break-inside: avoid; break-inside: avoid; }
 .fig svg { max-width: 100%; height: auto; }
 figcaption { font-style: italic; font-size: 0.92em; margin-top: 0.5em; }
+.photo { margin: 1.3em 0; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+.photo__frame { display: inline-block; max-width: 100%; padding: 0.3em; border: 1px solid #a88b5c; }
+.photo img { display: block; max-width: 100%; max-height: 80vh; width: auto; height: auto; margin: 0 auto; }
+.photo__cap { margin-top: 0.4em; }
+.photo__text { display: block; font-style: italic; }
+.photo__credit { display: block; font-style: normal; font-size: 0.78em; margin-top: 0.2em; }
 .callout { margin: 1em 0; padding: 0.6em 0.9em; border-left: 3px solid #8a6128; background: rgba(138, 97, 40, 0.08); }
 .callout--mnemonic { border-left-color: #9a3324; }
 .callout--eli5 { border-left-color: #3d6a2c; }
@@ -365,9 +409,15 @@ nav ol { list-style: none; padding-left: 1em; }
     };
     add('title', 'title.xhtml', titleDoc(book));
     add('nav', 'nav.xhtml', navDoc(book), 'nav');
-    book.chapters.forEach((ch) => add(`ch${pad(ch.n)}`, chapterFile(ch.n), chapterDoc(book, ch)));
+    const chapters = book.chapters.map((ch) => ({ ch, doc: chapterDoc(book, ch) }));
+    const photos = await embedPhotos(chapters.map((c) => c.doc));
+    chapters.forEach(({ ch, doc }) => add(`ch${pad(ch.n)}`, chapterFile(ch.n), doc));
     if (book.hasExercises) add('answers', 'answers.xhtml', answersDoc(book));
     files.push({ name: 'OEBPS/style.css', data: STYLE });
+    photos.forEach((im) => {
+      files.push({ name: 'OEBPS/' + im.href, data: im.data });
+      items.push({ id: im.id, href: im.href, type: im.type });
+    });
     const blob = P.zip([
       { name: 'mimetype', data: 'application/epub+zip' },
       { name: 'META-INF/container.xml', data: CONTAINER },

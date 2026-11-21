@@ -14,5 +14,6 @@ export default [
   () => import('./review.mjs'),
   () => import('./placement.mjs'),
   () => import('./marking.mjs'),
-  () => import('./offline.mjs')
+  () => import('./offline.mjs'),
+  () => import('./photos.mjs')
 ];
