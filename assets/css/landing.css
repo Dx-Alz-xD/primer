@@ -5,20 +5,39 @@
    section reads complete without it.
    ===================================================================== */
 
-/* ---------- hero ---------- */
+/* ---------- hero: the words on the left, the topic growing roses on the right ---------- */
+.hero.wrap{width:min(1240px, 100% - var(--pad-l) - var(--pad-r))}
 .hero{
-  text-align:center;min-height:calc(100svh - 84px);display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:clamp(20px,5vh,64px) 0 clamp(24px,5vh,56px);
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.06fr);grid-template-areas:"head garden" "body garden";
+  column-gap:clamp(24px,4vw,64px);align-content:center;text-align:left;
+  min-height:calc(100svh - 84px);padding:clamp(16px,4vh,48px) 0 clamp(24px,5vh,56px);
 }
-.hero h1{font-size:clamp(2.5rem,6.4vw,4.9rem);line-height:1.04;letter-spacing:-.006em;margin:1.2rem auto 0}
-.h1-line{display:inline-block}
-.hero__stage{position:relative;width:min(1180px, 100vw - 2 * var(--gutter));height:clamp(120px,24svh,250px);margin:clamp(.4rem,1.6vh,1.2rem) auto 0}
-/* a pool of shadow behind the word, so the gathered letters read before the shelves */
-.hero__stage::before{content:"";position:absolute;inset:-14% -4%;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(10,6,3,.82), rgba(10,6,3,.5) 55%, transparent 76%);pointer-events:none}
-.hero__swarm{position:absolute;inset:0;width:100%;height:100%;display:block}
-.lead{max-width:33em;margin:clamp(.4rem,1.4vh,1rem) auto 0;font-size:clamp(1.14rem,2vw,1.34rem);line-height:1.5;color:var(--cream-dim);text-shadow:var(--shadow-text)}
+.hero__head{grid-area:head;align-self:end}
+.hero__body{grid-area:body;align-self:start}
+.hero h1{font-size:clamp(2.6rem,5.3vw,4.7rem);line-height:1.03;letter-spacing:-.008em;margin:1.1rem 0 0}
+.h1-line{display:block}
 
-.ask{display:flex;gap:10px;width:100%;max-width:630px;margin:clamp(1.2rem,3vh,2.1rem) auto 0}
+/* the eyebrow: a small rose, gold foil small capitals, and a gilt rule running off */
+.eyebrow{display:flex;align-items:center;gap:.65rem;margin:0;font-family:var(--font-head);font-size:clamp(.98rem,1.3vw,1.1rem);line-height:1.2}
+.eyebrow__mark{flex:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+.eyebrow__text{
+  letter-spacing:.17em;text-transform:uppercase;white-space:nowrap;
+  background:linear-gradient(100deg, #a87a36 0%, #f6dc9c 22%, #d6a554 42%, #fff3cf 55%, #c9964a 72%, #f1cd84 100%);
+  background-size:240% 100%;background-position:0 0;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:foil 2.8s var(--ease-out) .5s 1 backwards;
+}
+@keyframes foil{from{background-position:100% 0}to{background-position:0 0}}
+.eyebrow::after{content:"";flex:0 1 5.5rem;min-width:1.5rem;height:1px;background:linear-gradient(90deg, rgba(214,165,84,.8), transparent)}
+/* letter-spacing tears the joined strokes of Indic and Arabic scripts: only Latin and Cyrillic get it */
+html:not([lang="en"]):not([lang="es"]):not([lang="fr"]):not([lang="pt"]):not([lang="ru"]) .eyebrow__text{letter-spacing:.02em;text-transform:none}
+
+.hero__garden{grid-area:garden;position:relative;align-self:center;height:clamp(320px,62svh,620px);min-width:0}
+/* a pool of shadow, so the gold reads before the shelves behind it */
+.hero__garden::before{content:"";position:absolute;inset:-6% -10%;background:radial-gradient(ellipse 50% 46% at 50% 50%, rgba(10,6,3,.86), rgba(10,6,3,.55) 55%, transparent 78%);pointer-events:none}
+.hero__garden canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+
+.lead{max-width:32em;margin:clamp(.9rem,2vh,1.3rem) 0 0;font-size:clamp(1.14rem,1.7vw,1.3rem);line-height:1.5;color:var(--cream-dim);text-shadow:var(--shadow-text)}
+.ask{display:flex;gap:10px;width:100%;max-width:600px;margin:clamp(1.1rem,2.6vh,1.8rem) 0 0}
 .ask__field{position:relative;flex:1;min-width:0;display:flex}
 .ask__field .input{font-size:1.2rem;padding:.78rem 1rem;box-shadow:inset 0 0 0 3px rgba(14,9,4,.45), inset 0 0 0 4px rgba(214,165,84,.08), 0 10px 30px -14px rgba(0,0,0,.9)}
 .ask__type{
@@ -29,9 +48,21 @@
 }
 .ask__type .text-type{white-space:nowrap}
 .ask__field.is-quiet .ask__type{opacity:0}
-.chips--hero{justify-content:center;margin:1.1rem auto 0;max-width:640px}
-.hero__note{margin-top:1.2rem;color:var(--muted);font-style:italic;font-size:1.05rem;text-shadow:var(--shadow-text)}
+.chips--hero{justify-content:flex-start;margin:1rem 0 0;max-width:620px}
+.hero__note{margin-top:1.1rem;color:var(--muted);font-style:italic;font-size:1.05rem;text-shadow:var(--shadow-text)}
 .hero__note a{color:var(--gold)}
+.foot__credit{margin-top:.4rem;font-size:.92rem;opacity:.75}
+.foot__credit a{color:var(--gold)}
+
+@media (max-width:899px){
+  .hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "garden" "body";align-content:start;padding-top:clamp(12px,3vh,28px)}
+  .hero__garden{height:clamp(220px,34svh,330px);margin-top:.4rem}
+}
+@media (max-width:560px){
+  .eyebrow{align-items:flex-start;font-size:.92rem}
+  .eyebrow__text{white-space:normal;letter-spacing:.1em;line-height:1.35;padding-top:.3rem}
+  .eyebrow::after{display:none}
+}
 
 /* ---------- one idea per screen: each section fills it, its content in the middle ---------- */
 .grow,.contents,#reading-room{min-height:100svh;display:flex;flex-direction:column;justify-content:center;padding-block:clamp(56px,9vh,96px)}
@@ -183,7 +214,6 @@
   .show__step{opacity:1}
 }
 @media (max-width:560px){
-  .h1-line{display:inline}
   .ask{flex-direction:column}
   .nav__link--hide-sm{display:none}
   .toc__row{flex-wrap:wrap;gap:.15rem .7rem}

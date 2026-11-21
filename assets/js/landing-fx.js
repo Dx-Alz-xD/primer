@@ -2,8 +2,11 @@
    The landing page's moments (GSAP: assets/vendor/gsap).
 
    - The headline enters once, letter by letter (SplitText).
-   - The library's letters gather into a topic (swarm.js): each hint's
-     subject as the hint finishes typing, or whatever the visitor types.
+   - The topic is typed in gold and grows roses (typegarden.js, after
+     Type Garden): each hint's subject as its hint finishes typing, or
+     whatever the visitor types, letter by letter.
+   - The eyebrow's words unscramble out of the library's letters
+     (GSAP ScrambleText).
    - How it works: the app at work. While the section is pinned, scrolling
      plays its four screens (a topic typed, the outline, a checkpoint
      answered, the tutor answering in Hindi) and lights the matching step.
@@ -37,21 +40,34 @@
   const ready = Promise.race([translated, new Promise((r) => setTimeout(r, 1500))]);
   if (g && ST) g.registerPlugin(ST);
   if (g && Split) g.registerPlugin(Split);
+  if (g && window.ScrambleTextPlugin) g.registerPlugin(window.ScrambleTextPlugin);
   const live = () => Boolean(g) && !reduce();
 
   /* ---------- the hero ---------- */
   const h1 = $('[data-split]');
-  const rest = $$('.hero .pill, .hero__stage, .hero .lead, .hero .ask, .chips--hero, .hero__note');
+  const rest = $$('.hero__garden, .hero .lead, .hero .ask, .chips--hero, .hero__note');
+  const brow = $('.eyebrow');
+  const browText = $('.eyebrow__text');
+  // Latin and Cyrillic can be taken apart letter by letter; other scripts can't (vowel signs, joined letters)
+  const latin = (txt) => Array.from(txt).every((ch) => { const c = ch.codePointAt(0); return c <= 0x024F || (c >= 0x0400 && c <= 0x04FF) || (c >= 0x2000 && c <= 0x206F); });
   if (live() && h1) {
-    g.set([h1, ...rest], { autoAlpha: 0 }); // nothing shows before its entrance (the text may still be translated)
+    g.set([h1, brow, ...rest].filter(Boolean), { autoAlpha: 0 }); // nothing shows before its entrance (the text may still be translated)
     ready.then(() => {
       g.set(h1, { autoAlpha: 1 });
+      // the eyebrow: its rose opens, and its words unscramble out of the library's letters (GSAP ScrambleText)
+      if (brow) {
+        g.fromTo(brow, { autoAlpha: 0, x: -10 }, { autoAlpha: 1, x: 0, duration: 0.7, ease: 'power3.out', clearProps: 'transform' });
+        g.from('.eyebrow__mark', { scale: 0.2, rotation: -60, transformOrigin: '50% 60%', duration: 1, ease: 'back.out(2)' });
+        if (browText && window.ScrambleTextPlugin && latin(browText.textContent)) {
+          g.to(browText, { duration: 1.5, ease: 'none', scrambleText: { text: browText.textContent, chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ&', revealDelay: 0.25, speed: 0.45 } });
+        }
+      }
       // the headline letter by letter; whatever happens there, the rest of the hero still comes in
       // (Latin and Cyrillic letter by letter; any other script word by word, since splitting
       // Devanagari or Tamil between letters tears off vowel signs, and Arabic letters must join)
       try {
         if (Split) {
-          const byLetter = Array.from(h1.textContent).every((ch) => { const c = ch.codePointAt(0); return c <= 0x024F || (c >= 0x0400 && c <= 0x04FF) || (c >= 0x2000 && c <= 0x206F); });
+          const byLetter = latin(h1.textContent);
           Split.create(h1, {
             type: byLetter ? 'words,chars' : 'words', mask: 'words', autoSplit: true,
             onSplit: (self) => g.from(byLetter ? self.chars : self.words, { yPercent: 115, duration: 1.05, ease: 'power4.out', stagger: byLetter ? 0.017 : 0.09 })
@@ -62,25 +78,27 @@
     });
   }
 
-  /* ---------- the swarm ---------- */
-  // the subject of each hint in landing.js, in the same order
+  /* ---------- the type garden ---------- */
+  // The subject of each hint in landing.js, in the same order: as a hint finishes, its subject is typed
+  // out in gold and grows roses. Whatever the visitor types is followed letter by letter (typegarden.js).
   const SUBJECTS = ['Black holes', 'Calculus', 'Stoicism', 'Organic chemistry', 'Personal finance'];
-  const canvas = $('#swarm');
-  const swarm = canvas && P.swarm ? P.swarm(canvas, { max: 1500 }) : null;
-  P.heroSwarm = swarm; // for checking the page by hand
-  if (swarm) {
+  const tgCanvas = $('#type-garden');
+  const garden = tgCanvas && P.typeGarden ? P.typeGarden(tgCanvas, { density: 0.78 }) : null; // a little sparer than Type Garden's, so the topic stays readable
+  P.heroGarden = garden; // for checking the page by hand
+  if (garden) {
     const input = $('#topic');
     const typed = () => (input ? input.value.trim() : '');
     let hint = 0, timer = 0;
-    ready.then(() => { if (!typed()) swarm.say(t(SUBJECTS[0])); });
+    ready.then(() => setTimeout(() => { if (!typed()) garden.typeTo(t(SUBJECTS[0])); }, live() ? 700 : 0));
     document.addEventListener('primer:hint', (e) => {
       hint = e.detail.index % SUBJECTS.length;
-      if (!typed()) swarm.say(t(SUBJECTS[hint]));
+      if (!typed() && document.activeElement !== input) garden.typeTo(t(SUBJECTS[hint]));
     });
     if (input) {
       input.addEventListener('input', () => {
         clearTimeout(timer);
-        timer = setTimeout(() => swarm.say(typed() || t(SUBJECTS[hint])), 260);
+        if (typed()) garden.mirror(input.value);
+        else timer = setTimeout(() => garden.typeTo(t(SUBJECTS[hint])), 600);
       });
     }
   }

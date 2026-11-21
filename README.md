@@ -79,7 +79,7 @@ Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` 
 
 ## How it’s built
 
-- **Front end:** plain HTML, CSS and JavaScript. No framework and no build step. KaTeX for maths, a WebGL2 letter backdrop, canvas whiteboards, and [GSAP](https://gsap.com) for motion (kept in `assets/vendor/gsap` under GSAP’s standard no-charge licence). Every animation has a still version for reduced motion.
+- **Front end:** plain HTML, CSS and JavaScript. No framework and no build step. KaTeX for maths, a WebGL2 letter backdrop, canvas whiteboards, and [GSAP](https://gsap.com) for motion (kept in `assets/vendor/gsap` under GSAP’s standard no-charge licence). Every animation has a still version for reduced motion. The landing page's rose-grown type is adapted from [Type Garden](https://type-garden.vercel.app/) by Akshat Agarwal.
 - **Server:** Node.js 24 with `node:http` and **zero npm dependencies**. Each feature is a small module in `server/` that adds its routes.
 - **Data:** one SQLite file (`data/primer.db`) through the built-in `node:sqlite`.
 - **AI:** Groq, Gemini, Requesty and OpenRouter, each with free models, tried in order. Every reply is repaired (LaTeX and JSON escaping), checked against the lesson format, and cached, so the same lesson is never written twice.
@@ -132,7 +132,8 @@ server/packs.mjs, assets/js/packfmt.js          course files
 server/talk.mjs                                 talking to the tutor
 server/study.mjs, server/reminders.mjs          study methods, time studied, reminders
 server/features.mjs                             the list of feature modules
-assets/js/garden.js, swarm.js, landing-fx.js    the course garden, the gathering letters, the landing page's motion
-assets/vendor/gsap                              GSAP (core, ScrollTrigger, SplitText)
+assets/js/garden.js, typegarden.js              the course garden; the topic in gold growing roses (after Type Garden)
+assets/js/landing-fx.js                         the landing page's motion
+assets/vendor/gsap                              GSAP (core, ScrollTrigger, SplitText, ScrambleText)
 docs/                                           images for this README
 ```

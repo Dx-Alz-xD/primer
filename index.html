@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&family=Playfair+Display:wght@700&display=swap">
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/offline.css">
 <link rel="stylesheet" href="assets/css/garden.css">
@@ -27,7 +27,8 @@
 <script defer src="assets/vendor/gsap/gsap.min.js"></script>
 <script defer src="assets/vendor/gsap/ScrollTrigger.min.js"></script>
 <script defer src="assets/vendor/gsap/SplitText.min.js"></script>
-<script defer src="assets/js/swarm.js"></script>
+<script defer src="assets/vendor/gsap/ScrambleTextPlugin.min.js"></script>
+<script defer src="assets/js/typegarden.js"></script>
 <script defer src="assets/js/garden.js"></script>
 <script defer src="assets/js/landing.js"></script>
 <script defer src="assets/js/landing-fx.js"></script>
@@ -59,10 +60,13 @@
     <main id="main">
       <!-- Hero -->
       <section class="hero wrap" aria-labelledby="hero-title">
-        <span class="pill">AI course builder · private beta</span>
-        <h1 id="hero-title" data-split><span class="h1-line">Type a topic.</span> <span class="h1-line">Get a whole course.</span></h1>
-        <!-- the library's letters gather into the topic (assets/js/swarm.js) -->
-        <div class="hero__stage" aria-hidden="true"><canvas class="hero__swarm" id="swarm"></canvas></div>
+        <div class="hero__head">
+          <p class="eyebrow"><svg class="eyebrow__mark" viewBox="0 0 28 28" width="28" height="28" aria-hidden="true"><path d="M14 26.5C14 21 13.2 17.5 14 13.5" fill="none" stroke="#b98a3e" stroke-width="1.4" stroke-linecap="round"/><path d="M13.9 21.6C10 21.6 7.4 19.6 6.3 16.6c3.3 0 6.3 1.8 7.6 5z" fill="#c99543"/><path d="M14.1 19.2c3.6-.5 6.1-2.6 7.2-5.3-3.2 0-6.3 1.7-7.2 5.3z" fill="#c99543"/><ellipse cx="14" cy="8.6" rx="6.3" ry="5.7" fill="#7f1729"/><ellipse cx="10.8" cy="10.3" rx="4.2" ry="3.7" fill="#a9142e"/><ellipse cx="17.2" cy="10.3" rx="4.2" ry="3.7" fill="#a9142e"/><path d="M14 6.6c-1.9 0-2.8 1.5-1.9 2.7.9 1.1 3.1.9 3.4-.7.3-1.5-1.4-2.3-2.4-1.6" fill="none" stroke="#f6d690" stroke-width=".9" stroke-linecap="round"/></svg><span class="eyebrow__text">AI course builder · private beta</span></p>
+          <h1 id="hero-title" data-split><span class="h1-line">Type a topic.</span> <span class="h1-line">Get a whole course.</span></h1>
+        </div>
+        <!-- the topic in gold type, roses growing from its letters (assets/js/typegarden.js, after Type Garden) -->
+        <div class="hero__garden" aria-hidden="true"><canvas id="type-garden"></canvas></div>
+        <div class="hero__body">
         <p class="lead">Primer breaks any subject into lessons, writes each one, and curates them into a single credible course you can learn from, practice, and download as a PDF.</p>
 
         <form class="ask" id="ask" autocomplete="off" novalidate>
@@ -82,6 +86,7 @@
           <button class="chip" type="button" data-surprise>🎲 Surprise me</button>
         </div>
         <p class="hero__note" data-when="guest">Building a course needs an account. <a href="auth.html#signup">Have an invite code?</a></p>
+        </div>
       </section>
 
       <!-- How it works: the product itself, played by scrolling (assets/js/landing-fx.js) -->
@@ -233,6 +238,7 @@
 
     <footer class="foot wrap">
       <p>© 2026 Primer. Learn anything, credibly.</p>
+      <p class="foot__credit" data-no-i18n>The roses after <a href="https://type-garden.vercel.app/" rel="noopener">Type Garden</a> by Akshat Agarwal · motion by <a href="https://gsap.com/" rel="noopener">GSAP</a></p>
     </footer>
   </div>
 </body>
