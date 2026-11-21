@@ -1,7 +1,7 @@
 /* =====================================================================
    Interactive parts of lessons ("widgets"), the browser half of
    server/widgets.mjs: a chess board, a circuit, a graph with sliders, a
-   piano or drums. Each kind lives in assets/js/widgets/<kind>.js (with
+   piano or drums, cards to put in order, match or sort. Each kind lives in assets/js/widgets/<kind>.js (with
    assets/css/widgets/<kind>.css) and is fetched the first time a page
    needs it, so pages without one load nothing extra; once fetched it is
    kept by the offline app like any other file under /assets/.
@@ -39,7 +39,7 @@
   'use strict';
   const P = window.Primer;
   if (!P) return;
-  const KINDS = ['chess', 'circuit', 'graph', 'music'];
+  const KINDS = ['chess', 'circuit', 'graph', 'music', 'arrange'];
   const impls = {};
   const loading = {};
   const t = (s) => (P.t ? P.t(s) : s);

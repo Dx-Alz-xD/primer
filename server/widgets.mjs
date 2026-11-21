@@ -1,6 +1,7 @@
 // =====================================================================
 // Interactive parts of a lesson ("widgets"): a chess board, a circuit, a
-// graph with sliders, a piano or drums, used in two ways.
+// graph with sliders, a piano or drums, cards to put in order, match or
+// sort (for any subject), used in two ways.
 //
 //   A block, among a section's content:
 //     { "t": "widget", "kind": "chess", "spec": {...}, "caption": "..." }
@@ -21,6 +22,10 @@
 //            with a short example of each, and when (not) to use it
 //   block(spec)        -> a clean spec, or null (the block is dropped)
 //   task(spec, goal)   -> { spec, goal } clean, or null (the question is dropped)
+// and may export
+//   optional  true: offered to every lesson, but used only where it fits
+//   texts(spec) -> [words]           the words in it that a translator should translate
+//   withTexts(spec, words) -> spec   the same spec with translated words, or null
 // and its browser half is assets/js/widgets/<kind>.js (assets/js/widgets.js).
 //
 // Everything the AI sends is checked here: a widget that doesn't hold
@@ -29,7 +34,7 @@
 // half-broken. A lesson on a subject with no widget is written as before.
 // =====================================================================
 
-export const KINDS = ['chess', 'circuit', 'graph', 'music'];
+export const KINDS = ['chess', 'circuit', 'graph', 'music', 'arrange'];
 
 const mods = new Map(); // kind -> module, for the kinds whose file exists
 await Promise.all(KINDS.map(async (kind) => {
@@ -59,10 +64,14 @@ export function widgetKinds({ topic, title, desc, instructions } = {}) {
 export function widgetPrompt(kinds) {
   const parts = (kinds || []).map((k) => mods.get(k)).filter(Boolean);
   if (!parts.length) return '';
+  // only optional kinds (the card activity): use one where it fits, or none
+  const use = parts.some((m) => !m.optional)
+    ? 'Use them where doing or watching teaches better than reading: at least one interactive block in the lesson, and one or two "task" questions where acting is the natural test.'
+    : 'Most lessons have something it suits (stages, events in time, causes and effects, words and meanings, examples and their kind): then use it, usually as one "task" question, two at most. Use none if nothing in this lesson suits it.';
   return [
     '',
     'Interactive parts. This lesson can use the interactive parts below, which the app draws and the learner can use.',
-    'Use them where doing or watching teaches better than reading: at least one interactive block in the lesson, and one or two "task" questions where acting is the natural test. Write the surrounding text so it makes sense with them (refer to "the board below", "the circuit", "the graph", "the keyboard"). Everything else in the lesson stays as described above.',
+    use + ' Write the surrounding text so it makes sense with them (refer to "the board below", "the circuit", "the graph", "the keyboard", "the cards"). Everything else in the lesson stays as described above.',
     'A block goes among a section\'s "blocks": {"t": "widget", "kind": "<kind>", "spec": {...}, "caption": "one sentence on what to notice or try"}.',
     'A task goes among a section\'s "checkpoint" questions: {"type": "task", "kind": "<kind>", "prompt": "what to do", "spec": {...}, "goal": {...}, "hint": "...", "explain": "why that is right"}.',
     'Get every detail exactly right (legal positions, sound circuits, true values): the app checks each one and leaves out any that is wrong.',
@@ -87,9 +96,10 @@ export function normTask(q, base) {
   if (!isObj(q)) return null;
   const kind = str(q.kind || q.widget, 20).toLowerCase();
   const m = mods.get(kind);
-  if (!m || !isObj(q.spec) || !isObj(q.goal) || !small(q.spec) || !small(q.goal, 6000)) return null;
+  const goal = q.goal == null ? {} : q.goal; // a kind whose answer is the spec itself takes {}
+  if (!m || !isObj(q.spec) || !isObj(goal) || !small(q.spec) || !small(goal, 6000)) return null;
   let out;
-  try { out = m.task(q.spec, q.goal); } catch { out = null; }
+  try { out = m.task(q.spec, goal); } catch { out = null; }
   if (!out || !isObj(out.spec) || !isObj(out.goal) || !small(out.spec) || !small(out.goal, 6000)) return null;
   return { type: 'task', kind, ...base, spec: out.spec, goal: out.goal };
 }
@@ -98,4 +108,15 @@ export function normTask(q, base) {
 export function widgetLine(b) {
   const m = mods.get(b && b.kind);
   return `[${m ? m.label : 'an interactive part'}${b && b.caption ? `: ${b.caption}` : ''}]`;
+}
+
+// The words in a widget's spec that a translator should translate ([] for most kinds), and the spec
+// with translated words put back (null: keep the original).
+export function widgetTexts(kind, spec) {
+  const m = mods.get(kind);
+  try { return m && typeof m.texts === 'function' ? m.texts(spec).filter((x) => typeof x === 'string') : []; } catch { return []; }
+}
+export function widgetWithTexts(kind, spec, words) {
+  const m = mods.get(kind);
+  try { return m && typeof m.withTexts === 'function' ? m.withTexts(spec, words) : null; } catch { return null; }
 }

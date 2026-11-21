@@ -1,0 +1,79 @@
+/* =====================================================================
+   "arrange" cards (assets/js/widgets/arrange.js), on the lesson's
+   parchment: cards like the answer choices, places drawn as dashed slots.
+   ===================================================================== */
+.arr{display:grid;gap:.85rem;font-size:1.08rem;line-height:1.4;color:var(--ink)}
+.arr__how{margin:0;font-style:italic;color:var(--ink-soft);font-size:1rem}
+
+/* the places */
+.arr__places{display:grid;gap:.5rem;margin:0;padding:0;list-style:none}
+.arr--group .arr__places{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:.7rem}
+.arr__place{
+  position:relative;display:flex;align-items:center;gap:.7rem;min-height:52px;padding:.4rem .55rem;
+  border:1px dashed #a88b5c;border-radius:6px;background:rgba(247,239,220,.6);
+  transition:border-color .15s, background-color .15s;
+}
+.arr--group .arr__place{flex-direction:column;align-items:stretch;min-height:120px;padding:.55rem}
+.arr__place.is-ready{border-color:var(--ink-gold);background:rgba(239,223,184,.75)}
+.arr__place.is-ready:hover{background:#efdfb8}
+.arr__name{position:relative;z-index:1;pointer-events:none;flex:none}
+.arr--order .arr__name{
+  display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;
+  background:#e6d6b0;font-family:var(--font-head);font-size:1.05rem;color:var(--ink-gold)
+}
+.arr--match .arr__name{flex:1 1 45%;font-weight:600}
+.arr--group .arr__name{font-family:var(--font-head);font-size:1.1rem;text-align:center;border-bottom:1px solid rgba(168,139,92,.45);padding-bottom:.3rem}
+.arr__drop{position:relative;z-index:1;pointer-events:none;flex:1 1 50%;display:flex;flex-wrap:wrap;gap:.4rem;min-height:2.4rem;align-items:center}
+.arr--group .arr__drop{align-content:flex-start;justify-content:center}
+.arr__empty{color:#a88b5c}
+/* the whole place is a button underneath its cards */
+.arr__go{position:absolute;inset:0;z-index:0;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:6px;background:transparent;cursor:pointer}
+.arr__go:disabled{cursor:default}
+.arr__go:focus-visible{outline:2px solid var(--ink-gold);outline-offset:2px}
+
+/* the cards */
+.arr__pool{display:flex;flex-wrap:wrap;gap:.5rem;min-height:52px;padding:.55rem;border-radius:6px;background:rgba(201,180,138,.22);align-items:center;transition:background-color .15s}
+.arr__pool.is-ready{background:rgba(201,180,138,.42);cursor:pointer}
+.arr__done{color:var(--ink-soft);font-style:italic;font-size:.98rem}
+.arr__card{
+  pointer-events:auto;position:relative;z-index:2;
+  min-height:44px;max-width:100%;padding:.45rem .8rem;text-align:left;
+  font:inherit;font-size:1.04rem;line-height:1.3;color:var(--ink);
+  border:1px solid #c4ad80;border-radius:6px;background:#f2e8d0;cursor:pointer;
+  box-shadow:0 1px 0 rgba(91,71,48,.18);
+  transition:border-color .15s, background-color .15s, transform .15s;
+}
+.arr__card.is-moved{animation:arr-in .22s ease-out}
+.arr__card:hover{border-color:var(--ink-gold)}
+.arr__card:focus-visible{outline:2px solid var(--ink-gold);outline-offset:2px}
+.arr__card.is-picked{border-color:var(--ink-gold);background:#efdfb8;transform:translateY(-2px);box-shadow:0 3px 8px rgba(91,71,48,.22)}
+.arr__card.is-right{border-color:var(--ink-green);background:#e2ebcf}
+.arr__card.is-wrong{border-color:var(--ink-red);background:#f3dcd2}
+.arr__card:disabled{cursor:default}
+.arr.is-done .arr__drop .arr__card{border-color:var(--ink-green);background:#e2ebcf}
+@keyframes arr-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* a block's own buttons */
+.arr__actions{display:flex;flex-wrap:wrap;gap:.5rem 1.1rem;align-items:center}
+.arr__link{font:inherit;font-size:1rem;color:var(--ink-gold);background:none;border:0;padding:.3rem 0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.arr__feedback{margin:0;min-height:1.4em;color:var(--ink-soft);font-style:italic}
+.arr__feedback.is-right{color:var(--ink-green);font-style:normal}
+
+/* a correct or shown task: cards stay put */
+.q.is-correct .arr__pool,.q.is-revealed .arr__pool{display:none}
+
+/* the still picture */
+.arr-still{text-align:left;max-width:36rem;margin:0 auto}
+.arr-still__cards{margin:.2rem 0 .6rem}
+.arr-still__slots,.arr-still__left{margin:.2rem 0;padding-left:1.6rem;line-height:2}
+.arr-still__right,.arr-still__groups{margin:.4rem 0;padding-left:0;list-style:none;line-height:1.9}
+.arr-still__blank{color:#8a7a60;letter-spacing:.05em}
+
+@media (max-width:520px){
+  .arr--match .arr__place{flex-wrap:wrap}
+  .arr--match .arr__name{flex-basis:100%}
+}
+@media (prefers-reduced-motion: reduce){
+  .arr__card{animation:none;transition:none}
+  .arr__card.is-picked{transform:none}
+}

@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { HttpError } from './http.mjs';
 import { promptNote, safetyKey } from './safety.mjs';
 import { lengthRule, lengthKey, enforceLength } from './length.mjs';
-import { widgetKinds, widgetPrompt, normWidgetBlock, normTask } from './widgets.mjs';
+import { widgetKinds, widgetPrompt, normWidgetBlock, normTask, widgetTexts, widgetWithTexts } from './widgets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache');
@@ -435,6 +435,24 @@ export function normalizeLesson(raw, lessonTitle = 'this lesson') {
 
   if (sections.length < 3) throw new Error(`only ${sections.length} usable sections`);
   if (!sections.some((s) => s.checkpoint.length)) throw new Error('no usable questions');
+  // interactive parts that failed their checks are left out quietly; say so in the log
+  const asked = arr(raw && raw.sections).slice(0, 7).reduce((n, s) => n
+    + arr(s && s.blocks).filter((b) => b && typeof b === 'object' && str(b.t || b.type, 20).toLowerCase() === 'widget').length
+    + arr(s && s.checkpoint).slice(0, 3).filter((x) => x && typeof x === 'object' && x.type === 'task').length, 0);
+  const kept = sections.reduce((n, s) => n + s.blocks.filter((b) => b.t === 'widget').length + s.checkpoint.filter((x) => x.type === 'task').length, 0);
+  if (asked > kept) console.log(`[widgets] "${lessonTitle}": ${asked - kept} of ${asked} interactive parts left out (they failed their checks)`);
+  // an interactive part shown twice with the same contents (a block and a task alike) is kept once: as the task
+  const tasked = new Set(sections.flatMap((s) => s.checkpoint.filter((x) => x.type === 'task').map((x) => x.kind + JSON.stringify(x.spec))));
+  const shown = new Set();
+  sections.forEach((s) => {
+    s.blocks = s.blocks.filter((b) => {
+      if (b.t !== 'widget') return true;
+      const k = b.kind + JSON.stringify(b.spec);
+      if (tasked.has(k) || shown.has(k)) return false;
+      shown.add(k);
+      return true;
+    });
+  });
   // every lesson asks for at least one answer in the learner's own words
   if (!sections.some((s) => s.checkpoint.some((x) => x.type === 'subjective'))) {
     const target = [...sections].reverse().find((s) => s.checkpoint.length) || sections[sections.length - 2];
@@ -1084,7 +1102,7 @@ export function pickLibraryCut({ subject, outline, from, to }) {
 
 const TRANSLATE_SYSTEM = String.raw`You translate one lesson of an online course, given as JSON, for a learner who reads another language.
 Return ONLY the same JSON object (no prose, no code fences) with every piece of text a learner reads translated:
-section titles, paragraph "html" (keep every HTML tag exactly), list items, callout titles and "html", figure, photo and widget captions (never change "svg"), recap points, question prompts, choices, hints, explanations and model answers.
+section titles, paragraph "html" (keep every HTML tag exactly), list items, callout titles and "html", figure, photo and widget captions (never change "svg"), every string in a "texts" list (the same number, in the same order), recap points, question prompts, choices, hints, explanations and model answers.
 Keep exactly the same structure: the same sections, blocks, questions and choices, in the same order.
 Never change: maths inside \( \) and in "tex", numbers, "answer", "tolerance", "type", "t", "kind", "id", or "unit" symbols.
 For "text" questions, put the translated accepted answers first in "accept" and keep the original ones after them.
@@ -1095,16 +1113,20 @@ Natural, warm, precise wording, the way a good teacher writes in that language. 
 const isPhotoBlock = (b) => Boolean(b && typeof b === 'object' && str(b.t || b.type, 20).toLowerCase() === 'photo');
 // Interactive parts likewise: a widget goes as its caption, a task as its wording; the board, circuit, graph or
 // keyboard (spec and goal) never pass through the translator, and are put back by position (widgetsBack).
+// Words that are part of one (the cards of an "arrange") go as "texts" and are put back into the spec.
 const isWidgetBlock = (b) => Boolean(b && typeof b === 'object' && b.t === 'widget');
 const isTask = (x) => Boolean(x && typeof x === 'object' && x.type === 'task');
+const wordsOf = (w) => { const texts = widgetTexts(w.kind, w.spec); return texts.length ? { texts } : {}; };
+// the original spec with the translated words, when the translator kept them all
+const specBack = (w, tr) => (tr && Array.isArray(tr.texts) && widgetWithTexts(w.kind, w.spec, tr.texts.map((x) => str(x, 200)))) || w.spec;
 const captionsOnly = (lesson) => ({
   sections: arr(lesson.sections).map((s) => {
     const photos = arr(s.blocks).some(isPhotoBlock), widgets = arr(s.blocks).some(isWidgetBlock), tasks = arr(s.checkpoint).some(isTask);
     if (!photos && !widgets && !tasks) return s;
     return {
       ...s,
-      blocks: arr(s.blocks).map((b) => (isPhotoBlock(b) ? { t: 'photo', caption: str(b.caption, 300) } : isWidgetBlock(b) ? { t: 'widget', kind: b.kind, caption: str(b.caption, 400) } : b)),
-      ...(tasks ? { checkpoint: s.checkpoint.map((x) => (isTask(x) ? { type: 'task', kind: x.kind, prompt: x.prompt, hint: x.hint, explain: x.explain } : x)) } : {})
+      blocks: arr(s.blocks).map((b) => (isPhotoBlock(b) ? { t: 'photo', caption: str(b.caption, 300) } : isWidgetBlock(b) ? { t: 'widget', kind: b.kind, caption: str(b.caption, 400), ...wordsOf(b) } : b)),
+      ...(tasks ? { checkpoint: s.checkpoint.map((x) => (isTask(x) ? { type: 'task', kind: x.kind, prompt: x.prompt, hint: x.hint, explain: x.explain, ...wordsOf(x) } : x)) } : {})
     };
   })
 });
@@ -1122,11 +1144,11 @@ function widgetsBack(raw, original) {
         blocks: arr(s.blocks).flatMap((b) => {
           if (!(b && typeof b === 'object' && str(b.t || b.type, 20).toLowerCase() === 'widget')) return [b];
           const w = mine[k++];
-          return w ? [{ ...w, caption: str(b.caption, 400) || w.caption || '' }] : [];
+          return w ? [{ ...w, spec: specBack(w, b), caption: str(b.caption, 400) || w.caption || '' }] : [];
         }),
         checkpoint: arr(s.checkpoint).map((x, j) => {
           const oq = arr(o.checkpoint)[j];
-          return isTask(oq) && x && typeof x === 'object' ? { ...x, type: 'task', kind: oq.kind, spec: oq.spec, goal: oq.goal } : x;
+          return isTask(oq) && x && typeof x === 'object' ? { ...x, type: 'task', kind: oq.kind, spec: specBack(oq, x), goal: oq.goal } : x;
         })
       };
     })
