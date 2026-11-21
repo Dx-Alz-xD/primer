@@ -842,6 +842,10 @@
     "That question isn’t in the lesson.": "यह सवाल पाठ में नहीं है।",
     "That question isn’t in the lesson, or it isn’t one you answer in your own words.": "यह सवाल पाठ में नहीं है, या यह अपने शब्दों में जवाब देने वाला सवाल नहीं है।",
     "This answer is already being marked.": "यह जवाब पहले से जाँचा जा रहा है।",
-    "You’ve had a lot of answers marked this hour. Try again a little later.": "इस घंटे आपके बहुत से जवाब जाँचे जा चुके हैं। थोड़ी देर बाद फिर कोशिश करें।"
+    "You’ve had a lot of answers marked this hour. Try again a little later.": "इस घंटे आपके बहुत से जवाब जाँचे जा चुके हैं। थोड़ी देर बाद फिर कोशिश करें।",
+    "Photo": "फ़ोटो",
+    "Sample courses use their built-in lessons.": "नमूना कोर्स अपने बने-बनाए पाठ इस्तेमाल करते हैं।",
+    "You’ve asked for a lot of photos this hour. Try again later.": "इस घंटे आपने बहुत सी फ़ोटो माँगी हैं। बाद में फिर कोशिश करें।",
+    "That lesson can’t be read.": "यह पाठ पढ़ा नहीं जा सकता।"
   }
 }

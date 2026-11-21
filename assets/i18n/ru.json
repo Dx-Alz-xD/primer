@@ -842,6 +842,10 @@
     "That question isn’t in the lesson.": "Этого вопроса нет в уроке.",
     "That question isn’t in the lesson, or it isn’t one you answer in your own words.": "Этого вопроса нет в уроке, или на него не отвечают своими словами.",
     "This answer is already being marked.": "Этот ответ уже проверяется.",
-    "You’ve had a lot of answers marked this hour. Try again a little later.": "За этот час проверено много ваших ответов. Попробуйте чуть позже."
+    "You’ve had a lot of answers marked this hour. Try again a little later.": "За этот час проверено много ваших ответов. Попробуйте чуть позже.",
+    "Photo": "Фото",
+    "Sample courses use their built-in lessons.": "В примерах курсов используются встроенные уроки.",
+    "You’ve asked for a lot of photos this hour. Try again later.": "За этот час вы запросили много фото. Попробуйте позже.",
+    "That lesson can’t be read.": "Этот урок не удаётся прочитать."
   }
 }

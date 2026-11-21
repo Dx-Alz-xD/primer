@@ -26,6 +26,7 @@ Primer turns one topic into a full course. You name the subject, say where to st
 - **Build from a syllabus.** Paste a syllabus or chapter list (NCERT, your university’s) and the course follows its chapters and order.
 - **A two-minute level check** before a course sets where it starts, from the first idea you don’t know yet.
 - **Answers in your own words are marked**, with short feedback and the key points you missed.
+- **Real photos in lessons.** Up to two freely licensed photos per lesson from Wikimedia Commons, each credited with its author and licence, kept on the server so they work offline and in the EPUB. Courses get a cover photo too.
 - **Accounts that keep everything**: courses, progress, notes, doubts and the tutor’s memory follow you to any device.
 - **Risky topics are taught safely, not turned away.** A request like “bomb making” becomes a course on the chemistry and safety of explosives, and a hateful premise becomes critical history. Lessons and the tutor stay at textbook level and never give instructions for causing harm. Someone who seems to be struggling gets a supportive answer with a helpline. The only thing always refused is sexual content involving children.
 
@@ -51,6 +52,7 @@ Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` 
 | `INVITE_CODE` | The code sign-up asks for. Empty means open sign-up. |
 | `ELEVENLABS_API_KEY` | Turns on narration, sound effects and spoken doubts. |
 | `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL` | Optional: another voice or model. |
+| `WIKIMEDIA_CONTACT` | Optional: your email or web page, sent to Wikimedia so photo lookups get a higher rate limit. |
 | `PORT`, `HOST` | Where the server listens (default `127.0.0.1:5173`). |
 
 ## How it’s built
@@ -91,6 +93,7 @@ server/review.mjs                               the review schedule for past mis
 server/classes.mjs                              classes, join codes, the class dashboard
 server/placement.mjs, server/marking.mjs        the level check, marking written answers
 server/offline.mjs, assets/js/sw.js             the installable app and offline courses
+server/photos.mjs                               lesson photos from Wikimedia Commons, with credits
 assets/icons                                    app icons
 server/ebook.mjs, server/translate.mjs          the book view, lesson translation
 server/features.mjs                             the list of feature modules
