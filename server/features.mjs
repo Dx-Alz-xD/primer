@@ -21,5 +21,6 @@ export default [
   () => import('./reuse.mjs'),
   () => import('./exams.mjs'),
   () => import('./packs.mjs'),
-  () => import('./talk.mjs')
+  () => import('./talk.mjs'),
+  () => import('./refs.mjs') // a lesson's sources and the apps to practise it in (with sources.mjs, apps.mjs)
 ];

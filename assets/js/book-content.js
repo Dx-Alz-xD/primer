@@ -37,6 +37,8 @@
   function normalize(raw) {
     raw = scrub(raw);
     return {
+      // its sources (server/refs.mjs), checked by assets/js/refs.js when they are shown
+      refs: raw && raw.refs && typeof raw.refs === 'object' ? raw.refs : null,
       sections: arr(raw && raw.sections).filter((s) => s && typeof s === 'object').map((s) => ({
         title: str(s.title),
         blocks: arr(s.blocks).filter((b) => b && typeof b === 'object' && typeof b.t === 'string')
@@ -215,10 +217,15 @@
     return `<li class="bk-ans__item" id="ans-${n}-${k}" data-a="a${n}-${k}"><span class="bk-ex__n">${n}.${k}</span><div class="bk-ans__main">${main}</div>${why}<p class="bk-ex__more"><a class="bk-ans__back" href="${link.exercise(n, k)}" aria-label="Back to exercise ${n}.${k}">Back to the exercise</a></p></li>`;
   }
 
+  // A chapter's sources (assets/js/refs.js): numbers beside its parts' titles, and the list after its exercises.
+  const srcPrefix = (ch) => `src-${ch.n}-`;
+  const srcTags = (ch, si) => (P.refs ? P.refs.tags(ch.lesson, si, { prefix: srcPrefix(ch), text: true }) : '');
+  const srcList = (book, ch) => (P.refs ? P.refs.list(ch.lesson, { prefix: srcPrefix(ch), heading: 'h3', cls: 'srcs bk-src', lang: book.lang, anchor: `s${ch.n}` }) : '');
+
   function chapter(book, ch, link) {
     const body = ch.lesson.sections.map((s, si) => {
       const a = `c${ch.n}-${si + 1}`;
-      return (s.title ? `<h3 class="bk-sec"${` data-a="${a}"`}>${esc(s.title)}</h3>` : '') +
+      return (s.title ? `<h3 class="bk-sec"${` data-a="${a}"`}>${esc(s.title)}${srcTags(ch, si)}</h3>` : '') +
         s.blocks.map((b, bi) => block(b, `${a}-${bi + 1}`)).join('');
     }).join('');
     const ex = ch.questions.length
@@ -234,7 +241,7 @@
         <p class="bk-chapter__unit">Unit ${P.roman(ch.unitIndex)}: ${esc(ch.unit)}</p>
         <div class="bk-rule" aria-hidden="true"></div>
       </header>
-      ${body}${ex}
+      ${body}${ex}${srcList(book, ch)}
     </article>`;
   }
 

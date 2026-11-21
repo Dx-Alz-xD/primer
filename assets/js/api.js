@@ -266,6 +266,8 @@
       const lesson = cleanLesson(JSON.parse(JSON.stringify((translated || res).lesson)));
       lesson.model = res.model;
       if (translated) { lesson.translated = { lang: P.lang, model: translated.model }; }
+      // a translation keeps the original's sources and apps (assets/js/refs.js checks them before use)
+      if (translated && res.lesson && res.lesson.refs) lesson.refs = JSON.parse(JSON.stringify(res.lesson.refs));
       return withMeta(lesson);
     },
 

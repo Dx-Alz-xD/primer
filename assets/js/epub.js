@@ -60,6 +60,7 @@
         P.zip ? null : loadScript('assets/js/zip.js'),
         P.book ? null : loadScript('assets/js/book-content.js'),
         P.photos ? null : loadScript('assets/js/photos.js'),
+        P.refs ? null : loadScript('assets/js/refs.js'), // each chapter's sources
         // Without KaTeX the maths is kept as TeX source rather than failing the whole export.
         window.katex ? null : loadScript(KATEX_JS, true).catch(() => console.warn('[Primer] KaTeX didn’t load, so the EPUB keeps maths as TeX.'))
       ]).catch((err) => { readying = null; throw err; });
@@ -389,6 +390,15 @@ figcaption { font-style: italic; font-size: 0.92em; margin-top: 0.5em; }
 .bk-ans-ch__title { font-size: 1.1em; margin: 1.4em 0 0.5em; }
 code.tex { font-family: monospace; font-size: 0.9em; }
 nav ol { list-style: none; padding-left: 1em; }
+.srctags { font-size: 0.55em; vertical-align: super; line-height: 1; margin-left: 0.3em; }
+.srctag { text-decoration: none; padding: 0 0.15em; }
+.bk-src { margin-top: 2em; padding-top: 0.8em; border-top: 1px solid #c9b48a; }
+.srcs__title { font-size: 1.3em; }
+.srcs__note { font-style: italic; font-size: 0.92em; }
+.srcs__list { list-style: none; padding: 0; }
+.src { margin: 0 0 0.5em; }
+.src__n { font-family: "IM Fell English", Georgia, serif; color: #8a6128; margin-right: 0.5em; }
+.src__site, .src__by, .src__doi { font-size: 0.95em; }
 `;
 
   function fileName(title) {

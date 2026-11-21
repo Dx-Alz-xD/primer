@@ -114,12 +114,13 @@ async function apiTurn(until) {
   }
 }
 
-function wmFetch(url, ms) {
+function wmFetch(url, ms, method = 'GET') {
   return slot(async () => {
     if (Date.now() < downUntil) throw new Unreachable('Wikimedia asked Primer to wait');
     let res;
     try {
       res = await fetch(url, {
+        method,
         headers: { 'User-Agent': UA, 'Api-User-Agent': UA },
         credentials: 'omit', referrerPolicy: 'no-referrer', redirect: 'follow',
         signal: AbortSignal.timeout(ms)
@@ -139,16 +140,27 @@ function wmFetch(url, ms) {
   });
 }
 
-async function api(base, params, until) {
+async function api(base, params, until, ms = API_MS) {
   const url = base + '?' + new URLSearchParams({ format: 'json', formatversion: '2', ...params });
   await apiTurn(until);
-  const res = await wmFetch(url, API_MS);
+  const res = await wmFetch(url, ms);
   if (!res.ok) { res.body?.cancel().catch(() => {}); throw new Unreachable(`HTTP ${res.status}`); }
   let data;
   try { data = await res.json(); } catch { throw new Unreachable('the answer wasn’t JSON'); }
   if (data && data.error) throw new Unreachable(String(data.error.info || data.error.code || 'API error'));
   return data;
 }
+
+// Other modules' Wikimedia requests (a lesson's sources and its apps' logos, server/sources.mjs and
+// server/apps.mjs) share this limiter, agent and back-off. An Unreachable error means "ask again later".
+// Their searches ask for more (extracts, links), so they get longer than photos' 4 s before counting as unanswered.
+export const wikimedia = {
+  api: (base, params, waitMs = QUEUE_MS, ms = 10_000) => api(base, params, Date.now() + waitMs, ms),
+  // a page's own address, to check it resolves: counted like an API request, to stay well inside the limit
+  head: async (url, waitMs = QUEUE_MS) => { await apiTurn(Date.now() + waitMs); return wmFetch(url, 10_000, 'HEAD'); },
+  file: (url) => wmFetch(url, FILE_MS),
+  Unreachable
+};
 
 const INFO = {
   prop: 'imageinfo', iiprop: 'url|mime|size|extmetadata', iiurlwidth: String(THUMB_WIDTH), iiextmetadatalanguage: 'en',
