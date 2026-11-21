@@ -206,6 +206,8 @@
       onSketchChange: (strokes) => { if (notebook) notebook.onPageSketch(strokes); }
     });
     notebook = P.initNotebook({ course, n, lessonTitle: meta.title, toggle: $('#nb-toggle'), board, paper });
+    // the lesson for other tools on the page (study methods: assets/js/study-methods.js)
+    document.dispatchEvent(new CustomEvent('primer:lesson', { detail: { course: () => course, n, meta, flat, lesson, sections, prog: () => prog, lessonHref, outlineHref } }));
 
     // Watch mode (assets/js/video.js) follows the same lesson as videos, with the same questions and progress.
     if (P.watch) {

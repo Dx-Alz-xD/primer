@@ -394,5 +394,7 @@
       }
     });
     if (P.classes) P.classes.mountCourse(view, course);
+    // the course page for other tools (study method, time studied, knowledge map, reminders)
+    document.dispatchEvent(new CustomEvent('primer:course', { detail: { view, course } }));
   }
 })();

@@ -18,6 +18,9 @@ import { send } from './http.mjs';
 
 const SW_FILE = path.join(ROOT, 'assets', 'js', 'sw.js');
 let swCache = null;
+// Other features add their own service worker code after sw.js (study.mjs: notifications and the
+// background check for reminders): paths under assets/js/, each wrapped so its names stay its own.
+export const swParts = [];
 
 // What the service worker itself may fetch: this site, KaTeX and the fonts the pages use.
 const SW_CSP = "default-src 'none'; connect-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com";
@@ -47,7 +50,9 @@ const MANIFEST = JSON.stringify({
 async function serviceWorker({ req, res }) {
   let js = process.env.NODE_ENV === 'production' ? swCache : null;
   if (!js) {
-    try { js = await readFile(SW_FILE, 'utf8'); } catch { return send(res, 404, 'Not found'); }
+    try {
+      js = [await readFile(SW_FILE, 'utf8'), ...await Promise.all(swParts.map((f) => readFile(path.join(ROOT, 'assets', 'js', f), 'utf8')))].join('\n');
+    } catch { return send(res, 404, 'Not found'); }
     swCache = js;
   }
   send(res, 200, req.method === 'HEAD' ? undefined : js, 'text/javascript; charset=utf-8', {
