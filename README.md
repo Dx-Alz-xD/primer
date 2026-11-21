@@ -10,6 +10,7 @@ Primer turns one topic into a full course. You name the subject, say where to st
 
 - **Plans a course from one topic.** Topic, an optional range (“from limits to the chain rule”) and teaching instructions (LaTeX, mnemonics, worked examples, “teach me like I’m 5”). The outline is as long as the range needs.
 - **Writes each lesson when you open it**, with typeset maths (KaTeX), worked examples, callouts and diagrams, then keeps it.
+- **Lessons you can play with.** Where doing teaches better than reading, a lesson draws something to use: a chess board to watch and move on, a circuit whose switches and sliders light bulbs and move meters, a graph with sliders and points to drag, a piano (with sargam names) and drums or tabla to play, or cards to put in order, match or sort, for any subject. Some checkpoint questions are done in them (find the mate, light only L2, set the slope to −2, play the G major chord). Every one is checked on the server, so an impossible position, a broken circuit or a wrong answer key is left out rather than shown.
 - **Checks you as you go.** Every part of a lesson ends with a checkpoint, and the next part isn’t on the page until you answer. A wrong answer brings back that part’s key points; a second miss adds a hint; a third lets you see the answer.
 - **Doubts where they happen.** Select a sentence, or circle something on the whiteboard, and ask. The tutor answers using that part of the lesson.
 - **A tutor that remembers.** A conversation on every page that knows your courses, your doubts and the questions you got wrong, so it can point out a pattern.
@@ -109,6 +110,8 @@ server/index.mjs                                HTTP server, pages, security hea
 server/auth.mjs                                 accounts and sessions (argon2id)
 server/data.mjs                                 courses, lessons, progress, notes, doubts
 server/ai.mjs                                   AI providers: plan, write, translate, repair, check, cache
+server/widgets.mjs, server/widgets/             interactive parts of lessons: which lessons get them, the AI's instructions, the checks
+assets/js/widgets.js, assets/js/widgets/        the chess board, circuit, graph, piano and drums, and cards, drawn and played in the page
 server/langs.mjs                                interface and course languages
 server/videos.mjs, assets/js/video.js           Watch mode: YouTube picks, quizzes, Primer’s own videos, sign language
 server/tutor.mjs                                doubt answers and the tutor
