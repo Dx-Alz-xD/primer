@@ -199,6 +199,10 @@ function screenSyllabus(topic, syllabus) {
 export const hooks = { planCourse: null, writeLesson: null, ownFolder: null };
 // classes.mjs: classLesson(user, row, n, write) -> { lesson, model } for a class course, null otherwise
 hooks.classLesson = null;
+// photos.mjs: photos(row, meta, n, lesson, stored) -> the lesson with its photos looked up. Called for
+// every lesson written (stored: false, saved here after) or opened (stored: true, it saves its changes).
+hooks.photos = null;
+const withPhotos = (row, meta, n, lesson, stored) => (hooks.photos && lesson ? hooks.photos(row, meta, n, lesson, stored) : lesson);
 
 // The folder a new course should be filed in, if the request names one.
 function folderFor(user, body) {
@@ -240,7 +244,7 @@ async function lesson({ req, res }) {
   const flat = flatten(meta.units || []);
   if (!Number.isInteger(n) || n < 1 || n > flat.length) throw new HttpError('That lesson is not in the course.', 400);
   const have = q('SELECT data, model FROM lessons WHERE course_id = ? AND n = ?').get(row.id, n);
-  if (have) return sendJSON(res, 200, { ok: true, lesson: parseJSON(have.data), model: have.model, cached: true });
+  if (have) return sendJSON(res, 200, { ok: true, lesson: await withPhotos(row, meta, n, parseJSON(have.data), true), model: have.model, cached: true });
   if (meta.source !== 'ai' && meta.source !== 'library') throw new HttpError('This sample course uses its built-in lessons.', 400);
   // older courses on risky topics (made before this check) are framed safely from here on
   const safety = courseSafety(meta);
@@ -260,16 +264,18 @@ async function lesson({ req, res }) {
   };
   // a class course goes through its class first: the teacher's lesson, or one written once for everyone
   const out = (hooks.classLesson && await hooks.classLesson(u, row, n, write)) || await write();
-  saveLesson(row.id, n, out.lesson, out.model);
-  sendJSON(res, 200, { ok: true, lesson: out.lesson, model: out.model });
+  const saved = await withPhotos(row, meta, n, out.lesson, false);
+  saveLesson(row.id, n, saved, out.model);
+  sendJSON(res, 200, { ok: true, lesson: saved, model: out.model });
 }
 
 async function getLesson({ req, res, params }) {
   const u = requireUser(req);
   const row = ownCourse(u, params.id);
-  const have = q('SELECT data, model FROM lessons WHERE course_id = ? AND n = ?').get(row.id, Number(params.n));
+  const n = Number(params.n);
+  const have = q('SELECT data, model FROM lessons WHERE course_id = ? AND n = ?').get(row.id, n);
   if (!have) throw new HttpError('That lesson hasn’t been written yet.', 404);
-  sendJSON(res, 200, { ok: true, lesson: parseJSON(have.data), model: have.model });
+  sendJSON(res, 200, { ok: true, lesson: await withPhotos(row, parseJSON(row.data, {}), n, parseJSON(have.data), true), model: have.model });
 }
 
 async function putProgress({ req, res, params }) {

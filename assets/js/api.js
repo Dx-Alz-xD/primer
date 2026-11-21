@@ -173,6 +173,8 @@
     const h = P.sanitizeHTML;
     lesson.sections.forEach((s) => {
       s.blocks = s.blocks.map((b) => {
+        // a photo only ever comes from this site's /media/ (assets/js/photos.js)
+        if (b && b.t === 'photo') return P.photos ? P.photos.clean(b, h) : null;
         const o = Object.assign({}, b);
         if (o.html != null) o.html = h(o.html);
         if (o.items) o.items = o.items.map(h);

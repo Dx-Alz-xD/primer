@@ -129,6 +129,7 @@
       case 'math': return `<div class="math-display"${at}>$$${esc(b.tex)}$$</div>`;
       case 'list': return `<ul${at}>${b.items.map((it) => `<li>${it}</li>`).join('')}</ul>`;
       case 'figure': return b.svg ? `<figure class="fig"${at}>${b.svg}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ''}</figure>` : '';
+      case 'photo': return P.photos && b.src ? P.photos.html(b, { attr: at }) : '';
       case 'callout': {
         const kind = str(b.kind || 'note').replace(/[^\w-]/g, '') || 'note';
         return `<aside class="callout callout--${kind}"${at}>${b.title ? `<div class="callout__title">${esc(b.title)}</div>` : ''}<div class="callout__body">${str(b.html)}</div></aside>`;

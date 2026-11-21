@@ -238,6 +238,7 @@
       case 'list': return `<ul ${id}>${b.items.map((it) => `<li>${it}</li>`).join('')}</ul>`;
       case 'figure': return `<figure class="fig" ${id}>${b.svg ? b.svg : `<img src="${esc(b.src)}" alt="${esc(b.alt || '')}" loading="lazy">`}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ''}</figure>`;
       case 'callout': return `<aside class="callout callout--${esc(b.kind || 'note')}" ${id}>${b.title ? `<div class="callout__title">${esc(b.title)}</div>` : ''}<div class="callout__body">${b.html}</div></aside>`;
+      case 'photo': return P.photos ? P.photos.html(b, { attr: ` ${id}` }) : '';
       default: return '';
     }
   }
