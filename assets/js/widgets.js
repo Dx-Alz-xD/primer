@@ -61,7 +61,11 @@
       s.src = `/assets/js/widgets/${kind}.js`;
       s.async = true;
       s.dataset.widget = kind;
-      s.onload = () => (impls[kind] ? Promise.resolve(impls[kind].ready).then(() => resolve(impls[kind]), reject) : reject(new Error(kind + ' did not register')));
+      // a kind may load a helper file before it registers (it sets document.currentScript.ready), or
+      // register at once and say when its helper has arrived (impl.ready); either way, wait for it
+      s.onload = () => Promise.resolve(s.ready)
+        .then(() => (impls[kind] ? impls[kind].ready : Promise.reject(new Error(kind + ' did not register'))))
+        .then(() => resolve(impls[kind]), reject);
       s.onerror = () => { delete loading[kind]; reject(new Error(kind + ' could not be loaded')); };
       document.head.appendChild(s);
     });
