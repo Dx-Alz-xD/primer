@@ -423,17 +423,25 @@ async function generate({ system, user, maxTokens, timeoutMs, deadlineMs, valida
 const inflight = new Map();
 const norm = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
+const cacheFile = (kind, keyObj) => path.join(CACHE_DIR, `${kind}-${createHash('sha256').update(JSON.stringify(keyObj)).digest('hex').slice(0, 24)}.json`);
+
+async function readCache(kind, keyObj) {
+  try { return JSON.parse(await readFile(cacheFile(kind, keyObj), 'utf8')); } catch { return null; }
+}
+
+async function writeCache(kind, keyObj, value) {
+  await mkdir(CACHE_DIR, { recursive: true });
+  await writeFile(cacheFile(kind, keyObj), JSON.stringify(value, null, 1));
+}
+
 async function cached(kind, keyObj, produce) {
-  const hash = createHash('sha256').update(JSON.stringify(keyObj)).digest('hex').slice(0, 24);
-  const file = path.join(CACHE_DIR, `${kind}-${hash}.json`);
-  try {
-    return { ...JSON.parse(await readFile(file, 'utf8')), cached: true };
-  } catch { /* not cached yet */ }
+  const file = cacheFile(kind, keyObj);
+  const hit = await readCache(kind, keyObj);
+  if (hit) return { ...hit, cached: true };
   if (inflight.has(file)) return inflight.get(file);
   const job = (async () => {
     const out = await produce();
-    await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(file, JSON.stringify(out, null, 1));
+    await writeCache(kind, keyObj, out);
     return out;
   })().finally(() => inflight.delete(file));
   inflight.set(file, job);
@@ -480,4 +488,62 @@ export function generateLesson(input) {
     });
     return { lesson: value, model };
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* Small calls: folder fit                                             */
+/* Short prompts and small budgets; callers treat a failure as "skip". */
+/* ------------------------------------------------------------------ */
+
+const FIT_SYSTEM = `You help a learner keep their course folders tidy. You get a folder name and a numbered list of course topics filed in it. For each topic, decide whether a reasonable person would file it in a folder with that name. Be generous: parts, tools, techniques, history and related skills of the folder's subject all fit, and a vague folder name (like "Misc" or "To learn") fits anything. Flag only clear mismatches.
+Return ONLY a JSON object (no prose, no code fences) like this:
+{"results": [{"i": 1, "fits": true, "reason": ""}, {"i": 2, "fits": false, "reason": "derivatives are a maths topic"}]}
+- One entry per topic, with its number as "i" and "fits" as true or false.
+- reason: empty when it fits. Otherwise at most 12 plain words saying what the topic is really about, starting in lower case unless it starts with a name.`;
+
+const posInt = (v) => { const n = Math.round(Number(String(v ?? '').replace(/^#/, ''))); return Number.isInteger(n) && n > 0 ? n : null; };
+const asBool = (v) => (typeof v === 'boolean' ? v : /^(true|yes)$/i.test(String(v)) ? true : /^(false|no)$/i.test(String(v)) ? false : null);
+
+// Does each topic belong in a folder with this name? Answers are cached per folder name and
+// topic, so only pairs never seen before reach the AI, all of them in one request.
+// Returns one { ok, reason, model } per topic, or null where the AI gave no answer.
+export async function checkFolderFit(folder, topics) {
+  const keys = topics.map((t) => ({ v: 1, folder: norm(folder), topic: norm(t) }));
+  const out = await Promise.all(keys.map((k) => readCache('fit', k)));
+  const uniq = [], slot = new Map();
+  topics.forEach((t, i) => {
+    if (out[i] || slot.has(keys[i].topic)) return;
+    slot.set(keys[i].topic, uniq.length);
+    uniq.push(t);
+  });
+  if (!uniq.length) return out;
+  const { value, model } = await generate({
+    system: FIT_SYSTEM,
+    user: [`Folder: "${folder}"`, 'Topics:', ...uniq.map((t, i) => `${i + 1}. ${t}`)].join('\n'),
+    maxTokens: 2000,
+    timeoutMs: 45000,
+    deadlineMs: 60000,
+    validate: (raw) => {
+      const res = new Map();
+      for (const r of arr(raw && raw.results)) {
+        const i = posInt(r && (r.i ?? r.n ?? r.index));
+        const fits = asBool(r && (r.fits ?? r.ok ?? r.fit));
+        if (!i || i > uniq.length || fits == null) continue;
+        res.set(i - 1, { ok: fits, reason: fits ? '' : str(r.reason, 160).replace(/[.\s]+$/, '') });
+      }
+      if (!res.size) throw new Error('no usable results');
+      return res;
+    },
+    label: `folder fit "${folder}" (${uniq.length} topic${uniq.length === 1 ? '' : 's'})`
+  });
+  const saves = [];
+  topics.forEach((t, i) => {
+    if (out[i]) return;
+    const r = value.get(slot.get(keys[i].topic));
+    if (!r) return;
+    out[i] = { ...r, model };
+    saves.push(writeCache('fit', keys[i], out[i]));
+  });
+  await Promise.all(saves);
+  return out;
 }
