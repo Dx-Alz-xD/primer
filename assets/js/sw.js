@@ -47,6 +47,11 @@ const abs = (p) => new URL(p, ORIGIN).href;
 const OWNER_KEY = abs('/__primer/owner');
 const DOWNLOADS_KEY = abs('/__primer/downloads');
 const STUDY_PAGES = ['/app.html', '/lesson.html', '/book.html'];
+// The interactive parts of lessons (assets/js/widgets.js fetches each when a lesson first uses it), kept with
+// every downloaded course so a board or a circuit works with no internet too. Small; a missing one is skipped.
+const WIDGET_FILES = ['chess', 'circuit', 'graph', 'music']
+  .flatMap((k) => [`/assets/js/widgets/${k}.js`, `/assets/css/widgets/${k}.css`])
+  .concat(['/assets/js/widgets/chess-rules.js', '/assets/js/widgets/circuit-core.js', '/assets/js/widgets/graph-expr.js', '/assets/js/widgets/music-core.js']);
 
 const RE = {
   course: /^\/api\/courses\/([A-Za-z0-9_-]{4,64})$/,
@@ -669,6 +674,7 @@ async function download(msg, report) {
   }
   if (msg.lang && msg.lang !== 'en') files.push(abs(`/assets/i18n/${msg.lang}.json`));
   files.push(abs('/manifest.webmanifest'), abs('/assets/icons/icon-192.png'), abs('/assets/icons/icon-512.png'));
+  files.push(...WIDGET_FILES.map(abs)); // the boards, circuits, graphs and keyboards work offline too
   const fileJobs = await fileList(files, msg.lang);
 
   const id = encodeURIComponent(courseId);
