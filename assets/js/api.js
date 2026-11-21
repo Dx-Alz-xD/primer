@@ -194,6 +194,8 @@
     });
     return lesson;
   }
+  // Shared with the book reader and the EPUB export, which show the same lessons.
+  P.cleanLesson = cleanLesson;
 
   /* ---------- the API surface ---------- */
   const doubtCache = new Map(); // "courseId|n" -> [doubts]
