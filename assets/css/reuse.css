@@ -1,0 +1,89 @@
+/* =====================================================================
+   Course length and reuse before writing (app.html):
+   the builder's "Length" choice and "What's new?" box, the card that
+   shows a course that already covers the request, and the course page's
+   note about an update.
+   ===================================================================== */
+
+/* "Length": four choices, the extra box for a number or a time */
+.clen__opts{display:flex;flex-wrap:wrap;gap:8px}
+.clen__opt{position:relative;display:inline-flex}
+.clen__opt input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+.clen__opt span{
+  font-size:1.04rem;line-height:1.2;color:var(--cream-dim);cursor:pointer;
+  background:rgba(16,10,5,.66);border:1px solid var(--leather-soft);border-radius:999px;
+  padding:.36rem .92rem;transition:color .2s, border-color .2s, background-color .2s;
+}
+.clen__opt:hover span{color:var(--cream);border-color:rgba(214,165,84,.65)}
+.clen__opt input:checked + span{color:var(--gold-hi);border-color:var(--gold);background:rgba(60,40,18,.7)}
+.clen__opt input:focus-visible + span{outline:2px solid var(--gold);outline-offset:2px}
+.clen__more{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .7rem;margin-top:.55rem}
+.clen__more[hidden]{display:none}
+.clen__more .help{font-size:1.02rem}
+.clen__num{width:7.5rem}
+.clen__help{margin-top:.45rem}
+.clen .field__error:empty{display:none}
+
+/* "There's new information on this topic" and its box */
+.rnew__open{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .6rem}
+.rnew__open .help{font-size:.95rem}
+.rnew__field{display:grid;gap:.4rem}
+.rnew__text{min-height:6rem}
+.rnew__field .textlink{font-size:1rem}
+
+/* "Looking for a course on this you already have…", beside "Build my course" */
+.reuse__checking{flex-basis:100%;margin-top:.2rem}
+.reuse__checking:empty{display:none}
+
+/* the card: a course that already covers the request */
+.reuse{margin-top:1.8rem;padding:1.9rem 2rem 1.7rem}
+.reuse__eyebrow{font-family:var(--font-head);font-size:.82rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.reuse__title{margin-top:.25rem;font-size:clamp(1.6rem,3.6vw,2.15rem);text-shadow:none}
+.reuse__title:focus{outline:none}
+.reuse__lead{margin-top:.55rem;color:var(--cream-dim);font-size:1.1rem;line-height:1.45;max-width:44rem}
+.reuse__list{list-style:none;margin:1.2rem 0 0;padding:0;display:grid;gap:.9rem}
+.rcard{padding:1.05rem 1.2rem 1.1rem;border:1px solid var(--leather-soft);border-radius:4px;background:rgba(14,9,4,.55)}
+.rcard__kind{font-style:italic;color:var(--gold);font-size:.98rem}
+.rcard__title{margin-top:.15rem;font-size:1.4rem;line-height:1.2;text-shadow:none;overflow-wrap:anywhere}
+.rcard__topic{margin-top:.15rem;color:var(--muted);font-size:1rem}
+.rcard__topic .ugc{color:var(--cream-dim)}
+.rcard__meta{margin-top:.35rem;color:var(--cream-dim);font-size:1.02rem}
+.rcard__notes{margin:.55rem 0 0;padding:0 0 0 1.1rem;display:grid;gap:.2rem;color:var(--cream-dim);font-size:1rem;line-height:1.4}
+.rcard__notes li::marker{color:var(--gold-lo)}
+.rcard__notes .ugc{color:var(--cream)}
+.rcard__actions{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1rem;margin-top:.85rem}
+.rcard__actions .btn{white-space:normal;text-align:center}
+.rcard__lessons{margin-top:.7rem;font-size:1rem}
+.rcard__lessons summary{cursor:pointer;color:var(--gold);font-style:italic;width:max-content;max-width:100%}
+.rcard__lessons summary:hover{text-decoration:underline}
+.rcard__units{list-style:none;margin:.5rem 0 0;padding:.6rem .8rem;max-height:18rem;overflow:auto;display:grid;gap:.5rem;border-left:2px solid var(--gold-lo);background:rgba(14,9,4,.5)}
+.rcard__unit{font-family:var(--font-head);color:var(--cream)}
+.rcard__units ol{margin:.15rem 0 0;padding-left:1.4rem;color:var(--cream-dim);line-height:1.4}
+.reuse__foot{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem 1.4rem;margin-top:1.3rem;padding-top:1.1rem;border-top:1px solid var(--leather-soft)}
+.reuse__cost{margin-top:.6rem}
+.reuse__status{margin-top:.6rem;color:var(--cream-dim);font-size:1.02rem}
+.reuse__status:empty{display:none}
+.reuse__status.is-error,.cupd__status.is-error{color:var(--error-soft)}
+
+/* the course page: what the last update changed */
+.cupd{margin-top:1rem;padding:.65rem .9rem;border-left:2px solid var(--gold);border-radius:0 4px 4px 0;background:rgba(214,165,84,.08);font-size:1.02rem;line-height:1.4}
+.cupd[hidden]{display:none}
+.cupd__title{font-style:italic;color:var(--gold)}
+.cupd__sum{margin-top:.2rem;color:var(--cream)}
+.cupd__what{margin-top:.2rem;color:var(--cream-dim)}
+.cupd__info{margin-top:.3rem}
+.cupd__info summary{cursor:pointer;color:var(--gold);font-style:italic;width:max-content;max-width:100%}
+.cupd__info p{margin-top:.3rem;white-space:pre-line;color:var(--cream-dim)}
+.cupd__form{margin-top:1rem;display:grid;gap:.45rem;max-width:40rem}
+.cupd__form[hidden]{display:none}
+.cupd__row{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1.2rem}
+.cupd__status{color:var(--cream-dim);font-size:1rem}
+.cupd__status:empty{display:none}
+.tag.tag--upd{color:var(--gold-hi);border-color:var(--gold-lo)}
+
+@media (max-width:640px){
+  .reuse{padding:1.5rem 1.2rem 1.4rem}
+  .rcard{padding:.95rem .95rem 1rem}
+  .rcard__title{font-size:1.25rem}
+}
+@media print{ .cupd__form,.cupd__info{display:none !important} }

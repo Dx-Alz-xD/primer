@@ -157,6 +157,18 @@
         return;
       }
       const folderId = folderSel.value ? Number(folderSel.value) : null;
+      // the length chosen (assets/js/length.js); a number or a time that doesn't make sense is pointed out there
+      const len = P.courseLength ? P.courseLength.read() : { value: null };
+      if (len.error) return;
+      const extra = { folderId, syllabus: P.syllabus ? P.syllabus.value() : '', lang: langSel && langSel.value ? langSel.value : undefined, length: len.value || undefined };
+      let instructions = instr.value;
+      // reuse before writing (assets/js/reuse.js): a course that already covers this request is offered first
+      if (P.reuse) {
+        const go = await P.reuse.check({ topic: t, from: from.value, to: to.value, instructions, ...extra });
+        if (!go) return; // the learner took an existing course, or went back to the form
+        Object.assign(extra, go.extra);
+        if (go.instructions != null) instructions = go.instructions;
+      }
 
       const building = $('#building');
       form.hidden = true;
@@ -177,10 +189,7 @@
       building.scrollIntoView({ block: 'center', behavior: smooth() });
 
       try {
-        const course = await P.api.generateCourse({
-          topic: t, from: from.value, to: to.value, instructions: instr.value,
-          extra: { folderId, syllabus: P.syllabus ? P.syllabus.value() : '', lang: langSel && langSel.value ? langSel.value : undefined }
-        });
+        const course = await P.api.generateCourse({ topic: t, from: from.value, to: to.value, instructions, extra });
         clearInterval(tick);
         steps.forEach((li) => { li.className = 'is-done'; });
         P.courses.save(course);
@@ -323,6 +332,8 @@
       <ol class="units">${unitsHTML}</ol>`;
 
     if (P.review) P.review.courseCard(view.querySelector('[data-review-slot]'), course.id); // "2 to review · 1 of 3 mistakes fixed"
+    if (P.courseLength) P.courseLength.mountCourse(view, course); // "Length: 20 lessons, as you asked"
+    if (P.reuse) P.reuse.mountCourse(view, course); // what an update with new information changed, and "Add new information"
     // the range again once the dictionary is in, if the page was drawn before it
     if (P.tReady) P.tReady.then(() => { const dd = view.querySelector('[data-range]'); if (dd) dd.innerHTML = rangeHTML(); });
     // the course's own words (its title, units and lessons) in its language, its direction and its script's font

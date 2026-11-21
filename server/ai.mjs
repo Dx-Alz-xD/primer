@@ -16,6 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HttpError } from './http.mjs';
 import { promptNote, safetyKey } from './safety.mjs';
+import { lengthRule, lengthKey, enforceLength } from './length.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache');
@@ -199,18 +200,19 @@ function syllabusBlock(syllabus) {
   ].join('\n');
 }
 
-function outlineUser({ topic, from, to, instructions, lang, safety, syllabus }) {
+function outlineUser({ topic, from, to, instructions, lang, safety, syllabus, length }) {
   return [
     `Topic: ${topic}`,
     `Range: from ${from || 'the very beginning'} up to ${to || 'the end of the subject'}`,
     `Teaching instructions from the learner: ${instructions || 'none'}`,
     syllabusBlock(syllabus),
+    lengthRule(length, { syllabus: Boolean(syllabus) }), // the length the learner chose, if any (server/length.mjs)
     langLine(lang),
     promptNote(safety, { outline: true, title: safety && safety.title })
   ].filter(Boolean).join('\n');
 }
 
-function lessonUser({ topic, from, to, instructions, courseTitle, outline, n, lang, safety, syllabus }) {
+function lessonUser({ topic, from, to, instructions, courseTitle, outline, n, lang, safety, syllabus, update }) {
   const me = outline.find((l) => l.n === n);
   return [
     `Course: "${courseTitle}", on ${topic}.`,
@@ -222,6 +224,8 @@ function lessonUser({ topic, from, to, instructions, courseTitle, outline, n, la
     ...outline.map(lineFor),
     '',
     `Write lesson ${n}: "${me.title}"${me.desc ? ` — ${me.desc}` : ''}`,
+    // the course was updated with new information that changes this lesson (server/reuse.mjs)
+    update ? `This lesson was revised because of new information on the subject. It must reflect this: ${update}` : '',
     langLine(lang),
     promptNote(safety)
   ].filter(Boolean).join('\n');
@@ -297,8 +301,10 @@ const TAGS = new Set(['maths', 'diagram', 'practice', 'written']);
 export const OUTLINE_MIN = 5;
 export const OUTLINE_MAX = 150;
 
-export function normalizeOutline(raw) {
-  const units = arr(raw && raw.units)
+// `length` (server/length.mjs) is the size the learner asked for: the outline is held to it, and a
+// reply far from it is refused (or, with `lenient`, accepted if it is close).
+export function normalizeOutline(raw, length = null, { lenient = false } = {}) {
+  let units = arr(raw && raw.units)
     .map((u) => ({
       title: str(u && u.title, 80) || 'Unit',
       lessons: arr(u && u.lessons)
@@ -312,6 +318,8 @@ export function normalizeOutline(raw) {
     }))
     .filter((u) => u.lessons.length);
 
+  // A chosen length replaces the floor: a concise course has 1 to 5 lessons.
+  if (length) return { title: str(raw.title, 80), units: enforceLength(units, length, { lenient, title: str(raw.title, 80) }) };
   // A course is as long as its range needs. The floor and ceiling only catch broken or runaway replies.
   let total = units.reduce((n, u) => n + u.lessons.length, 0);
   if (total < OUTLINE_MIN) throw new Error(`only ${total} lessons`);
@@ -707,18 +715,28 @@ export async function cached(kind, keyObj, produce) {
 /* ------------------------------------------------------------------ */
 
 export function generateOutline(input) {
-  const key = { v: 3, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions), ...langKey(input.lang), ...safetyKey(input.safety), ...syllabusKey(input.syllabus) };
+  const key = { v: 3, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions), ...langKey(input.lang), ...safetyKey(input.safety), ...syllabusKey(input.syllabus), ...lengthKey(input.length) };
+  let tries = 0; // with a length, the first reply must keep to it; a later one may be a little off
+  const ask = () => generate({
+    system: OUTLINE_SYSTEM,
+    user: outlineUser(input),
+    maxTokens: 16000,
+    timeoutMs: 100000,
+    deadlineMs: 210000,
+    validate: (raw) => normalizeOutline(raw, input.length || null, { lenient: ++tries > 1 }),
+    label: `outline "${input.topic}"`
+  });
   return cached('outline', key, async () => {
-    const { value, model } = await generate({
-      system: OUTLINE_SYSTEM,
-      user: outlineUser(input),
-      maxTokens: 16000,
-      timeoutMs: 100000,
-      deadlineMs: 210000,
-      validate: normalizeOutline,
-      label: `outline "${input.topic}"`
-    });
-    return { outline: value, model };
+    let out;
+    try {
+      out = await ask();
+    } catch (err) {
+      // the only reply was far from the length asked for (no other model answered): ask once more
+      if (!input.length || tries !== 1) throw err;
+      console.log(`[ai] outline "${input.topic}": asking again for the length`);
+      out = await ask();
+    }
+    return { outline: out.value, model: out.model };
   });
 }
 
@@ -729,7 +747,8 @@ export function generateLesson(input) {
   const key = {
     v: 2, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions),
     n: input.n, title: norm(me.title), prev: norm(prev && prev.title), next: norm(next && next.title), ...langKey(input.lang), ...safetyKey(input.safety),
-    ...(input.syllabus ? { syllabus: 1 } : {}) // its prompt says the course follows a syllabus
+    ...(input.syllabus ? { syllabus: 1 } : {}), // its prompt says the course follows a syllabus
+    ...(input.update ? { update: createHash('sha256').update(norm(input.update)).digest('hex').slice(0, 16) } : {}) // revised with new information
   };
   return cached('lesson', key, async () => {
     const { value, model } = await generate({
