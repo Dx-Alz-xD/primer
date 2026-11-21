@@ -1,0 +1,176 @@
+/* =====================================================================
+   Watch mode (assets/js/video.js): the Read | Watch switch, the videos
+   with their quizzes, Primer's own narrated videos, sign language.
+   ===================================================================== */
+
+/* Read | Watch */
+.vmode{display:inline-flex;margin-top:1rem;padding:3px;border:1px solid rgba(138,97,40,.55);border-radius:999px;background:rgba(138,97,40,.08)}
+.vmode__btn{
+  display:inline-flex;align-items:center;gap:.4rem;padding:.36rem 1rem;border:0;border-radius:999px;cursor:pointer;
+  background:none;color:var(--ink-soft);font:inherit;font-family:var(--font-head);font-size:1.06rem;line-height:1.2;transition:background .2s, color .2s;
+}
+.vmode__btn:hover{color:var(--ink)}
+.vmode__btn[aria-pressed="true"]{background:var(--ink-gold);color:#fbf6ea}
+.vmode__btn svg{flex:none}
+
+/* in Watch mode the written parts step aside (they're re-drawn when the learner reads again) */
+.paper.is-watch .lbody,.paper.is-watch #llock{display:none}
+.vbody[hidden]{display:none}
+
+.vbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.7rem 1.2rem;margin-top:1.6rem;padding:.7rem .9rem;border:1px solid rgba(138,97,40,.4);border-radius:var(--radius);background:rgba(138,97,40,.07)}
+.vsrc{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
+.vsrc__label{font-style:italic;color:var(--ink-soft);margin-right:.2rem}
+.vsrc__btn{padding:.25rem .8rem;border:1px solid rgba(138,97,40,.5);border-radius:999px;background:#f2e8d0;color:var(--ink);font:inherit;font-size:1rem;cursor:pointer}
+.vsrc__btn[aria-pressed="true"]{background:var(--ink-gold);border-color:var(--ink-gold);color:#fbf6ea}
+.vsrc__btn:disabled{opacity:.5;cursor:default}
+.vsign{display:inline-flex;align-items:center;gap:.45rem;color:var(--ink);cursor:pointer;font-size:1.04rem}
+.vsign svg{color:var(--ink-gold)}
+.vsign input{accent-color:#8a6128;width:17px;height:17px}
+.vnote{margin-top:.9rem;font-style:italic;color:var(--ink-soft);font-size:1.04rem}
+
+/* one video and its quiz */
+.vstep{margin-top:2.1rem;padding-top:1.7rem}
+.vstep__n{font-style:italic;color:var(--ink-soft);font-size:1rem;margin-bottom:.15rem}
+.vstep__title{margin-bottom:.8rem}
+.vquiz.is-flash{animation:flash 1.8s ease-out}
+
+/* a YouTube video: its thumbnail until the learner presses play */
+.vframe{position:relative;aspect-ratio:16/9;width:100%;border-radius:4px;overflow:hidden;background:#140d07;box-shadow:0 22px 40px -26px rgba(43,29,17,.95), 0 0 0 1px rgba(43,29,17,.35)}
+.vframe--small{max-width:440px}
+.vframe__iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vfacade{position:absolute;inset:0;display:block;width:100%;height:100%;padding:0;border:0;cursor:pointer;background:#140d07}
+.vfacade__img{width:100%;height:100%;object-fit:cover;display:block;opacity:.92;transition:opacity .2s, transform .4s var(--ease-out)}
+.vfacade:hover .vfacade__img{opacity:1;transform:scale(1.015)}
+.vfacade__play{position:absolute;left:50%;top:50%;width:74px;height:74px;margin:-37px 0 0 -37px;display:grid;place-items:center;border-radius:50%;
+  color:var(--gold-ink);background:linear-gradient(180deg, #f3d38f, #d6a554 55%, #b07f3a);border:1px solid #8a6128;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.vfacade__play svg{margin-left:4px}
+.vfacade__len,.vfacade__tag{position:absolute;bottom:10px;padding:.1rem .45rem;border-radius:3px;background:rgba(10,6,3,.82);color:var(--cream);font-size:.9rem;font-family:var(--font-body)}
+.vfacade__len{right:10px}
+.vfacade__tag{left:10px;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vfacade:focus-visible{outline:3px solid var(--gold);outline-offset:-3px}
+.vframe__note{margin-top:.45rem;font-size:.92rem;font-style:italic;color:var(--ink-soft)}
+.vcredit{margin-top:.55rem;font-size:.98rem;line-height:1.45;color:var(--ink-soft)}
+.vcredit a{color:var(--ink-gold);text-decoration:none;border-bottom:1px solid rgba(138,97,40,.35)}
+.vcredit a:hover{border-bottom-color:var(--ink-gold)}
+.vtools{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .7rem;margin-top:.35rem}
+.vtools__hint{font-size:.9rem;font-style:italic;color:var(--ink-soft)}
+.vyt__why{margin-top:.7rem;font-size:1.12rem;line-height:1.5}
+.vyt__covers{margin-top:.35rem;font-size:1rem;color:var(--ink-soft)}
+.vchap{margin-top:.6rem}
+.vchap summary{cursor:pointer;color:var(--ink-gold);font-style:italic}
+.vchap ol{list-style:none;margin:.4rem 0 0;padding:0;display:grid;gap:.2rem}
+.vchap__t{font-variant-numeric:tabular-nums;color:var(--ink-soft);font-style:normal;margin-right:.3rem}
+
+/* not in the learner's language */
+.vmis{margin-top:1rem;padding:.95rem 1.05rem 1rem;border:1px solid rgba(138,97,40,.55);border-radius:4px;background:rgba(214,165,84,.14)}
+.vmis--ok{padding:.55rem .85rem;font-size:1rem;color:var(--ink-soft);font-style:italic}
+.vmis__head{font-size:1.1rem}
+.vmis__head strong{font-family:var(--font-head);font-weight:400;font-size:1.15rem}
+.vmis__acts{display:flex;flex-wrap:wrap;gap:.55rem;margin-top:.7rem}
+.paper .vmis .btn--ghost{color:var(--ink-gold);background:#f2e8d0;border-color:rgba(138,97,40,.6);box-shadow:none}
+.paper .vmis .btn--ghost:hover{background:#efdfb8}
+.vmis__how{margin-top:.7rem;padding:.6rem .8rem;border-left:3px solid var(--ink-gold);background:#f2e8d0;font-size:1.04rem;line-height:1.5}
+.vmis__small{margin-top:.6rem;font-size:.92rem;font-style:italic;color:var(--ink-soft)}
+
+/* signed versions */
+.vsigned{margin-top:1.4rem;padding:1rem 1.1rem 1.1rem;border:1px solid rgba(138,97,40,.5);border-radius:var(--radius);background:rgba(61,106,44,.07)}
+.vsigned__title{display:flex;align-items:center;gap:.5rem;font-size:1.35rem}
+.vsigned__title svg{color:var(--ink-gold)}
+.vsigned__none,.vsigned__status,.vsigned__sub{margin-top:.35rem;font-size:1.08rem;color:var(--ink-soft)}
+.vsigned__none{color:var(--ink);font-size:1.15rem}
+.vsigned__item{margin-top:.9rem}
+
+/* a Primer-made video */
+.vmade{margin-top:.2rem}
+.vstage{
+  position:relative;aspect-ratio:16/9;width:100%;overflow:hidden;border-radius:4px;cursor:pointer;
+  background:radial-gradient(ellipse at 30% 0%, #3a2715, #1a1009 62%, #120b06);color:var(--cream);
+  box-shadow:0 22px 40px -26px rgba(43,29,17,.95), 0 0 0 1px rgba(43,29,17,.4);
+}
+.vstage::before{content:"";position:absolute;inset:7px;border:1px solid rgba(214,165,84,.22);border-radius:3px;pointer-events:none;z-index:2}
+.vstage__slides{position:absolute;inset:0}
+.vslide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6% 8% 17%;text-align:center;
+  opacity:0;transform:translateY(10px) scale(.985);transition:opacity .55s var(--ease-out), transform .7s var(--ease-out)}
+.vslide.is-on{opacity:1;transform:none}
+.vslide__kicker{font-style:italic;color:var(--gold);font-size:clamp(.85rem,1.9vw,1.05rem);letter-spacing:.02em;margin-bottom:.4rem}
+.vslide__h{font-family:var(--font-head);font-weight:400;color:var(--cream);font-size:clamp(1.5rem,4.4vw,2.5rem);line-height:1.1;text-shadow:var(--shadow-text)}
+.paper .vslide__h{color:var(--cream);text-shadow:var(--shadow-text)}
+.vslide__lesson{margin-top:.55rem;color:var(--cream-dim);font-style:italic;font-size:clamp(.9rem,2vw,1.1rem)}
+.vslide--title.has-photo{padding-bottom:6%}
+.vslide__bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.42;filter:sepia(.35) saturate(.85)}
+.vslide.is-on .vslide__bg{animation:kenburns 14s ease-out both}
+@keyframes kenburns{from{transform:scale(1.02)}to{transform:scale(1.1) translate(-1%, -1%)}}
+.vslide__titlebox{position:relative;max-width:90%;padding:.9rem 1.3rem;border-radius:4px;background:rgba(18,11,6,.55)}
+.vslide__credit{position:absolute;right:16px;top:12px;z-index:3;font-size:.72rem;color:rgba(239,226,198,.75);max-width:60%;text-align:right}
+.vslide--points{align-items:stretch;text-align:left}
+.vslide__points{margin:0;padding-left:1.4em;font-size:clamp(1rem,2.6vw,1.45rem);line-height:1.4}
+.vslide__points li{margin:.35em 0;opacity:.28;transition:opacity .5s, color .5s}
+.vslide__points li.is-seen{opacity:.7}
+.vslide__points li.is-on{opacity:1;color:var(--gold-hi)}
+.vslide--math .math-display{margin:0;color:var(--cream);font-size:clamp(1.15rem,3.4vw,1.9rem)}
+.vslide--figure svg{max-width:min(440px,72%);max-height:64%;height:auto;background:var(--parchment);border-radius:4px;padding:8px;color:var(--ink)}
+.vslide--photo .vslide__img{max-width:76%;max-height:62%;object-fit:contain;border:6px solid #f7f0de;border-radius:2px;box-shadow:0 14px 30px rgba(0,0,0,.6)}
+.vslide__cap{margin-top:.6rem;max-width:80%;font-style:italic;color:var(--cream-dim);font-size:clamp(.85rem,1.9vw,1.05rem)}
+.vstage__badge{position:absolute;left:14px;top:12px;z-index:3;font-size:.8rem;font-style:italic;color:rgba(239,226,198,.7);letter-spacing:.03em}
+
+/* captions, over the picture like a film's */
+.vstage__cap{position:absolute;left:5%;right:5%;bottom:5.5%;z-index:3;text-align:center;pointer-events:none}
+.vstage__cap:empty,.vmade:not(.is-started) .vstage__cap{display:none}
+.vcap{display:inline;padding:.12em .45em;line-height:1.55;font-size:clamp(.95rem,2.3vw,1.22rem);color:#fbf6ea;background:rgba(8,5,2,.8);
+  -webkit-box-decoration-break:clone;box-decoration-break:clone;border-radius:3px;font-family:var(--font-body);font-weight:500}
+.vcap span{transition:color .12s}
+.vcap .is-word{color:var(--gold-hi)}
+.vstage__big{position:absolute;left:50%;top:80%;z-index:4;width:76px;height:76px;margin:-38px 0 0 -38px;display:grid;place-items:center;border-radius:50%;cursor:pointer;
+  color:var(--gold-ink);background:linear-gradient(180deg, #f3d38f, #d6a554 55%, #b07f3a);border:1px solid #8a6128;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.vstage__big[hidden],.vmade.is-started .vstage__big{display:none}
+.vstage__big svg{margin-left:4px}
+.vmade.is-busy .vstage::after{content:"";position:absolute;left:50%;top:80%;z-index:4;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
+  border:3px solid rgba(214,165,84,.25);border-top-color:var(--gold);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.vctl{display:flex;align-items:center;gap:.7rem;margin-top:.5rem;padding:.4rem .6rem;border-radius:4px;background:#1c120a;color:var(--cream)}
+.vctl__play{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;cursor:pointer;color:var(--gold-ink);
+  background:linear-gradient(180deg, #f3d38f, #d6a554 55%, #b07f3a);border:1px solid #8a6128}
+.vctl__time{flex:none;min-width:6.6em;font-variant-numeric:tabular-nums;font-size:.95rem;color:var(--cream-dim)}
+.vctl__seek{flex:1;min-width:60px;accent-color:#d6a554;color-scheme:dark}
+.vctl__cc{flex:none;padding:.1rem .45rem;border:1px solid rgba(214,165,84,.55);border-radius:3px;background:none;color:var(--cream-dim);font:600 .82rem/1.4 system-ui, sans-serif;cursor:pointer}
+.vctl__cc[aria-pressed="true"]{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.vctl__cc:disabled{cursor:default;opacity:.85}
+.vctl button:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px}
+.vmade__voice{margin-top:.45rem;font-size:.95rem;font-style:italic;color:var(--ink-soft)}
+
+/* the transcript: the narration script, the sentence being read marked */
+.vtrans{margin-top:.8rem}
+.vtrans summary{cursor:pointer;color:var(--ink-gold);font-style:italic;font-size:1.05rem}
+.vtrans__text{margin-top:.45rem;max-height:13.5em;overflow:auto;padding:.7rem .9rem;border:1px solid rgba(138,97,40,.35);border-radius:4px;background:#f2e8d0;scrollbar-width:thin}
+.vtrans__text p{margin:0 0 .6rem;font-size:1.08rem;line-height:1.55}
+.vtrans__text p:last-child{margin-bottom:0}
+.vcue{cursor:pointer;border-radius:2px;transition:background-color .2s}
+.vcue:hover{background:rgba(214,165,84,.2)}
+.vcue.is-on{background:rgba(214,165,84,.45)}
+.vtrans__wait{font-style:italic;color:var(--ink-soft)}
+
+/* sign-language mode: captions always on, and large */
+.vbody.is-sign .vcap{font-size:clamp(1.25rem,3.4vw,1.85rem);line-height:1.5;background:#050302;font-weight:600}
+.vbody.is-sign .vstage__cap{bottom:4%}
+.vbody.is-sign .vslide{padding-bottom:24%}
+
+@media (max-width:720px){
+  .vbar{padding:.6rem .7rem}
+  .vfacade__play,.vstage__big{width:58px;height:58px;margin:-29px 0 0 -29px}
+  .vslide__credit{display:none}
+  .vctl__time{min-width:0;font-size:.85rem}
+}
+/* phones: a taller screen for the slides' words, and no badge in their way */
+@media (max-width:560px){
+  .vstage{aspect-ratio:4/3}
+  .vstage__badge{display:none}
+  .vslide{padding:7% 6% 24%}
+  .vslide__points{font-size:1.02rem}
+  .vbody.is-sign .vslide{padding-bottom:30%}
+}
+@media (prefers-reduced-motion: reduce){
+  .vslide{transition:none;transform:none}
+  .vslide.is-on .vslide__bg{animation:none}
+  .vfacade__img{transition:none}
+}

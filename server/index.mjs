@@ -57,6 +57,8 @@ function csp(nonce) {
     "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' data: blob: https://images.unsplash.com",
     "media-src 'self' blob:",
+    // Watch mode's YouTube videos, embedded without YouTube's cookies (their thumbnails come from this site)
+    'frame-src https://www.youtube-nocookie.com',
     "connect-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
