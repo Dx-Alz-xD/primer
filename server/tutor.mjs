@@ -12,6 +12,15 @@ import { HttpError, sendJSON, readBody, text, longText, overLimit } from './http
 import { requireUser } from './auth.mjs';
 import { askJSON, config, mathify } from './ai.mjs';
 import { doubtHooks, ownCourse, flatten } from './data.mjs';
+import { screen, courseSafety, promptNote, REFUSED } from './safety.mjs';
+
+// What the tutor says when someone may be struggling and the AI can't be reached.
+const SUPPORT = {
+  en: '<p>I’m really sorry you’re going through this. You don’t have to face it alone. Please talk to someone you trust, or call India’s Tele-MANAS helpline on <strong>14416</strong>. It’s free and open at any time.</p><p>Outside India, findahelpline.com lists free helplines near you.</p>',
+  hi: '<p>मुझे बहुत दुख है कि आप इस दौर से गुज़र रहे हैं। आपको इसका सामना अकेले नहीं करना है। कृपया किसी भरोसेमंद व्यक्ति से बात करें, या भारत की टेली-मानस हेल्पलाइन <strong>14416</strong> पर कॉल करें। यह मुफ़्त है और हर समय उपलब्ध है।</p><p>भारत के बाहर, findahelpline.com पर आपके पास की मुफ़्त हेल्पलाइनें मिलेंगी।</p>',
+  ru: '<p>Мне очень жаль, что вам сейчас так тяжело. Вы не обязаны справляться с этим в одиночку. Пожалуйста, поговорите с человеком, которому доверяете, или позвоните на индийскую линию помощи Tele-MANAS: <strong>14416</strong>, бесплатно и круглосуточно.</p><p>За пределами Индии бесплатные линии помощи рядом с вами есть на findahelpline.com.</p>'
+};
+const support = (lang) => SUPPORT[lang] || SUPPORT.en;
 
 schema('tutor-1', `
   CREATE TABLE tutor_messages (
@@ -77,6 +86,8 @@ How to reply:
 - If one of their past mistakes is relevant, name the pattern kindly in one sentence. Don't list their history otherwise.
 - Follow their teaching instructions if the course has any.
 - If you are not sure of something, say so. Never invent facts.
+- Safety: keep dangerous subjects at textbook level (the science in general terms, history, safety, law). Never give instructions, recipes, quantities, designs, or ways to obtain or hide anything dangerous. Answer hateful or extremist claims critically, with the evidence.
+- If the learner seems to be struggling or mentions hurting themselves, answer kindly first, encourage them to talk to someone they trust, and give India's Tele-MANAS helpline (14416, free, any time) or a local helpline.
 - Write in ${LANG_NAMES[lang] || 'English'}.`;
 
 function validateReply(raw) {
@@ -93,13 +104,16 @@ async function answerDoubt(user, d) {
   if (answering.has(d.id)) return;
   answering.add(d.id);
   try {
-    let course = '', lesson = '';
+    let course = '', lesson = '', meta = null;
     if (d.course_id) {
       const row = q('SELECT data FROM courses WHERE id = ?').get(d.course_id);
-      const meta = parseJSON(row && row.data, {});
+      meta = parseJSON(row && row.data, {});
       course = `Course: ${courseLine(meta)}.`;
       lesson = lessonText(d.course_id, d.lesson_n, d.section, 3500);
     }
+    const answer = (html, model) => q('UPDATE doubts SET answer = ?, answer_model = ?, answered_at = ? WHERE id = ?').run(html, model, now(), d.id);
+    const s = screen(d.question, d.quote, d.context) || (meta ? courseSafety(meta) : null);
+    if (s && s.kind === 'refuse') return answer(`<p>${REFUSED}</p>`, 'safety');
     const about = d.kind === 'drawing'
       ? `They drew on the lesson page (a sketch, circled or underlined something) near this text: "${d.context || ''}"`
       : d.kind === 'selection' ? `They selected this passage: "${d.quote || ''}"` : '';
@@ -110,17 +124,25 @@ async function answerDoubt(user, d) {
       about,
       `Their question: ${d.question}`,
       '',
-      memory(user.id)
+      memory(user.id),
+      promptNote(s)
     ].filter(Boolean).join('\n');
-    const { value, model } = await askJSON({ system: SYSTEM(user.lang), user: prompt, maxTokens: 1600, validate: validateReply, label: `doubt ${d.id}` });
-    q('UPDATE doubts SET answer = ?, answer_model = ?, answered_at = ? WHERE id = ?').run(value, model, now(), d.id);
+    let out;
+    try {
+      out = await askJSON({ system: SYSTEM(user.lang), user: prompt, maxTokens: 1600, validate: validateReply, label: `doubt ${d.id}` });
+    } catch (err) {
+      if (s && s.kind === 'selfharm') return answer(support(user.lang), 'safety'); // never leave someone struggling without an answer
+      throw err;
+    }
+    answer(out.value, out.model);
   } finally {
     answering.delete(d.id);
   }
 }
 
 doubtHooks.afterAsk = (user, row) => {
-  if (!config().key) return;
+  const urgent = screen(row.question, row.quote, row.context);
+  if (!config().key && !(urgent && (urgent.kind === 'selfharm' || urgent.kind === 'refuse'))) return;
   if (overLimit('doubt-answers:' + user.id, 40, 3600_000)) return;
   answerDoubt(user, row).catch((err) => console.log(`[tutor] doubt ${row.id} not answered: ${err.message}`));
 };
@@ -155,16 +177,22 @@ async function clear({ req, res }) {
 
 async function chat({ req, res }) {
   const u = requireUser(req);
-  if (!config().key) throw new HttpError('The tutor needs an OpenRouter key in .env.', 503);
   if (overLimit('tutor:' + u.id, 40, 3600_000)) throw new HttpError('You’ve asked the tutor a lot this hour. Try again a little later.', 429);
   const body = await readBody(req, 8_000);
   const message = longText(body.message, 1500);
   if (!message) throw new HttpError('Type a question first.', 400);
+  let s = screen(message);
+  if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);
+  // someone who may be struggling always gets an answer, even with no AI
+  const struggling = Boolean(s && s.kind === 'selfharm');
+  if (!config().key && !struggling) throw new HttpError('The tutor needs an OpenRouter key in .env.', 503);
 
   let courseId = null, lessonN = null, here = '';
   if (body.courseId) {
     const row = ownCourse(u, text(body.courseId, 64));
     const meta = parseJSON(row.data, {});
+    if (!s) s = courseSafety(meta);
+    if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);
     courseId = row.id;
     lessonN = Number.isInteger(Number(body.lesson)) && Number(body.lesson) > 0 ? Number(body.lesson) : null;
     const flat = flatten(meta.units || []);
@@ -182,7 +210,8 @@ async function chat({ req, res }) {
     here,
     memory(u.id),
     past.length ? `Your conversation so far:\n${past.join('\n')}` : '',
-    `Their new message: ${message}`
+    `Their new message: ${message}`,
+    promptNote(s)
   ].filter(Boolean).join('\n\n');
 
   const t = now();
@@ -192,8 +221,11 @@ async function chat({ req, res }) {
   try {
     out = await askJSON({ system: SYSTEM(u.lang), user: prompt, maxTokens: 1600, validate: validateReply, label: `tutor ${u.id}` });
   } catch (err) {
-    q('DELETE FROM tutor_messages WHERE id = ?').run(Number(mine.lastInsertRowid));
-    throw err;
+    if (!struggling) {
+      q('DELETE FROM tutor_messages WHERE id = ?').run(Number(mine.lastInsertRowid));
+      throw err;
+    }
+    out = { value: support(u.lang), model: 'safety' };
   }
   const id = Number(q('INSERT INTO tutor_messages (user_id, role, content, course_id, lesson_n, model, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(u.id, 'tutor', out.value, courseId, lessonN, out.model, now()).lastInsertRowid);

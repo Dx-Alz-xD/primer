@@ -217,7 +217,8 @@
         });
         return P.courses.put(res.course);
       } catch (err) {
-        if (err.status === 401) throw err;
+        // signed out, or a request the server turned down: a sample course wouldn't help
+        if (err.status === 401 || err.status === 400) throw err;
         console.warn('[Primer] AI outline failed:', err);
         const sample = P.courseGen.build(input);
         sample.source = 'sample';

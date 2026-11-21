@@ -17,6 +17,12 @@
     "Shakespeare's sonnets", 'The science of sourdough', 'Map projections', 'Organic chemistry'
   ];
   const lessonHref = (id, n) => `lesson.html?course=${encodeURIComponent(id)}&lesson=${n}`;
+  // shown on a course whose topic was reframed for safety (server/safety.mjs)
+  const SAFETY_NOTES = {
+    harm: 'Primer teaches this subject’s science, history and safety, and how harm is prevented, never how to cause it.',
+    hate: 'Primer teaches this as critical history: what the ideas claimed, why people followed them, and why they are rejected.',
+    selfharm: 'If you’re going through a hard time, you don’t have to face it alone. In India, call Tele-MANAS on 14416, free and at any time.'
+  };
   const smooth = () => (P.motion.reduce ? 'auto' : 'smooth');
 
   const courseId = P.params.get('course');
@@ -263,6 +269,7 @@
         <p class="course-head__meta">${flat.length} lessons in ${course.units.length} units, about ${duration}</p>
         ${lib ? `<p class="course-head__lib"><span>${libText}</span> <span data-lib-more></span></p>` : ''}
         ${course.source === 'sample' && course.aiError ? `<p class="course-head__note">This is a sample outline, because the AI couldn’t be reached: ${esc(course.aiError)}</p>` : ''}
+        ${course.safety && SAFETY_NOTES[course.safety.kind] ? `<p class="course-head__note">${SAFETY_NOTES[course.safety.kind]}</p>` : ''}
         <div data-fit-slot></div>
         <dl class="spec">
           <dt>Topic</dt><dd>${esc(course.topic)}</dd>

@@ -11,6 +11,7 @@ import { q, tx, now, parseJSON } from './db.mjs';
 import { HttpError, sendJSON, readBody, text, longText } from './http.mjs';
 import { requireUser } from './auth.mjs';
 import { generateOutline, generateLesson } from './ai.mjs';
+import { screen, cleanSafety, courseSafety, softenSample, REFUSED } from './safety.mjs';
 
 export const newId = () => Date.now().toString(36) + crypto.randomBytes(5).toString('hex');
 const TAGS = new Set(['maths', 'diagram', 'practice', 'written']);
@@ -62,6 +63,8 @@ export function cleanMeta(c) {
   const aiError = text(c.aiError, 300);
   if (aiError) meta.aiError = aiError;
   if (c.library && typeof c.library === 'object') meta.library = c.library;
+  const safety = cleanSafety(c.safety);
+  if (safety) meta.safety = safety;
   return meta;
 }
 
@@ -72,8 +75,13 @@ export function flatten(units) {
 }
 
 function courseOut(row, written = [], progress = {}) {
+  const meta = parseJSON(row.data, {});
+  if (!meta.safety) { // courses made before the safety check get their framing worked out here
+    const s = courseSafety(meta);
+    if (s && s.kind !== 'refuse') meta.safety = s;
+  }
   return {
-    ...parseJSON(row.data, {}),
+    ...meta,
     id: row.id,
     folderId: row.folder_id ?? null,
     createdAt: row.created_at,
@@ -130,6 +138,10 @@ async function createCourse({ req, res }) {
   const meta = cleanMeta(body.course);
   if (meta.source === 'ai' || meta.source === 'library') meta.source = 'sample'; // AI courses are only made by /api/outline
   delete meta.library;
+  // a sample course on a risky topic is renamed to its safe framing, like an AI one
+  const s = screen(meta.topic, meta.title, meta.from, meta.to, meta.instructions);
+  if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);
+  if (s) softenSample(meta, s);
   const row = insertCourse(u, meta, { folderId: folderFor(u, body) });
   sendJSON(res, 201, { ok: true, course: courseOut(row) });
 }
@@ -178,6 +190,10 @@ async function outline({ req, res }) {
   const u = requireUser(req);
   const body = await readBody(req, 8_000);
   const input = { ...courseInput(body), lang: u.lang || 'en' }; // courses are written in the learner's language
+  // risky topics aren't turned away: the AI is told to teach their safe, public side
+  const s = screen(input.topic, input.from, input.to, input.instructions);
+  if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);
+  if (s) input.safety = s;
   const style = Array.isArray(body.style) ? body.style : [];
   const folderId = folderFor(u, body);
   let meta;
@@ -206,11 +222,14 @@ async function lesson({ req, res }) {
   const have = q('SELECT data, model FROM lessons WHERE course_id = ? AND n = ?').get(row.id, n);
   if (have) return sendJSON(res, 200, { ok: true, lesson: parseJSON(have.data), model: have.model, cached: true });
   if (meta.source !== 'ai' && meta.source !== 'library') throw new HttpError('This sample course uses its built-in lessons.', 400);
+  // older courses on risky topics (made before this check) are framed safely from here on
+  const safety = courseSafety(meta);
+  if (safety && safety.kind === 'refuse') throw new HttpError(REFUSED, 400);
   let out = null;
-  if (hooks.writeLesson) out = await hooks.writeLesson(u, row, meta, n);
+  if (hooks.writeLesson && !safety) out = await hooks.writeLesson(u, row, meta, n);
   if (!out) {
     out = await generateLesson({
-      topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions,
+      topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions, safety,
       courseTitle: meta.title || meta.topic, n, lang: meta.lang || 'en',
       outline: flat.map((l) => ({ n: l.n, unit: l.unit, title: l.title, desc: l.desc }))
     });
@@ -350,6 +369,9 @@ async function importLocal({ req, res }) {
     for (const c of list) {
       let meta;
       try { meta = cleanMeta(c); } catch { continue; }
+      const s = screen(meta.topic, meta.title, meta.instructions);
+      if (s && s.kind === 'refuse') continue;
+      if (s) meta.safety = { kind: s.kind, area: s.area || '' }; // its lessons stay as they were; new ones are framed safely
       const row = insertCourse(u, meta);
       if (c.lessons && typeof c.lessons === 'object') {
         for (const [k, l] of Object.entries(c.lessons)) {

@@ -21,6 +21,7 @@ Primer turns one topic into a full course. You name the subject, say where to st
 - **A community board.** Share the sources you learn from, with photos and links; threaded comments and votes. Anyone can read; sign in to take part.
 - **Read a course as a book**, save it as a PDF, or download it as an EPUB with real maths.
 - **Accounts that keep everything**: courses, progress, notes, doubts and the tutor’s memory follow you to any device.
+- **Risky topics are taught safely, not turned away.** A request like “bomb making” becomes a course on the chemistry and safety of explosives, and a hateful premise becomes critical history. Lessons and the tutor stay at textbook level and never give instructions for causing harm. Someone who seems to be struggling gets a supportive answer with a helpline. The only thing always refused is sexual content involving children.
 
 ## Running it
 
@@ -78,6 +79,7 @@ server/tutor.mjs                                doubt answers and the tutor
 server/voice.mjs                                ElevenLabs narration, sound effects, speech to text
 server/folders.mjs, server/library.mjs          folders and the shared topic library
 server/community.mjs                            posts, comments, votes, photos
+server/safety.mjs                               safe framing for risky topics
 server/ebook.mjs, server/translate.mjs          the book view, lesson translation
 server/features.mjs                             the list of feature modules
 docs/                                           images for this README

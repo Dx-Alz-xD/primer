@@ -13,6 +13,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HttpError } from './http.mjs';
+import { promptNote, safetyKey } from './safety.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache');
@@ -59,7 +60,8 @@ Rules:
 - minutes: realistic study time between 8 and 25.
 - Titles and descriptions are plain text shown in a list: no LaTeX, no $ signs, no markdown. Describe formulas in words (for example "the power rule for powers of x").
 - Follow the learner's teaching instructions wherever they affect the plan.
-- Write every title and description in the language the request names (English unless it names another).`;
+- Write every title and description in the language the request names (English unless it names another).
+- Safety: never plan lessons on how to make, get, use or hide weapons, explosives, poisons or illegal drugs, how to write malware or break into accounts, or how to hurt people or animals. If a request leans that way, plan the safe, public side of the subject instead (the science in general terms, history, legitimate uses, safety, law and prevention) under a neutral title. If a request starts from a hateful or extremist premise, plan a critical, accurate history of it instead of agreeing with it. Never include sexual content involving minors.`;
 
 const LESSON_SYSTEM = String.raw`You write one lesson of an online course as JSON. The app shows the lesson one section at a time: a learner must answer a section's checkpoint questions before the next section appears, and a wrong answer re-shows that section's "recap" points.
 
@@ -95,6 +97,7 @@ Rules:
 - Teach at the level the course and its range imply. Don't re-teach earlier lessons; set up the next one.
 - Follow the learner's teaching instructions (e.g. mnemonics: add mnemonic callouts; "like I'm 5": eli5 callouts and simpler words; LaTeX: write all maths in LaTeX).
 - Every piece of maths, everywhere (paragraphs, questions, choices, hints, explanations, recap), goes inside \\( and \\). Never use $ for maths.
+- Safety: teach a dangerous subject only as far as a school textbook or encyclopedia would: the science in general terms, history, legitimate uses, safety, law and prevention. Never give instructions, recipes, ingredients or quantities, formulations, synthesis routes, designs, assembly or deployment steps, ways to obtain restricted materials, or ways to avoid detection. Present hateful or extremist ideas critically, with the historical and scholarly consensus. If the subject touches self-harm, be gentle and point to help.
 - Plain, warm, precise writing in the language the request names (English unless it names another); maths notation stays LaTeX. Be factually correct; leave out anything you are unsure of.
 - This is JSON: every backslash in LaTeX must be written twice, for example "\\frac{1}{2}" and "\\(x\\)".`;
 
@@ -105,16 +108,17 @@ const langLine = (lang) => (lang && lang !== 'en' && LANG_NAMES[lang] ? `Languag
 // English requests keep their old cache keys; other languages get their own.
 const langKey = (lang) => (lang && lang !== 'en' ? { lang } : {});
 
-function outlineUser({ topic, from, to, instructions, lang }) {
+function outlineUser({ topic, from, to, instructions, lang, safety }) {
   return [
     `Topic: ${topic}`,
     `Range: from ${from || 'the very beginning'} up to ${to || 'the end of the subject'}`,
     `Teaching instructions from the learner: ${instructions || 'none'}`,
-    langLine(lang)
+    langLine(lang),
+    promptNote(safety, { outline: true, title: safety && safety.title })
   ].filter(Boolean).join('\n');
 }
 
-function lessonUser({ topic, from, to, instructions, courseTitle, outline, n, lang }) {
+function lessonUser({ topic, from, to, instructions, courseTitle, outline, n, lang, safety }) {
   const me = outline.find((l) => l.n === n);
   return [
     `Course: "${courseTitle}", on ${topic}.`,
@@ -125,7 +129,8 @@ function lessonUser({ topic, from, to, instructions, courseTitle, outline, n, la
     ...outline.map(lineFor),
     '',
     `Write lesson ${n}: "${me.title}"${me.desc ? ` — ${me.desc}` : ''}`,
-    langLine(lang)
+    langLine(lang),
+    promptNote(safety)
   ].filter(Boolean).join('\n');
 }
 
@@ -461,7 +466,7 @@ async function cached(kind, keyObj, produce) {
 /* ------------------------------------------------------------------ */
 
 export function generateOutline(input) {
-  const key = { v: 3, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions), ...langKey(input.lang) };
+  const key = { v: 3, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions), ...langKey(input.lang), ...safetyKey(input.safety) };
   return cached('outline', key, async () => {
     const { value, model } = await generate({
       system: OUTLINE_SYSTEM,
@@ -482,7 +487,7 @@ export function generateLesson(input) {
   const next = input.outline.find((l) => l.n === input.n + 1);
   const key = {
     v: 2, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions),
-    n: input.n, title: norm(me.title), prev: norm(prev && prev.title), next: norm(next && next.title), ...langKey(input.lang)
+    n: input.n, title: norm(me.title), prev: norm(prev && prev.title), next: norm(next && next.title), ...langKey(input.lang), ...safetyKey(input.safety)
   };
   return cached('lesson', key, async () => {
     const { value, model } = await generate({
