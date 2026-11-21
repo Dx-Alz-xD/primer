@@ -220,6 +220,12 @@ const withPhotos = (row, meta, n, lesson, stored) => (hooks.photos && lesson ? h
 hooks.refs = null;
 hooks.bookRefs = null;
 const withRefs = (row, meta, n, lesson, stored) => (hooks.refs && lesson ? hooks.refs(row, meta, n, lesson, stored) : lesson);
+// A saved lesson being opened: its photos and its sources are looked up side by side, not one after the other.
+// Photos only add blocks inside sections; sources go by section titles and positions, so neither needs the other.
+async function dressed(row, meta, n, lesson) {
+  const [p, r] = await Promise.all([withPhotos(row, meta, n, lesson, true), withRefs(row, meta, n, lesson, true)]);
+  return r && r.refs ? { ...(p || lesson), refs: r.refs } : (p || lesson);
+}
 
 // The folder a new course should be filed in, if the request names one.
 function folderFor(user, body) {
@@ -264,7 +270,7 @@ async function lesson({ req, res }) {
   const flat = flatten(meta.units || []);
   if (!Number.isInteger(n) || n < 1 || n > flat.length) throw new HttpError('That lesson is not in the course.', 400);
   const have = q('SELECT data, model FROM lessons WHERE course_id = ? AND n = ?').get(row.id, n);
-  if (have) return sendJSON(res, 200, { ok: true, lesson: await withRefs(row, meta, n, await withPhotos(row, meta, n, parseJSON(have.data), true), true), model: have.model, cached: true });
+  if (have) return sendJSON(res, 200, { ok: true, lesson: await dressed(row, meta, n, parseJSON(have.data)), model: have.model, cached: true });
   if (meta.source !== 'ai' && meta.source !== 'library') throw new HttpError('This sample course uses its built-in lessons.', 400);
   // older courses on risky topics (made before this check) are framed safely from here on
   const safety = courseSafety(meta);
@@ -301,7 +307,7 @@ async function getLesson({ req, res, params }) {
   const have = q('SELECT data, model FROM lessons WHERE course_id = ? AND n = ?').get(row.id, n);
   if (!have) throw new HttpError('That lesson hasn’t been written yet.', 404);
   const meta = parseJSON(row.data, {});
-  sendJSON(res, 200, { ok: true, lesson: await withRefs(row, meta, n, await withPhotos(row, meta, n, parseJSON(have.data), true), true), model: have.model });
+  sendJSON(res, 200, { ok: true, lesson: await dressed(row, meta, n, parseJSON(have.data)), model: have.model });
 }
 
 async function putProgress({ req, res, params }) {
