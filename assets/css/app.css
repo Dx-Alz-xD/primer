@@ -179,6 +179,8 @@ fieldset.field legend{padding:0;margin-bottom:.4rem}
 .fitwarn__x{background:none;border:0;border-bottom:1px solid rgba(214,165,84,.4);padding:0;color:var(--gold);font:inherit;font-size:.92rem;cursor:pointer}
 .fitwarn__x:hover{border-bottom-color:var(--gold)}
 .course-head .fitwarn{margin-top:.9rem;font-size:1.02rem}
+.course-head__lib{margin-top:.6rem;color:var(--gold);font-style:italic;font-size:1.05rem;line-height:1.4}
+.course-head__lib [data-lib-more]{color:var(--cream-dim)}
 .course-head h1:focus{outline:none}
 
 /* add many topics */
@@ -212,5 +214,5 @@ fieldset.field legend{padding:0;margin-bottom:.4rem}
 }
 
 @media print{
-  .noprint,.fitwarn{display:none !important}
+  .noprint,.fitwarn,.course-head__lib [data-lib-more]{display:none !important}
 }

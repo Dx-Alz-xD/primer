@@ -491,7 +491,7 @@ export function generateLesson(input) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Small calls: folder fit                                             */
+/* Small calls: folder fit, shared-library match and cut               */
 /* Short prompts and small budgets; callers treat a failure as "skip". */
 /* ------------------------------------------------------------------ */
 
@@ -501,6 +501,21 @@ Return ONLY a JSON object (no prose, no code fences) like this:
 - One entry per topic, with its number as "i" and "fits" as true or false.
 - reason: empty when it fits. Otherwise at most 12 plain words saying what the topic is really about, starting in lower case unless it starts with a name.`;
 
+const MATCH_SYSTEM = `You match a learner's course request to a shared library of general courses, each covering one whole subject. Return ONLY a JSON object (no prose, no code fences) like this:
+{"match": 3, "alias": "differentiation", "start": 4, "end": 19, "subject": null}
+- match: the # number of the library subject that is the SAME subject as the request, under the same or another name (for example "differentiation" and "Derivatives", "WW2" and "World War II", "intro to Python" and "Python programming"). Use null when none is the same subject. A broader, narrower or merely related subject is not a match.
+- alias: when match is not null, the requested topic as a short lower-case name, so it is recognised next time. Otherwise null.
+- start, end: when match is not null and its lessons are listed, the 1-based numbers of the first and last lessons that cover the requested range. The learner already knows everything before the starting point, so start at the lesson that teaches or recaps it, and end at the lesson that completes the end point. With no starting point, start is 1; with no end point, end is the last lesson. Otherwise null.
+- subject: when match is null, a short general name for the requested subject, at most 5 words (for example "Derivatives" for "derivatives in calculus"). Otherwise null.`;
+
+const CUT_SYSTEM = `You cut a general course down to the range a learner asked for. You get the course's numbered lessons and the range. Return ONLY a JSON object (no prose, no code fences) like this:
+{"start": 4, "end": 19}
+- start and end are 1-based lesson numbers from the list, with start no greater than end.
+- The learner already knows everything before the starting point: start at the lesson that teaches or recaps it. With no starting point, start is 1.
+- End at the lesson that completes the end point. With no end point, end is the last lesson.
+- If the range's ends are not taught by name, pick the closest lessons that still cover the whole range.`;
+
+const rangeLine = (from, to) => `Range: from ${from || 'the very beginning'} up to ${to || 'the end of the subject'}`;
 const posInt = (v) => { const n = Math.round(Number(String(v ?? '').replace(/^#/, ''))); return Number.isInteger(n) && n > 0 ? n : null; };
 const asBool = (v) => (typeof v === 'boolean' ? v : /^(true|yes)$/i.test(String(v)) ? true : /^(false|no)$/i.test(String(v)) ? false : null);
 
@@ -546,4 +561,68 @@ export async function checkFolderFit(folder, topics) {
   });
   await Promise.all(saves);
   return out;
+}
+
+// Which shared-library subject (if any) is the same subject as this request, and which of its
+// lessons cover the range. `entries` is [{ id, subject, aliases, lessons: [titles] | null }].
+export function matchLibrary({ topic, from, to, entries }) {
+  const key = {
+    v: 1, topic: norm(topic), from: norm(from), to: norm(to),
+    lib: entries.map((e) => [e.id, norm(e.subject), e.aliases.length, e.lessons ? e.lessons.length : 0])
+  };
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  return cached('libmatch', key, async () => {
+    const { value, model } = await generate({
+      system: MATCH_SYSTEM,
+      user: [
+        `Requested topic: ${topic}`,
+        rangeLine(from, to),
+        '',
+        'Library subjects:',
+        ...entries.map((e) => `#${e.id} ${e.subject}${e.aliases.length ? ` (also: ${e.aliases.slice(0, 8).join('; ')})` : ''}`
+          + (e.lessons ? `\n   Lessons: ${e.lessons.map((t, i) => `${i + 1} ${t}`).join('; ')}` : ''))
+      ].join('\n'),
+      maxTokens: 2000,
+      timeoutMs: 45000,
+      deadlineMs: 60000,
+      validate: (raw) => {
+        if (!raw || typeof raw !== 'object' || !('match' in raw)) throw new Error('no "match" in the reply');
+        const e = byId.get(posInt(raw.match)) || null;
+        return {
+          match: e ? e.id : null,
+          alias: e ? str(raw.alias, 120) : '',
+          subject: e ? '' : str(raw.subject, 120),
+          start: e ? posInt(raw.start) : null,
+          end: e ? posInt(raw.end) : null
+        };
+      },
+      label: `library match "${topic}"`
+    });
+    return { result: value, model };
+  });
+}
+
+// The first and last lessons of a general course that cover a learner's range.
+// `outline` is the flat list [{ n, unit, title, desc }].
+export function pickLibraryCut({ subject, outline, from, to }) {
+  const key = {
+    v: 1, subject: norm(subject), from: norm(from), to: norm(to),
+    lessons: createHash('sha256').update(outline.map((l) => l.title).join('|')).digest('hex').slice(0, 16)
+  };
+  return cached('libcut', key, async () => {
+    const { value, model } = await generate({
+      system: CUT_SYSTEM,
+      user: [`Subject: ${subject}`, rangeLine(from, to), '', 'Lessons:', ...outline.map(lineFor)].join('\n'),
+      maxTokens: 1200,
+      timeoutMs: 45000,
+      deadlineMs: 60000,
+      validate: (raw) => {
+        const s = posInt(raw && raw.start), e = posInt(raw && raw.end);
+        if (!s || !e || s > e || e > outline.length) throw new Error(`unusable cut ${raw && raw.start}-${raw && raw.end}`);
+        return { start: s, end: e };
+      },
+      label: `library cut "${subject}"`
+    });
+    return { cut: value, model };
+  });
 }

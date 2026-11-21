@@ -245,6 +245,12 @@
         </li>`;
     }).join('');
 
+    const lib = course.source === 'library' && course.library ? course.library : null;
+    const libText = lib
+      ? (lib.offset === 0 && flat.length === lib.total
+        ? `From the shared library: all ${lib.total} lessons of “${esc(lib.subject)}”.`
+        : `From the shared library: lessons ${lib.offset + 1}–${lib.offset + flat.length} of “${esc(lib.subject)}”.`)
+      : '';
     const folderRow = P.folders.list().length
       ? `<dt class="noprint"><label for="c-folder">Folder</label></dt>
          <dd class="noprint"><select class="select select--small" id="c-folder">${P.folders.options(course.folderId)}</select></dd>`
@@ -255,6 +261,7 @@
       <header class="course-head card card--solid">
         <h1>${esc(course.title)}</h1>
         <p class="course-head__meta">${flat.length} lessons in ${course.units.length} units, about ${duration}</p>
+        ${lib ? `<p class="course-head__lib"><span>${libText}</span> <span data-lib-more></span></p>` : ''}
         ${course.source === 'sample' && course.aiError ? `<p class="course-head__note">This is a sample outline, because the AI couldn’t be reached: ${esc(course.aiError)}</p>` : ''}
         <div data-fit-slot></div>
         <dl class="spec">
@@ -311,6 +318,18 @@
           folderSel.disabled = false;
         }
       });
+    }
+
+    // How many learners share this shared-library subject.
+    if (lib) {
+      P.get(`/api/library/${encodeURIComponent(lib.id)}`).then((d) => {
+        const s = d.subject;
+        const more = view.querySelector('[data-lib-more]');
+        if (!more) return;
+        const who = s.learners > 1 ? `Shared by ${s.learners} learners.` : 'You’re the first learner to use it.';
+        const ready = s.written ? ` ${s.written} of its ${s.lessons} lessons are already written, so they open at once.` : '';
+        more.textContent = who + ready;
+      }).catch(() => {});
     }
 
     view.querySelector('[data-print]').addEventListener('click', () => window.print());

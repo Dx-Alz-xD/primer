@@ -2,5 +2,6 @@
 // Each one exports `routes` (and optionally `pages`: [{ file, protected }]).
 // Add a line here to plug in a new feature.
 export default [
-  () => import('./folders.mjs')
+  () => import('./folders.mjs'),
+  () => import('./library.mjs')
 ];

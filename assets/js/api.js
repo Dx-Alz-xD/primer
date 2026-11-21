@@ -211,7 +211,7 @@
       };
       try {
         const res = await P.post('/api/outline', Object.assign({ style: P.parseStyle(input.instructions) }, input, req.extra || {}), {
-          timeout: 240000, timeoutMessage: 'The AI took too long to plan the course. Try again.'
+          timeout: 330000, timeoutMessage: 'The AI took too long to plan the course. Try again.'
         });
         return P.courses.put(res.course);
       } catch (err) {
