@@ -142,7 +142,7 @@ async function answerDoubt(user, d) {
 
 doubtHooks.afterAsk = (user, row) => {
   const urgent = screen(row.question, row.quote, row.context);
-  if (!config().key && !(urgent && (urgent.kind === 'selfharm' || urgent.kind === 'refuse'))) return;
+  if (!config().ai && !(urgent && (urgent.kind === 'selfharm' || urgent.kind === 'refuse'))) return;
   if (overLimit('doubt-answers:' + user.id, 40, 3600_000)) return;
   answerDoubt(user, row).catch((err) => console.log(`[tutor] doubt ${row.id} not answered: ${err.message}`));
 };
@@ -153,7 +153,7 @@ async function retryDoubt({ req, res, params }) {
   const d = q('SELECT * FROM doubts WHERE id = ? AND user_id = ?').get(Number(params.id), u.id);
   if (!d) throw new HttpError('That doubt doesn’t exist.', 404);
   if (d.answer) return sendJSON(res, 200, { ok: true, answered: true });
-  if (!config().key) throw new HttpError('The tutor needs an OpenRouter key in .env.', 503);
+  if (!config().ai) throw new HttpError('The tutor needs an OpenRouter key in .env.', 503);
   if (overLimit('doubt-answers:' + u.id, 40, 3600_000)) throw new HttpError('You’ve asked a lot this hour. Try again a little later.', 429);
   await answerDoubt(u, d);
   sendJSON(res, 200, { ok: true, answered: true });
@@ -166,7 +166,7 @@ const msgOut = (m) => ({ id: m.id, role: m.role, content: m.content, courseId: m
 async function history({ req, res }) {
   const u = requireUser(req);
   const rows = q('SELECT * FROM (SELECT * FROM tutor_messages WHERE user_id = ? ORDER BY created_at DESC LIMIT 60) ORDER BY created_at').all(u.id);
-  sendJSON(res, 200, { ok: true, messages: rows.map(msgOut), ai: Boolean(config().key) });
+  sendJSON(res, 200, { ok: true, messages: rows.map(msgOut), ai: config().ai });
 }
 
 async function clear({ req, res }) {
@@ -185,7 +185,7 @@ async function chat({ req, res }) {
   if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);
   // someone who may be struggling always gets an answer, even with no AI
   const struggling = Boolean(s && s.kind === 'selfharm');
-  if (!config().key && !struggling) throw new HttpError('The tutor needs an OpenRouter key in .env.', 503);
+  if (!config().ai && !struggling) throw new HttpError('The tutor needs an OpenRouter key in .env.', 503);
 
   let courseId = null, lessonN = null, here = '';
   if (body.courseId) {

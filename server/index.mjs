@@ -21,7 +21,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 try {
   process.loadEnvFile(process.env.PRIMER_ENV_FILE || path.join(ROOT, '.env'));
 } catch {
-  console.warn('[primer] No .env file found, so AI features are off. Copy .env.example to .env and add your key.');
+  console.warn('[primer] No .env file found, so AI features are off. Copy .env.example to .env and add a key.');
 }
 
 const { config } = await import('./ai.mjs');
@@ -89,7 +89,7 @@ async function servePage(req, res, file, search) {
   const nonce = crypto.randomBytes(16).toString('base64');
   const code = auth.inviteCode();
   const boot = scriptJSON(Object.assign({
-    user: auth.publicUser(user), invite: Boolean(code), ai: Boolean(config().key),
+    user: auth.publicUser(user), invite: Boolean(code), ai: config().ai,
     inviteHint: code.toUpperCase() === 'PRIMER' ? 'PRIMER' : null // only the public demo code is ever shown
   }, ...BOOT_HOOKS.map((f) => f(user) || {})));
   html = html.replace('</head>', `<script nonce="${nonce}">window.__PRIMER__=${boot};</script>\n</head>`);
@@ -120,8 +120,9 @@ async function serveStatic(req, res, pathname, search) {
 async function handleApi(req, res, pathname, url) {
   try {
     if (pathname === '/api/health' && req.method === 'GET') {
+      // which AI providers have a key, in the order they are tried (never the keys themselves)
       const cfg = config();
-      return sendJSON(res, 200, { ok: true, ai: Boolean(cfg.key), models: cfg.models });
+      return sendJSON(res, 200, { ok: true, ai: cfg.ai, providers: cfg.providers, models: cfg.models });
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') checkOrigin(req);
     const hit = matchRoute(ROUTES, req.method, pathname);
@@ -156,6 +157,8 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, HOST, () => {
   const cfg = config();
   console.log(`[primer] http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
-  console.log(cfg.key ? `[primer] AI on: ${cfg.models.join(' -> ')}` : '[primer] AI off: add OPENROUTER_API_KEY to .env');
+  console.log(cfg.ai
+    ? `[primer] AI on: ${cfg.providers.map((p) => `${p.name} (${p.models.join(', ')})`).join(' -> ')}`
+    : '[primer] AI off: add OPENROUTER_API_KEY, GROQ_KEY, GEM_KEY or REQ_KEY to .env');
   console.log(auth.inviteCode() ? '[primer] Sign-up needs the invite code set in INVITE_CODE (default PRIMER)' : '[primer] Sign-up is open to anyone');
 });

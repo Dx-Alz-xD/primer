@@ -3,7 +3,8 @@
   "private": true,
   "description": "Primer: type a topic, get a whole course.",
   "scripts": {
-    "start": "node server/index.mjs"
+    "start": "node server/index.mjs",
+    "test": "node --test \"test/*.test.mjs\""
   },
   "engines": {
     "node": ">=24.7"

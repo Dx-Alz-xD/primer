@@ -1,5 +1,5 @@
 // =====================================================================
-// Voice, through ElevenLabs (needs ELEVENLABS_API_KEY in .env).
+// Voice, through ElevenLabs (needs ELEVENLABS_API_KEY, or EL_LAB_KEY, in .env).
 // - Narration: any part of a lesson read aloud. Maths is turned into
 //   words first ("f prime of x equals the limit as h approaches 0...").
 // - Sound effects for right answers, wrong answers and newly opened
@@ -19,7 +19,7 @@ import { ownCourse } from './data.mjs';
 
 const AUDIO_DIR = path.join(DATA_DIR, 'audio');
 const API = 'https://api.elevenlabs.io/v1';
-const key = () => (process.env.ELEVENLABS_API_KEY || '').trim();
+const key = () => (process.env.ELEVENLABS_API_KEY || '').trim() || (process.env.EL_LAB_KEY || '').trim();
 const voiceId = () => (process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb').trim(); // "George": a warm narrator
 const MODEL = () => (process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2').trim();
 
