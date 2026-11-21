@@ -13,5 +13,6 @@ export default [
   () => import('./ebook.mjs'),
   () => import('./review.mjs'),
   () => import('./placement.mjs'),
-  () => import('./marking.mjs')
+  () => import('./marking.mjs'),
+  () => import('./offline.mjs')
 ];
