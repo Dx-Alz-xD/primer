@@ -20,7 +20,8 @@ const SW_FILE = path.join(ROOT, 'assets', 'js', 'sw.js');
 let swCache = null;
 
 // What the service worker itself may fetch: this site, KaTeX and the fonts the pages use.
-const SW_CSP = "default-src 'none'; connect-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com";
+// It loads its course-file helpers from this site (importScripts).
+const SW_CSP = "default-src 'none'; script-src 'self'; connect-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com";
 
 const MANIFEST = JSON.stringify({
   id: '/app.html',

@@ -179,6 +179,14 @@
     try { await P.del('/api/tutor'); emptyState(); } catch (e) { err.textContent = e.message; }
   });
 
+  /* ---------- Talk mode (assets/js/talk.js): the same tutor, spoken ---------- */
+  P.tutorUI = { panel, log, bubble, scrollEnd, here, load, setOpen };
+  if (P.boot.talk) {
+    const s = document.createElement('script');
+    s.src = 'assets/js/talk.js';
+    document.head.appendChild(s);
+  }
+
   /* ---------- answers to doubts asked in a lesson ---------- */
   P.onDoubtAsked = (doubt, { refresh }) => {
     if (!P.boot.ai || !doubt || !doubt.courseId) return;

@@ -118,7 +118,7 @@ export function speakHTML(html) {
     .replace(/\s+([.,;:!?])/g, '$1').replace(/\.\s*\./g, '.').replace(/\s+/g, ' ').trim();
 }
 
-function sectionScript(section, lang) {
+export function sectionScript(section, lang) {
   const en = !lang || lang === 'en';
   const parts = [section.title + '.'];
   for (const b of section.blocks || []) {
@@ -156,7 +156,7 @@ async function eleven(urlPath, init) {
   return res;
 }
 
-const audioName = (script, v) => crypto.createHash('sha256').update(`${voiceId()}|${v.model}${v.code ? '|' + v.code : ''}|${script}`).digest('hex').slice(0, 32) + '.mp3';
+export const audioName = (script, v) => crypto.createHash('sha256').update(`${voiceId()}|${v.model}${v.code ? '|' + v.code : ''}|${script}`).digest('hex').slice(0, 32) + '.mp3';
 
 function tts(script, lang) {
   const v = voiceFor(lang);
@@ -180,6 +180,9 @@ const SFX = {
 
 /* ---------------- routes ---------------- */
 
+// packs.mjs: packAudio(courseId, 'listen', script) -> { url } for narration that came with a course file
+export const voiceHooks = { packAudio: null };
+
 async function narrate({ req, res }) {
   const u = requireUser(req);
   if (!key()) throw new HttpError('Narration needs an ElevenLabs key. Add ELEVENLABS_API_KEY to .env and restart Primer.', 503);
@@ -195,6 +198,9 @@ async function narrate({ req, res }) {
   if (!section) throw new HttpError('That part of the lesson doesn’t exist.', 404);
   const lang = tr ? u.lang : parseJSON(row.data, {}).lang || 'en'; // the language the page shows it in
   const script = typeof body.script === 'string' && body.script.trim() ? text(body.script, 4500) : sectionScript(section, lang);
+  // narration that came with a course file (server/packs.mjs)
+  const own = voiceHooks.packAudio && await voiceHooks.packAudio(row.id, 'listen', script);
+  if (own) return sendJSON(res, 200, { ok: true, url: own.url, chars: 0 });
   const name = path.join(AUDIO_DIR, '');
   const file = audioName(script, voiceFor(lang));
   let fresh = true;

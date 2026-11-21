@@ -16,5 +16,7 @@ export default [
   () => import('./marking.mjs'),
   () => import('./offline.mjs'),
   () => import('./photos.mjs'),
-  () => import('./videos.mjs')
+  () => import('./videos.mjs'),
+  () => import('./packs.mjs'),
+  () => import('./talk.mjs')
 ];
