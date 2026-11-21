@@ -246,6 +246,7 @@
         <div class="course-head__actions">
           <a class="btn" href="${lessonHref(course.id, resume)}">${cta}</a>
           <button class="textlink" type="button" data-print>Save outline as PDF</button>
+          <a class="textlink" href="community.html?share=${encodeURIComponent(course.id)}">Share to Community</a>
           <button class="textlink" type="button" data-delete>Delete course</button>
         </div>
       </header>
