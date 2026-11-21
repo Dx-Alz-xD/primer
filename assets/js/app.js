@@ -289,6 +289,7 @@
           <a class="textlink" href="community.html?share=${encodeURIComponent(course.id)}">Share to Community</a>
           <button class="textlink" type="button" data-delete>Delete course</button>
         </div>
+        <div data-offline-slot></div>
       </header>
       <ol class="units">${unitsHTML}</ol>`;
 
@@ -342,6 +343,8 @@
       }).catch(() => {});
     }
 
+    // "Download for offline" (assets/js/offline.js)
+    if (P.offline) P.offline.mountCourse(view.querySelector('[data-offline-slot]'), course);
     view.querySelector('[data-epub]').addEventListener('click', (e) => P.epub.download(course.id, e.currentTarget));
     view.querySelector('[data-print]').addEventListener('click', () => window.print());
     view.querySelector('[data-delete]').addEventListener('click', async (e) => {
