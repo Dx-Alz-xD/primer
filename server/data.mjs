@@ -203,6 +203,9 @@ hooks.classLesson = null;
 // photos.mjs: photos(row, meta, n, lesson, stored) -> the lesson with its photos looked up. Called for
 // every lesson written (stored: false, saved here after) or opened (stored: true, it saves its changes).
 hooks.photos = null;
+// sources-in.mjs: groundedLesson(user, row, meta, n, safety) -> { lesson, model } for a course built from
+// material the learner gave (their knowledge, a textbook page), null for every other course.
+hooks.groundedLesson = null;
 const withPhotos = (row, meta, n, lesson, stored) => (hooks.photos && lesson ? hooks.photos(row, meta, n, lesson, stored) : lesson);
 
 // The folder a new course should be filed in, if the request names one.
@@ -255,7 +258,9 @@ async function lesson({ req, res }) {
   // the usual way: the shared library's copy if it has one, otherwise the AI
   const write = async () => {
     let out = null;
-    if (hooks.writeLesson && !safety) out = await hooks.writeLesson(u, row, meta, n);
+    // a course built from the learner's own material is written from that material (sources-in.mjs)
+    if (hooks.groundedLesson) out = await hooks.groundedLesson(u, row, meta, n, safety);
+    if (!out && hooks.writeLesson && !safety) out = await hooks.writeLesson(u, row, meta, n);
     if (!out) {
       out = await generateLesson({
         topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions, safety, syllabus: Boolean(meta.syllabus),

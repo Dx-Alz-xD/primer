@@ -16,5 +16,6 @@ export default [
   () => import('./marking.mjs'),
   () => import('./offline.mjs'),
   () => import('./photos.mjs'),
+  () => import('./sources-in.mjs'),
   () => import('./videos.mjs')
 ];
