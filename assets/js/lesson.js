@@ -82,9 +82,11 @@
 
   // AI lessons are written the first time they're opened, which takes a while on free models.
   function loadLesson() {
-    const needsWriting = course.source === 'ai' && !(course.lessons && course.lessons[n]);
-    if (needsWriting) showWriting();
-    P.api.getLesson(course, n).then(start).catch((err) => {
+    const needsWriting = (course.source === 'ai' || course.source === 'library') && !(course.written || []).includes(n);
+    // Shared-library lessons are often written already, so give them a moment before showing the wait.
+    const wait = needsWriting ? setTimeout(showWriting, course.source === 'library' ? 500 : 0) : 0;
+    P.api.getLesson(course, n).then((l) => { clearTimeout(wait); start(l); }).catch((err) => {
+      clearTimeout(wait);
       console.error(err);
       showLoadError(err);
     });

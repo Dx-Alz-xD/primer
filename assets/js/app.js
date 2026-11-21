@@ -20,7 +20,8 @@
   const smooth = () => (P.motion.reduce ? 'auto' : 'smooth');
 
   const courseId = P.params.get('course');
-  P.courses.load().then(() => {
+  // Folders are a nice-to-have here: if they don't load, the library still works without them.
+  Promise.all([P.courses.load(), P.folders.load().catch((err) => { console.warn('[Primer] folders:', err.message); })]).then(() => {
     if (courseId) showCourse(courseId);
     else showBuilder();
   }).catch((err) => {
@@ -106,6 +107,17 @@
     const clearTopicError = () => { topicErr.textContent = ''; topic.removeAttribute('aria-invalid'); };
     topic.addEventListener('input', clearTopicError);
 
+    // Which folder to file the new course in (shown once the learner has folders).
+    const folderSel = $('#b-folder');
+    const syncFolders = () => {
+      const keep = folderSel.value;
+      folderSel.innerHTML = P.folders.options(null);
+      folderSel.value = P.folders.get(keep) ? keep : '';
+      $('#b-folder-field').hidden = !P.folders.list().length;
+    };
+    syncFolders();
+    document.addEventListener('primer:folders', syncFolders);
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const t = P.clean(topic.value, 120);
@@ -117,6 +129,12 @@
         return;
       }
       clearTopicError();
+      const busy = P.shelves.busy();
+      if (busy) {
+        P.toast(`Topics are still being added to “${busy.name}”. Wait for them to finish, or cancel them first.`, 'error');
+        return;
+      }
+      const folderId = folderSel.value ? Number(folderSel.value) : null;
 
       const building = $('#building');
       form.hidden = true;
@@ -137,7 +155,9 @@
       building.scrollIntoView({ block: 'center', behavior: smooth() });
 
       try {
-        const course = await P.api.generateCourse({ topic: t, from: from.value, to: to.value, instructions: instr.value });
+        const course = await P.api.generateCourse({
+          topic: t, from: from.value, to: to.value, instructions: instr.value, extra: folderId ? { folderId } : undefined
+        });
         clearInterval(tick);
         steps.forEach((li) => { li.className = 'is-done'; });
         P.courses.save(course);
@@ -153,26 +173,23 @@
       }
     });
 
-    renderLibrary();
+    // The library: one shelf per folder, plus the unfiled courses.
+    P.shelves.mount($('#shelves'), {
+      onAddOne(f) {
+        syncFolders();
+        folderSel.value = String(f.id);
+        form.scrollIntoView({ block: 'start', behavior: smooth() });
+        topic.focus({ preventScroll: true });
+        P.toast(`The next course you build will be filed in “${f.name}”.`);
+      }
+    });
     offerImport();
     if (location.hash === '#library') requestAnimationFrame(() => $('#library').scrollIntoView());
     else topic.focus({ preventScroll: true });
   }
 
   function renderLibrary() {
-    const grid = $('#library-grid');
-    const list = P.courses.list();
-    $('#library-empty').hidden = list.length > 0;
-    grid.innerHTML = list.map((c) => {
-      const s = P.courses.stats(c);
-      const sameAsTopic = c.title.toLowerCase() === c.topic.toLowerCase();
-      return `<a class="ccard card card--solid" href="app.html?course=${encodeURIComponent(c.id)}">
-          <h3>${esc(c.title)}</h3>
-          ${sameAsTopic ? '' : `<p class="ccard__topic">${esc(c.topic)}</p>`}
-          <p class="ccard__meta">${s.done} of ${s.total} lessons done</p>
-          <div class="bar" aria-hidden="true"><span style="width:${s.pct}%"></span></div>
-        </a>`;
-    }).join('');
+    P.shelves.render();
   }
 
   /* ------------------------------------------------------------------
@@ -228,16 +245,30 @@
         </li>`;
     }).join('');
 
+    const lib = course.source === 'library' && course.library ? course.library : null;
+    const libText = lib
+      ? (lib.offset === 0 && flat.length === lib.total
+        ? `From the shared library: all ${lib.total} lessons of “${esc(lib.subject)}”.`
+        : `From the shared library: lessons ${lib.offset + 1}–${lib.offset + flat.length} of “${esc(lib.subject)}”.`)
+      : '';
+    const folderRow = P.folders.list().length
+      ? `<dt class="noprint"><label for="c-folder">Folder</label></dt>
+         <dd class="noprint"><select class="select select--small" id="c-folder">${P.folders.options(course.folderId)}</select></dd>`
+      : '';
+
     view.innerHTML = `
       <a class="backlink" href="app.html">All courses</a>
       <header class="course-head card card--solid">
         <h1>${esc(course.title)}</h1>
         <p class="course-head__meta">${flat.length} lessons in ${course.units.length} units, about ${duration}</p>
+        ${lib ? `<p class="course-head__lib"><span>${libText}</span> <span data-lib-more></span></p>` : ''}
         ${course.source === 'sample' && course.aiError ? `<p class="course-head__note">This is a sample outline, because the AI couldn’t be reached: ${esc(course.aiError)}</p>` : ''}
+        <div data-fit-slot></div>
         <dl class="spec">
           <dt>Topic</dt><dd>${esc(course.topic)}</dd>
           <dt>Range</dt><dd>${range}</dd>
           <dt>Teaching</dt><dd>${teaching}</dd>
+          ${folderRow}
         </dl>
         <div class="course-head__progress">
           <div class="bar" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="${stats.total}" aria-valuenow="${stats.done}"><span style="width:${stats.pct}%"></span></div>
@@ -251,6 +282,56 @@
         </div>
       </header>
       <ol class="units">${unitsHTML}</ol>`;
+
+    // The quiet note when the AI thinks this topic doesn't belong in its folder.
+    const fitSlot = view.querySelector('[data-fit-slot]');
+    const paintFit = () => {
+      const miss = P.folders.misfit(course);
+      fitSlot.innerHTML = miss ? P.folders.fitNote(course, miss) : '';
+    };
+    paintFit();
+    fitSlot.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-dismiss-fit]');
+      if (!b) return;
+      fitSlot.innerHTML = '';
+      view.querySelector('h1').setAttribute('tabindex', '-1');
+      view.querySelector('h1').focus();
+      P.folders.dismissFit(course.id).catch((err) => P.toast('Couldn’t dismiss the note: ' + err.message, 'error'));
+    });
+    if (P.folders.needsFit(course)) P.folders.checkFit(course.folderId, [course.id]).then((n) => { if (n) paintFit(); });
+
+    const folderSel = view.querySelector('#c-folder');
+    if (folderSel) {
+      folderSel.addEventListener('change', async () => {
+        const before = course.folderId;
+        const to = folderSel.value ? Number(folderSel.value) : null;
+        folderSel.disabled = true;
+        try {
+          await P.folders.move(course.id, to);
+          paintFit();
+          const f = P.folders.get(to);
+          P.toast(f ? `Moved to “${f.name}”.` : 'Moved out of its folder.');
+          if (f && await P.folders.checkFit(f.id, [course.id])) paintFit();
+        } catch (err) {
+          folderSel.value = before == null ? '' : String(before);
+          P.toast('Couldn’t move the course: ' + err.message, 'error');
+        } finally {
+          folderSel.disabled = false;
+        }
+      });
+    }
+
+    // How many learners share this shared-library subject.
+    if (lib) {
+      P.get(`/api/library/${encodeURIComponent(lib.id)}`).then((d) => {
+        const s = d.subject;
+        const more = view.querySelector('[data-lib-more]');
+        if (!more) return;
+        const who = s.learners > 1 ? `Shared by ${s.learners} learners.` : 'You’re the first learner to use it.';
+        const ready = s.written ? ` ${s.written} of its ${s.lessons} lessons are already written, so they open at once.` : '';
+        more.textContent = who + ready;
+      }).catch(() => {});
+    }
 
     view.querySelector('[data-print]').addEventListener('click', () => window.print());
     view.querySelector('[data-delete]').addEventListener('click', async (e) => {

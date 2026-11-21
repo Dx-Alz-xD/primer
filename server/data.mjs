@@ -128,7 +128,8 @@ async function createCourse({ req, res }) {
   const body = await readBody(req, 400_000);
   const meta = cleanMeta(body.course);
   if (meta.source === 'ai' || meta.source === 'library') meta.source = 'sample'; // AI courses are only made by /api/outline
-  const row = insertCourse(u, meta);
+  delete meta.library;
+  const row = insertCourse(u, meta, { folderId: folderFor(u, body) });
   sendJSON(res, 201, { ok: true, course: courseOut(row) });
 }
 
@@ -162,21 +163,29 @@ export function courseInput(body) {
   return { topic, from: text(body.from, 80), to: text(body.to, 80), instructions: text(body.instructions, 600) };
 }
 
-// Hooks other modules can set (the shared library plans courses its own way).
-export const hooks = { planCourse: null, writeLesson: null };
+// Hooks other modules can set (the shared library plans courses its own way;
+// the folders module checks a folder belongs to the user: ownFolder(user, id) -> row).
+export const hooks = { planCourse: null, writeLesson: null, ownFolder: null };
+
+// The folder a new course should be filed in, if the request names one.
+function folderFor(user, body) {
+  if (body.folderId == null || body.folderId === '' || !hooks.ownFolder) return null;
+  return hooks.ownFolder(user, body.folderId).id;
+}
 
 async function outline({ req, res }) {
   const u = requireUser(req);
   const body = await readBody(req, 8_000);
   const input = courseInput(body);
   const style = Array.isArray(body.style) ? body.style : [];
+  const folderId = folderFor(u, body);
   let meta;
   if (hooks.planCourse) meta = await hooks.planCourse(u, input, style);
   if (!meta) {
     const out = await generateOutline(input);
     meta = cleanMeta({ ...input, title: out.outline.title, style, source: 'ai', model: out.model, units: out.outline.units });
   }
-  const row = insertCourse(u, meta, { folderId: null });
+  const row = insertCourse(u, meta, { folderId });
   sendJSON(res, 201, { ok: true, course: courseOut(row) });
 }
 

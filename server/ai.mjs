@@ -51,7 +51,8 @@ const OUTLINE_SYSTEM = String.raw`You plan detailed online courses. Return ONLY 
   ]
 }
 Rules:
-- 20 to 30 lessons in total, grouped into 4 to 6 units, ordered so every lesson builds on the ones before it.
+- As many lessons as the requested range genuinely needs, and no more: usually 12 to 40. A narrow range needs fewer, a whole subject more, and a very large subject can go well beyond 40. Never pad with filler, repeats or vague review lessons to reach a number.
+- Group the lessons into units of about 3 to 8 lessons each, ordered so every lesson builds on the ones before it.
 - Lessons are specific and concrete (never vague titles like "Advanced concepts"); together they cover the requested range thoroughly.
 - Respect the range. If a starting point is given, assume the learner already knows everything before it and open with a short recap lesson of that starting point. If an end point is given, finish exactly there, ending with a capstone lesson on it.
 - tags: "maths" if the lesson uses formulas, "diagram" if a figure helps, "practice" if it is problem-heavy, "written" if it asks for a written explanation. Use only these four tags; an empty list is fine.
@@ -187,6 +188,8 @@ function mathify(s) {
 const mstr = (v, max) => mathify(str(v, max));
 const arr = (v) => (Array.isArray(v) ? v : []);
 const TAGS = new Set(['maths', 'diagram', 'practice', 'written']);
+export const OUTLINE_MIN = 5;
+export const OUTLINE_MAX = 150;
 
 export function normalizeOutline(raw) {
   const units = arr(raw && raw.units)
@@ -203,10 +206,10 @@ export function normalizeOutline(raw) {
     }))
     .filter((u) => u.lessons.length);
 
+  // A course is as long as its range needs. The floor and ceiling only catch broken or runaway replies.
   let total = units.reduce((n, u) => n + u.lessons.length, 0);
-  if (total < 18) throw new Error(`only ${total} lessons`);
-  // trim from the longest units if a model overshoots
-  while (total > 30) {
+  if (total < OUTLINE_MIN) throw new Error(`only ${total} lessons`);
+  while (total > OUTLINE_MAX) {
     const longest = units.reduce((a, b) => (b.lessons.length > a.lessons.length ? b : a));
     longest.lessons.splice(-2, 1);
     total--;
@@ -420,17 +423,25 @@ async function generate({ system, user, maxTokens, timeoutMs, deadlineMs, valida
 const inflight = new Map();
 const norm = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
+const cacheFile = (kind, keyObj) => path.join(CACHE_DIR, `${kind}-${createHash('sha256').update(JSON.stringify(keyObj)).digest('hex').slice(0, 24)}.json`);
+
+async function readCache(kind, keyObj) {
+  try { return JSON.parse(await readFile(cacheFile(kind, keyObj), 'utf8')); } catch { return null; }
+}
+
+async function writeCache(kind, keyObj, value) {
+  await mkdir(CACHE_DIR, { recursive: true });
+  await writeFile(cacheFile(kind, keyObj), JSON.stringify(value, null, 1));
+}
+
 async function cached(kind, keyObj, produce) {
-  const hash = createHash('sha256').update(JSON.stringify(keyObj)).digest('hex').slice(0, 24);
-  const file = path.join(CACHE_DIR, `${kind}-${hash}.json`);
-  try {
-    return { ...JSON.parse(await readFile(file, 'utf8')), cached: true };
-  } catch { /* not cached yet */ }
+  const file = cacheFile(kind, keyObj);
+  const hit = await readCache(kind, keyObj);
+  if (hit) return { ...hit, cached: true };
   if (inflight.has(file)) return inflight.get(file);
   const job = (async () => {
     const out = await produce();
-    await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(file, JSON.stringify(out, null, 1));
+    await writeCache(kind, keyObj, out);
     return out;
   })().finally(() => inflight.delete(file));
   inflight.set(file, job);
@@ -442,13 +453,13 @@ async function cached(kind, keyObj, produce) {
 /* ------------------------------------------------------------------ */
 
 export function generateOutline(input) {
-  const key = { v: 2, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions) };
+  const key = { v: 3, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions) };
   return cached('outline', key, async () => {
     const { value, model } = await generate({
       system: OUTLINE_SYSTEM,
       user: outlineUser(input),
-      maxTokens: 8000,
-      timeoutMs: 75000,
+      maxTokens: 16000,
+      timeoutMs: 100000,
       deadlineMs: 210000,
       validate: normalizeOutline,
       label: `outline "${input.topic}"`
@@ -487,3 +498,139 @@ export function askJSON({ system, user, maxTokens = 1800, timeoutMs = 60000, dea
 
 // Adds \( \) around bare LaTeX, as lessons get, for any AI text shown on a page.
 export { mathify };
+/* ------------------------------------------------------------------ */
+/* Small calls: folder fit, shared-library match and cut               */
+/* Short prompts and small budgets; callers treat a failure as "skip". */
+/* ------------------------------------------------------------------ */
+
+const FIT_SYSTEM = `You help a learner keep their course folders tidy. You get a folder name and a numbered list of course topics filed in it. For each topic, decide whether a reasonable person would file it in a folder with that name. Be generous: parts, tools, techniques, history and related skills of the folder's subject all fit, and a vague folder name (like "Misc" or "To learn") fits anything. Flag only clear mismatches.
+Return ONLY a JSON object (no prose, no code fences) like this:
+{"results": [{"i": 1, "fits": true, "reason": ""}, {"i": 2, "fits": false, "reason": "derivatives are a maths topic"}]}
+- One entry per topic, with its number as "i" and "fits" as true or false.
+- reason: empty when it fits. Otherwise at most 12 plain words saying what the topic is really about, starting in lower case unless it starts with a name.`;
+
+const MATCH_SYSTEM = `You match a learner's course request to a shared library of general courses, each covering one whole subject. Return ONLY a JSON object (no prose, no code fences) like this:
+{"match": 3, "alias": "differentiation", "start": 4, "end": 19, "subject": null}
+- match: the # number of the library subject that is the SAME subject as the request, under the same or another name (for example "differentiation" and "Derivatives", "WW2" and "World War II", "intro to Python" and "Python programming"). Use null when none is the same subject. A broader, narrower or merely related subject is not a match.
+- alias: when match is not null, the requested topic as a short lower-case name, so it is recognised next time. Otherwise null.
+- start, end: when match is not null and its lessons are listed, the 1-based numbers of the first and last lessons that cover the requested range. The learner already knows everything before the starting point, so start at the lesson that teaches or recaps it, and end at the lesson that completes the end point. With no starting point, start is 1; with no end point, end is the last lesson. Otherwise null.
+- subject: when match is null, a short general name for the requested subject, at most 5 words (for example "Derivatives" for "derivatives in calculus"). Otherwise null.`;
+
+const CUT_SYSTEM = `You cut a general course down to the range a learner asked for. You get the course's numbered lessons and the range. Return ONLY a JSON object (no prose, no code fences) like this:
+{"start": 4, "end": 19}
+- start and end are 1-based lesson numbers from the list, with start no greater than end.
+- The learner already knows everything before the starting point: start at the lesson that teaches or recaps it. With no starting point, start is 1.
+- End at the lesson that completes the end point. With no end point, end is the last lesson.
+- If the range's ends are not taught by name, pick the closest lessons that still cover the whole range.`;
+
+const rangeLine = (from, to) => `Range: from ${from || 'the very beginning'} up to ${to || 'the end of the subject'}`;
+const posInt = (v) => { const n = Math.round(Number(String(v ?? '').replace(/^#/, ''))); return Number.isInteger(n) && n > 0 ? n : null; };
+const asBool = (v) => (typeof v === 'boolean' ? v : /^(true|yes)$/i.test(String(v)) ? true : /^(false|no)$/i.test(String(v)) ? false : null);
+
+// Does each topic belong in a folder with this name? Answers are cached per folder name and
+// topic, so only pairs never seen before reach the AI, all of them in one request.
+// Returns one { ok, reason, model } per topic, or null where the AI gave no answer.
+export async function checkFolderFit(folder, topics) {
+  const keys = topics.map((t) => ({ v: 1, folder: norm(folder), topic: norm(t) }));
+  const out = await Promise.all(keys.map((k) => readCache('fit', k)));
+  const uniq = [], slot = new Map();
+  topics.forEach((t, i) => {
+    if (out[i] || slot.has(keys[i].topic)) return;
+    slot.set(keys[i].topic, uniq.length);
+    uniq.push(t);
+  });
+  if (!uniq.length) return out;
+  const { value, model } = await generate({
+    system: FIT_SYSTEM,
+    user: [`Folder: "${folder}"`, 'Topics:', ...uniq.map((t, i) => `${i + 1}. ${t}`)].join('\n'),
+    maxTokens: 2000,
+    timeoutMs: 45000,
+    deadlineMs: 60000,
+    validate: (raw) => {
+      const res = new Map();
+      for (const r of arr(raw && raw.results)) {
+        const i = posInt(r && (r.i ?? r.n ?? r.index));
+        const fits = asBool(r && (r.fits ?? r.ok ?? r.fit));
+        if (!i || i > uniq.length || fits == null) continue;
+        res.set(i - 1, { ok: fits, reason: fits ? '' : str(r.reason, 160).replace(/[.\s]+$/, '') });
+      }
+      if (!res.size) throw new Error('no usable results');
+      return res;
+    },
+    label: `folder fit "${folder}" (${uniq.length} topic${uniq.length === 1 ? '' : 's'})`
+  });
+  const saves = [];
+  topics.forEach((t, i) => {
+    if (out[i]) return;
+    const r = value.get(slot.get(keys[i].topic));
+    if (!r) return;
+    out[i] = { ...r, model };
+    saves.push(writeCache('fit', keys[i], out[i]));
+  });
+  await Promise.all(saves);
+  return out;
+}
+
+// Which shared-library subject (if any) is the same subject as this request, and which of its
+// lessons cover the range. `entries` is [{ id, subject, aliases, lessons: [titles] | null }].
+export function matchLibrary({ topic, from, to, entries }) {
+  const key = {
+    v: 1, topic: norm(topic), from: norm(from), to: norm(to),
+    lib: entries.map((e) => [e.id, norm(e.subject), e.aliases.length, e.lessons ? e.lessons.length : 0])
+  };
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  return cached('libmatch', key, async () => {
+    const { value, model } = await generate({
+      system: MATCH_SYSTEM,
+      user: [
+        `Requested topic: ${topic}`,
+        rangeLine(from, to),
+        '',
+        'Library subjects:',
+        ...entries.map((e) => `#${e.id} ${e.subject}${e.aliases.length ? ` (also: ${e.aliases.slice(0, 8).join('; ')})` : ''}`
+          + (e.lessons ? `\n   Lessons: ${e.lessons.map((t, i) => `${i + 1} ${t}`).join('; ')}` : ''))
+      ].join('\n'),
+      maxTokens: 2000,
+      timeoutMs: 45000,
+      deadlineMs: 60000,
+      validate: (raw) => {
+        if (!raw || typeof raw !== 'object' || !('match' in raw)) throw new Error('no "match" in the reply');
+        const e = byId.get(posInt(raw.match)) || null;
+        return {
+          match: e ? e.id : null,
+          alias: e ? str(raw.alias, 120) : '',
+          subject: e ? '' : str(raw.subject, 120),
+          start: e ? posInt(raw.start) : null,
+          end: e ? posInt(raw.end) : null
+        };
+      },
+      label: `library match "${topic}"`
+    });
+    return { result: value, model };
+  });
+}
+
+// The first and last lessons of a general course that cover a learner's range.
+// `outline` is the flat list [{ n, unit, title, desc }].
+export function pickLibraryCut({ subject, outline, from, to }) {
+  const key = {
+    v: 1, subject: norm(subject), from: norm(from), to: norm(to),
+    lessons: createHash('sha256').update(outline.map((l) => l.title).join('|')).digest('hex').slice(0, 16)
+  };
+  return cached('libcut', key, async () => {
+    const { value, model } = await generate({
+      system: CUT_SYSTEM,
+      user: [`Subject: ${subject}`, rangeLine(from, to), '', 'Lessons:', ...outline.map(lineFor)].join('\n'),
+      maxTokens: 1200,
+      timeoutMs: 45000,
+      deadlineMs: 60000,
+      validate: (raw) => {
+        const s = posInt(raw && raw.start), e = posInt(raw && raw.end);
+        if (!s || !e || s > e || e > outline.length) throw new Error(`unusable cut ${raw && raw.start}-${raw && raw.end}`);
+        return { start: s, end: e };
+      },
+      label: `library cut "${subject}"`
+    });
+    return { cut: value, model };
+  });
+}

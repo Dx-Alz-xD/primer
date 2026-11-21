@@ -211,7 +211,7 @@
       };
       try {
         const res = await P.post('/api/outline', Object.assign({ style: P.parseStyle(input.instructions) }, input, req.extra || {}), {
-          timeout: 240000, timeoutMessage: 'The AI took too long to plan the course. Try again.'
+          timeout: 330000, timeoutMessage: 'The AI took too long to plan the course. Try again.'
         });
         return P.courses.put(res.course);
       } catch (err) {
@@ -220,7 +220,7 @@
         const sample = P.courseGen.build(input);
         sample.source = 'sample';
         sample.aiError = err.message;
-        const res = await P.post('/api/courses', { course: sample });
+        const res = await P.post('/api/courses', { course: sample, folderId: (req.extra && req.extra.folderId) || null });
         return P.courses.put(res.course);
       }
     },

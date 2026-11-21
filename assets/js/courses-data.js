@@ -3,7 +3,7 @@
 
    Until the AI backend exists, this file plays its part:
    - P.courseGen.build({topic, from, to, instructions}) -> course outline
-     (20-30 lessons in units). Three topics have hand-written outlines
+     (as many lessons as the range needs, in units). Three topics have hand-written outlines
      (calculus/derivatives, black holes, Stoicism); anything else gets a
      sensible generic outline.
    - P.courseGen.lesson(course, n) -> lesson content. Three lessons are
@@ -679,7 +679,7 @@
     let lessons = cur
       ? cur.units.flatMap(([unit, rows]) => rows.map(([title, desc, tags, contentId, minutes]) => ({ unit, title, desc, tags, contentId, minutes })))
       : genericLessons(topic);
-    lessons = ensureCount(applyRange(lessons, from, to), 20, 30);
+    lessons = ensureCount(applyRange(lessons, from, to), 12, 60);
 
     const units = [];
     lessons.forEach((l) => {

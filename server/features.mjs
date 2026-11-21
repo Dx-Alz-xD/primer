@@ -5,5 +5,7 @@
 export default [
   () => import('./tutor.mjs'),
   () => import('./voice.mjs'),
-  () => import('./community.mjs')
+  () => import('./community.mjs'),
+  () => import('./folders.mjs'),
+  () => import('./library.mjs')
 ];
