@@ -87,8 +87,8 @@
   const SUBJECTS = ['Black holes', 'Calculus', 'Stoicism', 'Organic chemistry', 'Personal finance'];
   const demo = $('.hero__demo');
   const tgCanvas = $('#type-garden');
-  // a little sparer than Type Garden's, so the topic stays readable; set from the left, as in a text box
-  const garden = tgCanvas && P.typeGarden ? P.typeGarden(tgCanvas, { density: 0.78, align: 'left' }) : null;
+  // a little sparer than Type Garden's, so the topic stays readable; centred in the box
+  const garden = tgCanvas && P.typeGarden ? P.typeGarden(tgCanvas, { density: 0.78 }) : null;
   P.heroGarden = garden; // for checking the page by hand
   if (garden && demo) {
     const input = $('#topic');
