@@ -83,6 +83,12 @@
 
   /* ---------------- status ---------------- */
   const known = new Map();
+  const locks = new Map(); // course id -> lessons whose unit isn't open yet
+  function noteLocks(courseId, d) {
+    locks.set(courseId, new Set(((d && d.units) || []).filter((u) => !u.open).flatMap((u) => u.lessons || []).map(Number)));
+    document.dispatchEvent(new CustomEvent('primer:locks', { detail: { courseId } })); // the knowledge map redraws
+    return d;
+  }
   function status(courseId, force) {
     if (!force && known.has(courseId)) return known.get(courseId);
     const key = 'primer.exams.' + courseId;
@@ -93,10 +99,13 @@
         const kept = P.store.get(key, null);
         if (kept && kept.d && err.status !== 404 && err.status !== 401) return Object.assign({}, kept.d, { stale: true });
         throw err;
-      });
+      })
+      .then((d) => noteLocks(courseId, d));
     known.set(courseId, job);
     return job;
   }
+  // for other tools (the knowledge map): is this lesson waiting for an exam before it?
+  P.lessonLocked = (course, n) => { const s = course && locks.get(course.id); return Boolean(s && s.has(Number(n))); };
 
   // A paper copy of an exam: fresh questions, written by the AI, then the print view.
   async function printCopy(btn, courseId, unit) {

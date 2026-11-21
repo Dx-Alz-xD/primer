@@ -54,6 +54,7 @@
   async function fetchReview() {
     const d = await P.get('/api/review' + (courseFilter ? '?course=' + encodeURIComponent(courseFilter) : ''));
     await prepare(d);
+    document.dispatchEvent(new CustomEvent('primer:review', { detail: d })); // interleaving can reorder d.due (study-methods.js)
     if (P.review) P.review.setDue(d.dueAll);
     return d;
   }

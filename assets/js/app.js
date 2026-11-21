@@ -409,5 +409,7 @@
     });
     if (P.classes) P.classes.mountCourse(view, course);
     if (P.exams) P.exams.mountCourse(view, course); // unit exams, the final exam and tests (assets/js/exams.js)
+    // the course page for other tools (study method, time studied, knowledge map, reminders)
+    document.dispatchEvent(new CustomEvent('primer:course', { detail: { view, course } }));
   }
 })();

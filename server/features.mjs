@@ -22,5 +22,7 @@ export default [
   () => import('./exams.mjs'),
   () => import('./packs.mjs'),
   () => import('./talk.mjs'),
-  () => import('./refs.mjs') // a lesson's sources and the apps to practise it in (with sources.mjs, apps.mjs)
+  () => import('./refs.mjs'), // a lesson's sources and the apps to practise it in (with sources.mjs, apps.mjs)
+  () => import('./study.mjs'), // study methods, time studied, the knowledge map
+  () => import('./reminders.mjs') // reminders about unfinished courses
 ];

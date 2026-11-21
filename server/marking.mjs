@@ -125,16 +125,20 @@ function rememberMistake(user, courseId, n, lessonTitle, question, answer, missi
 
 const marking = new Set(); // one AI request at a time per question
 
+// Other features can have answers to questions of their own marked here (study.mjs: "f2" is the
+// Feynman explanation of part 2). question(row, n, qid) -> { section, question } | null
+export const markHooks = { question: null };
+
 async function mark({ req, res }) {
   const u = requireUser(req);
   const body = await readBody(req, 16_000);
   const row = ownCourse(u, text(body.courseId, 64));
   const n = Number(body.n);
   const qid = text(body.qid, 12);
-  if (!Number.isInteger(n) || n < 1 || n > 2000 || !/^q\d{1,3}$/.test(qid)) throw new HttpError('That question isn’t in the lesson.', 400);
+  if (!Number.isInteger(n) || n < 1 || n > 2000 || !/^[qf]\d{1,3}$/.test(qid)) throw new HttpError('That question isn’t in the lesson.', 400);
   const answer = longText(body.answer, 3000);
   if (!answer) throw new HttpError('Write your answer first.', 400);
-  const found = findQuestion(row.id, n, qid);
+  const found = findQuestion(row.id, n, qid) || (markHooks.question ? markHooks.question(row, n, qid) : null);
   if (!found) throw new HttpError('That question isn’t in the lesson, or it isn’t one you answer in your own words.', 404);
 
   const have = q('SELECT * FROM answer_marks WHERE user_id = ? AND course_id = ? AND lesson_n = ? AND qid = ?').get(u.id, row.id, n, qid);

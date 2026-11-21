@@ -257,6 +257,7 @@
       updateCount();
       status.textContent = d.updatedAt ? `Last saved ${new Date(d.updatedAt).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Notes save as you write.';
       redrawPad();
+      el.dispatchEvent(new CustomEvent('primer:notes', { bubbles: true })); // the notes are in (study methods lay them out)
     }).catch((err) => {
       state.loaded = true;
       status.textContent = 'Your notes didn’t load: ' + err.message;
