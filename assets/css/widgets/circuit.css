@@ -1,0 +1,56 @@
+/* =====================================================================
+   The circuit (assets/js/widgets/circuit.js), on the lesson's parchment:
+   ink lines, gold for what the learner can change, red for a short
+   circuit. The drawing's own colours are attributes (so a still picture
+   in the book needs none of this); this adds what moves and responds.
+   ===================================================================== */
+.ckt{position:relative;font-variant-numeric:lining-nums}
+.ckt-stage{display:flex;justify-content:center}
+.ckt-svg{display:block;width:100%;height:auto;overflow:visible;font-family:var(--font-body);font-weight:600;font-variant-numeric:lining-nums;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+/* words stay readable however small the drawing gets (the script sets --ckt-fs) */
+.ckt-svg text{font-size:calc(var(--ckt-fs, 15) * 1px)}
+.ckt-svg .ckt-letter{font-size:17px;font-family:var(--font-head);font-weight:400}
+.ckt-svg .ckt-plus{font-size:calc(var(--ckt-fs, 15) * 1.15px);font-weight:700}
+.ckt-svg .ckt-note{font-size:calc((var(--ckt-fs, 15) - 1) * 1px);font-weight:500}
+.ckt-svg .ckt-val{fill:var(--ink-soft)}
+.ckt-svg .ckt-read{fill:var(--ink-gold);font-weight:700}
+
+/* switches and terminals are buttons in the drawing */
+.ckt-sw,.ckt-term{cursor:pointer;outline:none}
+.ckt-sw .ckt-ring,.ckt-term .ckt-ring{opacity:0;transition:opacity .15s}
+.ckt-sw:hover .ckt-ring,.ckt-term:hover .ckt-ring{opacity:.4}
+.ckt-sw:focus-visible .ckt-ring,.ckt-term:focus-visible .ckt-ring{opacity:1}
+.ckt-arm{transition:transform .18s cubic-bezier(.2,.7,.2,1)}
+.ckt-term .ckt-dot{transition:fill .15s}
+.ckt-term.is-joined .ckt-dot{fill:#e9cf8f}
+.ckt-term.is-picked .ckt-dot{fill:var(--ink-gold)}
+.ckt.is-locked .ckt-sw,.ckt.is-locked .ckt-term{cursor:default}
+.ckt.is-locked .ckt-ring{opacity:0 !important}
+.ckt-glows circle{transition:opacity .25s}
+
+/* a warning: a short circuit, an LED with too much current */
+.ckt-status{margin:.55rem auto 0;max-width:34rem;padding:.4rem .75rem;border:1px solid rgba(138,97,40,.45);border-radius:4px;background:rgba(138,97,40,.08);color:var(--ink-soft);font-size:1rem;line-height:1.4;text-align:center}
+.ckt-status.is-short{border-color:rgba(154,51,36,.5);background:rgba(154,51,36,.08);color:var(--ink-red)}
+.ckt-status[hidden]{display:none}
+
+/* meter readings, large enough on a phone */
+.ckt-meters{display:flex;flex-wrap:wrap;justify-content:center;gap:.4rem .6rem;margin-top:.55rem}
+.ckt-chip{display:inline-flex;align-items:baseline;gap:.4rem;padding:.15rem .75rem .2rem;border:1px solid var(--parchment-edge);border-radius:999px;background:rgba(255,250,235,.5);font-size:1.02rem;line-height:1.35;font-variant-numeric:lining-nums;color:var(--ink)}
+.ckt-chip b{font-weight:700;color:var(--ink-gold)}
+
+/* sliders for the values the learner may change */
+.ckt-sliders{display:grid;gap:.45rem;margin:.7rem auto 0;max-width:30rem}
+.ckt-slider{display:grid;grid-template-columns:minmax(2.2em,auto) 1fr 4.6em;align-items:center;gap:.65rem}
+.ckt-slider__name{font-weight:700;color:var(--ink);font-variant-numeric:lining-nums}
+.ckt-slider input{width:100%;min-width:0;min-height:30px;margin:0;accent-color:#8a6128;cursor:pointer}
+.ckt-slider input:disabled{cursor:default;opacity:.7}
+.ckt-slider__out{text-align:right;font-variant-numeric:lining-nums;color:var(--ink);white-space:nowrap}
+
+.ckt-foot{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:.25rem 1rem;margin-top:.5rem;font-size:.98rem;line-height:1.4;color:var(--ink-soft);font-style:italic;text-align:center}
+.ckt-reset{background:none;border:0;padding:.1rem 0;font:inherit;font-style:normal;color:var(--ink-gold);border-bottom:1px solid rgba(138,97,40,.45);cursor:pointer}
+.ckt-reset:hover{border-bottom-color:var(--ink-gold)}
+.ckt-reset:disabled{opacity:.5;cursor:default}
+
+@media (prefers-reduced-motion: reduce){
+  .ckt-arm,.ckt-glows circle,.ckt-term .ckt-dot,.ckt-sw .ckt-ring,.ckt-term .ckt-ring{transition:none}
+}
