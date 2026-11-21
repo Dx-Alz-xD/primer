@@ -8,5 +8,6 @@ export default [
   () => import('./community.mjs'),
   () => import('./folders.mjs'),
   () => import('./library.mjs'),
-  () => import('./translate.mjs')
+  () => import('./translate.mjs'),
+  () => import('./ebook.mjs')
 ];
