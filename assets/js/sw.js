@@ -626,9 +626,11 @@ async function keepData(owner, path) {
   return true;
 }
 
+// The written lessons kept for a course: …/lessons/<n> itself, not the …/lessons/<n>/videos kept with it.
 async function cachedLessons(cache, courseId) {
   const prefix = abs(`/api/courses/${encodeURIComponent(courseId)}/lessons/`);
-  return (await cache.keys()).filter((k) => k.url.startsWith(prefix)).map((k) => Number(k.url.slice(prefix.length)));
+  return (await cache.keys()).map((k) => (k.url.startsWith(prefix) ? k.url.slice(prefix.length) : ''))
+    .filter((rest) => /^\d+$/.test(rest)).map(Number);
 }
 
 async function status(courseId) {
