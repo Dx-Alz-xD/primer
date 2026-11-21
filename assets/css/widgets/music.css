@@ -1,0 +1,200 @@
+/* =====================================================================
+   The piano and drums of interactive lessons (assets/js/widgets/music.js),
+   on the lesson's parchment, in the ink colours of lesson.css: ivory and
+   ink keys, gold for what is marked or sounding, green for an answer.
+   Everything that moves or sounds is also shown: lit keys, the playhead,
+   the beat light.
+   ===================================================================== */
+.mu{position:relative;outline:none;color:var(--ink,#2b1d11);font-family:var(--font-body);-webkit-tap-highlight-color:transparent}
+.mu:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:5px;border-radius:6px}
+
+/* the bar of controls */
+.mu-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem;margin:0 0 .75rem}
+.mu-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:2.3rem;
+  font-family:var(--font-head);font-size:1rem;line-height:1.1;color:var(--ink,#2b1d11);
+  background:#f2e8d0;border:1px solid #b39a6b;border-radius:4px;padding:.38rem .8rem;cursor:pointer;
+  transition:background-color .15s,border-color .15s,filter .15s;
+}
+.mu-btn:hover{border-color:var(--ink-gold,#8a6128);background:#efdfb8}
+.mu-btn:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:2px}
+.mu-btn:disabled{opacity:.5;cursor:default}
+.mu-btn svg{flex:none}
+.mu-btn--play{
+  color:var(--gold-ink,#24160a);border-color:#8a6128;min-width:6.2rem;
+  background:linear-gradient(180deg,#f3d38f 0%,#d6a554 55%,#b07f3a 100%);
+  box-shadow:inset 0 1px 0 rgba(255,246,220,.6),inset 0 -1px 0 rgba(90,58,20,.3);
+}
+.mu-btn--play:hover{background:linear-gradient(180deg,#f3d38f 0%,#d6a554 55%,#b07f3a 100%);filter:brightness(1.06)}
+.mu-seg{display:inline-flex;border:1px solid #b39a6b;border-radius:4px;overflow:hidden}
+.mu-seg .mu-btn{border:0;border-radius:0;min-height:2.2rem;padding:.3rem .65rem;font-size:.95rem}
+.mu-seg .mu-btn + .mu-btn{border-inline-start:1px solid #c9b48a}
+.mu-seg .mu-btn[aria-pressed="true"]{background:#e2cc98;color:var(--ink,#2b1d11);box-shadow:inset 0 2px 3px rgba(91,71,48,.25)}
+.mu-tempo,.mu-vol{display:inline-flex;align-items:center;gap:.4rem;color:var(--ink-soft,#5b4730);font-size:1rem}
+.mu-tempo__out{font-family:var(--font-head);white-space:nowrap;min-width:3.6em;color:var(--ink,#2b1d11)}
+.mu-vol{margin-inline-start:auto}
+.mu-range{width:6.5rem;accent-color:#8a6128;margin:0}
+
+/* ----- the piano ----- */
+.mu-score{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 .7rem}
+.mu-chip{
+  flex:0 0 auto;display:inline-flex;flex-direction:column-reverse;align-items:center;justify-content:center;
+  min-width:calc(var(--b,1) * 1.9em);min-height:1.9em;padding:.12rem .35rem;
+  border:1px solid rgba(138,97,40,.42);border-radius:4px;background:rgba(255,250,235,.6);
+  font-family:var(--font-head);font-size:.95rem;line-height:1.05;color:var(--ink-soft,#5b4730);
+  transition:background-color .12s,border-color .12s,color .12s;
+}
+.mu-chip.is-rest{color:rgba(91,71,48,.5);background:transparent;border-style:dashed}
+.mu-chip.is-now{background:#e9cf8f;border-color:var(--ink-gold,#8a6128);color:var(--ink,#2b1d11)}
+
+.mu-scroll{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;padding:2px 0 6px;scrollbar-width:thin}
+.mu-keys{
+  position:relative;margin:0 auto;
+  width:max(100%, calc(var(--white) * 30px));max-width:calc(var(--white) * 62px);
+  height:clamp(124px, 24vw, 178px);
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+}
+.mu-scroll.is-scrolling .mu-keys{touch-action:pan-x}
+.mu-key{position:absolute;top:0;margin:0;padding:0;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .08s,box-shadow .08s}
+.mu-key--white{
+  z-index:1;height:100%;border:1px solid #7d6744;border-radius:0 0 5px 5px;
+  background:linear-gradient(180deg,#fffaf0 0%,#f7efdc 82%,#eadcbc 100%);
+  box-shadow:inset 0 -6px 0 rgba(120,95,55,.16);
+}
+.mu-key--black{
+  z-index:2;height:62%;border:1px solid #120b06;border-radius:0 0 4px 4px;
+  background:linear-gradient(180deg,#3d2c1c 0%,#1f150c 88%,#2f2216 100%);
+  box-shadow:inset 0 -5px 0 rgba(255,240,210,.07),0 3px 4px -1px rgba(0,0,0,.4);
+}
+.mu-key--white.is-mark{background:linear-gradient(180deg,#f8e7b8 0%,#efd593 85%,#e2c477 100%)}
+.mu-key--black.is-mark{background:linear-gradient(180deg,#b5843f 0%,#8a6128 90%)}
+.mu-key--white.is-picked{background:linear-gradient(180deg,#f1dcae 0%,#e3c27e 100%);box-shadow:inset 0 0 0 2px var(--ink-gold,#8a6128),inset 0 -6px 0 rgba(120,95,55,.2)}
+.mu-key--black.is-picked{background:linear-gradient(180deg,#a57532,#7a531e);box-shadow:inset 0 0 0 2px #f1cd84}
+.mu-key--white.is-answer{background:linear-gradient(180deg,#eef3e2 0%,#d7e4c3 100%);box-shadow:inset 0 0 0 2px var(--ink-green,#3d6a2c)}
+.mu-key--black.is-answer{background:linear-gradient(180deg,#4f7a3b,#2f5222);box-shadow:inset 0 0 0 2px #cfe0b8}
+/* sounding: pressed down and lit */
+.mu-key--white.is-on{background:linear-gradient(180deg,#f6d889 0%,#e6b85e 100%);box-shadow:inset 0 -2px 0 rgba(120,95,55,.3),inset 0 3px 6px rgba(91,60,20,.25)}
+.mu-key--black.is-on{background:linear-gradient(180deg,#e0a94f,#a8732b);box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+.mu-key.is-hit{animation:mu-hit .22s ease-out}
+@keyframes mu-hit{0%{filter:brightness(1.18)}100%{filter:none}}
+
+.mu-key__lab{position:absolute;left:0;right:0;bottom:9px;text-align:center;pointer-events:none;font-family:var(--font-head);font-size:clamp(12px, 1.8vw, 16px);line-height:1;color:var(--ink-soft,#5b4730)}
+.mu-key--black .mu-key__lab{bottom:6px;font-size:clamp(9px, 1.25vw, 12px);color:#efe2c6}
+.mu-key.is-mark .mu-key__lab,.mu-key.is-picked .mu-key__lab,.mu-key.is-on .mu-key__lab{color:var(--ink,#2b1d11)}
+.mu-key--black.is-mark .mu-key__lab,.mu-key--black.is-picked .mu-key__lab,.mu-key--black.is-on .mu-key__lab,.mu-key--black.is-answer .mu-key__lab{color:#fff7e6}
+.mu-key__txt{position:relative;display:inline-block}
+.mu-key__txt sub{font-size:.68em;vertical-align:baseline;position:relative;top:.22em;margin-inline-start:1px}
+/* sargam: komal underlined, tivra Ma with a stroke above, a dot above or below for the octave */
+.mu-key__txt.is-komal{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+.mu-key__txt.is-tivra::before{content:"";position:absolute;left:50%;top:-7px;width:1.5px;height:5px;background:currentColor}
+.mu-key__txt.is-high::after,.mu-key__txt.is-low::after{content:"";position:absolute;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor}
+.mu-key__txt.is-high::after{top:-7px}
+.mu-key__txt.is-tivra.is-high::after{top:-12px}
+.mu-key__txt.is-low::after{bottom:-6px}
+
+/* the marks: a dot on a marked key (not colour alone), a ring on a chosen one */
+.mu-key__mark{position:absolute;left:50%;bottom:34%;width:10px;height:10px;margin-left:-5px;border-radius:50%;pointer-events:none;display:none}
+.mu-key--black .mu-key__mark{bottom:26%;width:8px;height:8px;margin-left:-4px}
+.mu-key.is-mark .mu-key__mark{display:block;background:var(--ink-gold,#8a6128)}
+.mu-key--black.is-mark .mu-key__mark{background:#fbeccb}
+.mu-key.is-picked .mu-key__mark{display:block;width:14px;height:14px;margin-left:-7px;background:var(--ink,#2b1d11);box-shadow:0 0 0 2px #f1cd84}
+.mu-key--black.is-picked .mu-key__mark{width:10px;height:10px;margin-left:-5px;background:#fff7e6;box-shadow:0 0 0 2px #24160a}
+.mu-key.is-answer .mu-key__mark{display:block;background:var(--ink-green,#3d6a2c);box-shadow:0 0 0 2px #eef3e2}
+.mu-key__n{position:absolute;left:0;right:0;top:auto;bottom:52%;text-align:center;font-family:var(--font-head);font-size:13px;font-weight:700;color:var(--ink-green,#3d6a2c);pointer-events:none}
+.mu-key--black .mu-key__n{bottom:auto;top:4px;color:#eef3e2;font-size:11px}
+/* the computer key for each note, while the keyboard has the focus, on a computer */
+.mu-key__kb{position:absolute;left:0;right:0;top:6px;text-align:center;font:600 10px/1 ui-monospace,Consolas,monospace;color:rgba(91,71,48,.55);pointer-events:none;display:none}
+.mu-key--black .mu-key__kb{color:rgba(239,226,198,.6);top:4px}
+@media (hover:hover) and (pointer:fine){ .mu:focus-within .mu-key__kb{display:block} }
+.mu-hint{display:none;margin:.45rem 0 0;font-size:.92rem;font-style:italic;color:var(--ink-soft,#5b4730)}
+@media (hover:hover) and (pointer:fine){ .mu-hint{display:block} }
+
+/* the task's line: what is chosen or played */
+.mu-task{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .7rem;margin-top:.75rem}
+.mu-said{flex:1 1 100%;margin:0;font-size:1.08rem;line-height:1.4;color:var(--ink-soft,#5b4730)}
+.mu-said strong{font-family:var(--font-head);font-weight:400;color:var(--ink,#2b1d11)}
+.mu-played{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:4px}
+.mu-played:empty{display:none}
+.mu-played .mu-chip{position:relative;min-width:2.1em}
+.mu-played .mu-chip::after{content:attr(data-i);position:absolute;top:-.55em;right:-.3em;font-size:.6rem;color:var(--ink-gold,#8a6128)}
+
+/* ----- the drums ----- */
+.mu-pads{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin:0 0 .9rem}
+.mu-pad{
+  position:relative;min-height:62px;padding:.4rem .3rem;border-radius:10px;border:1px solid #7d6744;cursor:pointer;
+  background:radial-gradient(ellipse at 50% 30%,#fdf6e4 0%,#ead9b0 100%);
+  box-shadow:inset 0 -4px 0 rgba(120,95,55,.25),0 2px 4px rgba(60,40,20,.16);
+  font-family:var(--font-head);font-size:1.02rem;line-height:1.1;color:var(--ink,#2b1d11);
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;transition:background .08s,transform .08s;
+}
+.mu-pad--tabla{background:radial-gradient(ellipse at 50% 40%,#5a4330 0%,#3a2a1b 38%,#e7d3a8 41%,#d9bf8a 100%);color:var(--ink,#2b1d11)}
+.mu-pad--tabla .mu-pad__name{display:inline-block;padding:.05rem .35rem;border-radius:3px;background:rgba(253,246,228,.92)}
+.mu-pad.is-hit{background:radial-gradient(ellipse at 50% 30%,#fbe2a2 0%,#d9a854 100%);transform:translateY(1px);box-shadow:inset 0 -1px 0 rgba(120,95,55,.3),0 0 0 3px rgba(214,165,84,.45)}
+.mu-pad:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:2px}
+.mu-pad:disabled{opacity:.55;cursor:default}
+.mu-pad__kb{position:absolute;right:6px;bottom:4px;font:600 10px/1 ui-monospace,Consolas,monospace;color:rgba(91,71,48,.55);display:none}
+@media (hover:hover) and (pointer:fine){ .mu-pad__kb{display:block} }
+.mu-pad__sub{display:block;font-size:.85rem;color:var(--ink-soft,#5b4730);margin-top:.15rem}
+
+.mu-grid{display:grid;gap:.8rem}
+.mu-line{display:grid;grid-template-columns:minmax(3.4rem,5.2rem) repeat(var(--cols),minmax(0,1fr));gap:3px;align-items:center}
+.mu-corner{display:block}
+.mu-rowlab{font-family:var(--font-head);font-size:.95rem;line-height:1.1;color:var(--ink,#2b1d11);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-inline-end:.35rem}
+.mu-rowlab.is-given{color:var(--ink-soft,#5b4730);font-style:italic}
+.mu-head{font-family:var(--font-head);font-size:.78rem;line-height:1.2;text-align:center;color:rgba(91,71,48,.7);padding-top:.1rem}
+.mu-head.is-beat{font-size:.95rem;color:var(--ink,#2b1d11)}
+.mu-head[data-mark]::before{content:attr(data-mark);display:block;font-size:.82rem;color:var(--ink-red,#9a3324)}
+.mu-head.is-now{color:var(--ink-red,#9a3324)}
+.mu-cell{
+  aspect-ratio:1/1;min-height:20px;max-height:46px;width:100%;margin:0;padding:0;cursor:pointer;
+  border:1px solid rgba(125,103,68,.55);border-radius:4px;background:#f8f0dd;
+  transition:background-color .08s,box-shadow .08s;
+}
+.mu-cell.is-alt{background:#efe2c3}
+.mu-cell.is-gstart{box-shadow:-3px 0 0 -1px rgba(138,97,40,.6)}
+.mu-cell[aria-pressed="true"]{background:radial-gradient(circle at 50% 40%,#5a4330 0%,#2b1d11 70%);border-color:#2b1d11}
+.mu-cell.is-given{cursor:default}
+.mu-cell.is-given[aria-pressed="true"]{background:radial-gradient(circle at 50% 40%,#9b8566,#7a6548);border-color:#6b5838}
+.mu-cell.is-answer[aria-pressed="true"]{background:radial-gradient(circle at 50% 40%,#5f8a4a,#3d6a2c);border-color:#2f5222}
+.mu-cell:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:1px}
+/* the playhead: the column now sounding */
+.mu-cell.is-now{outline:2px solid #d6a554;outline-offset:1px}
+.mu-cell.is-now[aria-pressed="true"]{background:radial-gradient(circle at 50% 40%,#f3d38f,#c08a3e);border-color:#8a6128}
+
+/* tapping in time */
+.mu-tap{display:grid;justify-items:center;gap:.85rem}
+.mu-tap__light{
+  display:grid;place-items:center;width:88px;height:88px;border-radius:50%;
+  border:2px solid #7d6744;background:radial-gradient(circle at 40% 35%,#fdf6e4,#e2d0a4);
+  font-family:var(--font-head);font-size:2.2rem;line-height:1;color:var(--ink,#2b1d11);
+}
+.mu-tap__light.is-countin{color:var(--ink-soft,#5b4730)}
+.mu-tap__light.is-beat{animation:mu-beat .32s ease-out}
+@keyframes mu-beat{0%{background:radial-gradient(circle at 40% 35%,#ffe9ad,#d6a554);box-shadow:0 0 0 9px rgba(214,165,84,.42)}100%{box-shadow:0 0 0 0 rgba(214,165,84,0)}}
+.mu.is-still .mu-tap__light.is-beat{background:radial-gradient(circle at 40% 35%,#ffe9ad,#d6a554)}
+.mu-tap__line{position:relative;width:100%;height:36px;border-bottom:1px solid rgba(138,97,40,.45)}
+.mu-tap__dot{position:absolute;top:9px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #7d6744;background:#f8f0dd}
+.mu-tap__dot.is-past{background:#e4d4ad}
+.mu-tap__dot.is-now{background:#d6a554;border-color:#8a6128;box-shadow:0 0 0 4px rgba(214,165,84,.35)}
+.mu-tap__dot.is-answer{background:var(--ink-green,#3d6a2c);border-color:var(--ink-green,#3d6a2c)}
+.mu-tap__tick{position:absolute;top:2px;width:3px;height:30px;margin-left:-1.5px;border-radius:2px;background:var(--ink-green,#3d6a2c)}
+.mu-tap__tick.is-off{background:var(--ink-red,#9a3324)}
+.mu-pad--tap{width:min(100%,280px);min-height:92px;font-size:1.35rem}
+.mu-tap__status{margin:0;text-align:center;font-size:1.06rem;line-height:1.45;color:var(--ink-soft,#5b4730);max-width:36rem}
+
+/* locked (answered), and still (reduced motion) */
+.mu.is-locked .mu-key,.mu.is-locked .mu-cell,.mu.is-locked .mu-pad{cursor:default}
+.mu.is-still *,.mu.is-still *::before,.mu.is-still *::after{transition:none !important;animation:none !important}
+
+@media (max-width:520px){
+  .mu-bar{gap:.45rem .55rem}
+  .mu-btn{font-size:.95rem;padding:.34rem .62rem}
+  .mu-range{width:5rem}
+  .mu-vol{margin-inline-start:0}
+  .mu-pads{grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px}
+  .mu-pad{min-height:54px;font-size:.95rem}
+  .mu-line{grid-template-columns:minmax(3rem,3.8rem) repeat(var(--cols),minmax(0,1fr))}
+  .mu-rowlab{font-size:.85rem}
+  .mu-chip{font-size:.88rem}
+}
+@media (prefers-reduced-motion:reduce){ .mu *,.mu *::before,.mu *::after{transition:none !important;animation:none !important} }
