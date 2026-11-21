@@ -306,13 +306,14 @@
       return { status: 'submitted' };
     },
 
-    // Every wrong answer is remembered, so the tutor can see what tends to trip this learner up.
+    // Every wrong answer is remembered, so the tutor can see what tends to trip this learner up,
+    // and the question comes back in Review (server/review.mjs), which is why its id is sent.
     recordMistake(course, n, lessonTitle, q, given) {
       const choiceText = (i) => (q.choices && q.choices[i] != null ? plain(q.choices[i]) : '');
       const correct = q.type === 'choice' ? choiceText(q.answer) : q.type === 'numeric' ? `${q.answer}${q.unit ? ' ' + q.unit : ''}` : (q.accept || [])[0] || '';
       const givenText = q.type === 'choice' ? choiceText(Number(given)) : String(given);
       P.post('/api/mistakes', {
-        courseId: course.id, lesson: n, lessonTitle, prompt: plain(q.prompt), given: givenText, correct
+        courseId: course.id, lesson: n, lessonTitle, qid: q.id, prompt: plain(q.prompt), given: givenText, correct
       }).catch(() => {});
     },
 

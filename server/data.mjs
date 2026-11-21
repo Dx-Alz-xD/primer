@@ -353,6 +353,9 @@ async function allNotes({ req, res, params }) {
 
 /* ---------------- wrong answers (the tutor's memory) ---------------- */
 
+// Set by review.mjs: a wrong answer schedules that question to come back for review.
+export const mistakeHooks = { afterRecord: null };
+
 async function addMistake({ req, res }) {
   const u = requireUser(req);
   const body = await readBody(req, 8_000);
@@ -363,6 +366,7 @@ async function addMistake({ req, res }) {
   q('INSERT INTO mistakes (user_id, course_id, lesson_n, lesson_title, prompt, given, correct, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run(u.id, courseId, clampInt(body.lesson, 1, 2000, null), text(body.lessonTitle, 140) || null, prompt, text(body.given, 300) || null, text(body.correct, 300) || null, now());
   q('DELETE FROM mistakes WHERE user_id = ? AND id NOT IN (SELECT id FROM mistakes WHERE user_id = ? ORDER BY created_at DESC LIMIT 500)').run(u.id, u.id);
+  if (mistakeHooks.afterRecord) mistakeHooks.afterRecord(u, courseId, body);
   sendJSON(res, 201, { ok: true });
 }
 
