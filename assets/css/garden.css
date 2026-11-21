@@ -13,7 +13,7 @@
 }
 .garden__svg{display:block;width:100%;height:auto;overflow:visible}
 
-.garden__ghost{fill:none;stroke:var(--garden-gold);stroke-opacity:.22;stroke-width:1.4;stroke-dasharray:1.5 7;stroke-linecap:round}
+.garden__ghost{fill:none;stroke:var(--garden-gold);stroke-opacity:.32;stroke-width:1.4;stroke-dasharray:1.5 7;stroke-linecap:round}
 .garden__stem{fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.55))}
 .garden__tendril{fill:none;stroke-width:1.5;stroke-linecap:round;opacity:0}
 .garden__tendril.is-on{opacity:1}
@@ -33,3 +33,6 @@
 .garden__petal{stroke:rgba(30,10,8,.55);stroke-width:.6}
 .garden__heart{fill:var(--garden-gold-hi);stroke:var(--gold-ink);stroke-width:.8}
 .garden__flower.is-end.is-open .garden__heart{filter:drop-shadow(0 0 6px rgba(241,205,132,.55))}
+.garden__seed .garden__stalk{stroke-opacity:1;stroke-dasharray:none}
+.garden__seed g path{stroke:rgba(36,22,10,.4);stroke-width:.6}
+.garden__soil{fill:rgba(138,97,40,.45)}

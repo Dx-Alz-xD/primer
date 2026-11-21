@@ -105,6 +105,17 @@
     stop(petalG, '0', '--garden-crimson-hi'); stop(petalG, '1', '--garden-crimson');
 
     el('path', { d, class: 'garden__ghost' }, svg);
+    // a seedling where the vine starts: a course not begun is planted, not empty
+    {
+      const x0 = pts[0][0], y0 = pts[0][1];
+      const seed = el('g', { class: 'garden__seed', transform: `translate(${f(x0)} ${f(y0)})` }, svg);
+      el('path', { d: `M0 0C${f(-2 * S)} ${f(-7 * S)} ${f(2 * S)} ${f(-11 * S)} ${f(1 * S)} ${f(-16 * S)}`, class: 'garden__stalk', stroke: `url(#${id}g)` }, seed);
+      [[-1, -38], [1, -142]].forEach(([, a], k) => {
+        const g = el('g', { transform: `translate(${f(1 * S)} ${f((-12 - k * 3) * S)}) rotate(${a})` }, seed);
+        el('path', { d: leafPath(9 * S), fill: `url(#${id}l)` }, g);
+      });
+      el('ellipse', { cx: 0, cy: f(1.5 * S), rx: f(7 * S), ry: f(2.2 * S), class: 'garden__soil' }, seed);
+    }
     const stem = el('path', { d, class: 'garden__stem', stroke: `url(#${id}g)`, 'stroke-dasharray': f(LEN), 'stroke-dashoffset': f(LEN) }, svg);
 
     // tendrils: a few curls along the way, grown with the lesson they belong to

@@ -58,7 +58,9 @@ fieldset.field legend{padding:0;margin-bottom:.4rem}
 .spec dt{font-family:var(--font-head);color:var(--gold)}
 .spec dd{margin:0;color:var(--cream-dim)}
 .spec dd .chip-static{display:inline-block;margin:.1rem .35rem .1rem 0;padding:.1rem .6rem;border:1px solid var(--leather-soft);border-radius:999px;font-size:.95rem;color:var(--cream)}
-.course-head__progress{margin-top:1.5rem;display:grid;gap:.45rem}
+/* the course's garden (garden.js) sits over its progress bar */
+.course-head__garden{margin:1.3rem -.4rem -.6rem;max-width:760px}
+.course-head__progress{margin-top:.6rem;display:grid;gap:.45rem}
 .course-head__progress p{color:var(--muted);font-style:italic;font-size:1rem}
 .course-head__actions{display:flex;flex-wrap:wrap;align-items:center;gap:.9rem 1.5rem;margin-top:1.5rem}
 

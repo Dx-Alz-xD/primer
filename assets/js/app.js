@@ -315,6 +315,7 @@
           ${langRow}
           ${folderRow}
         </dl>
+        <div class="course-head__garden" data-garden></div>
         <div class="course-head__progress">
           <div class="bar" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="${stats.total}" aria-valuenow="${stats.done}"><span style="width:${stats.pct}%"></span></div>
           <p>${stats.done} of ${stats.total} lessons complete</p>
@@ -333,6 +334,20 @@
       </header>
       <ol class="units">${unitsHTML}</ol>`;
 
+    // the course as a garden (garden.js): leaves for finished lessons, a flower for each finished unit.
+    // What was finished since the last visit grows in; the first visit just shows it.
+    const gslot = view.querySelector('[data-garden]');
+    if (gslot && P.garden) {
+      const done = flat.filter((l) => prog[l.n] && prog[l.n].done).map((l) => l.n);
+      const garden = P.garden.mount(gslot, { seed: course.id, units: course.units.map((u) => (u.lessons || []).length), height: 110 });
+      const key = 'primer.garden.' + course.id;
+      const seen = P.store.get(key, null);
+      if (Array.isArray(seen) && done.some((n) => !seen.includes(n))) {
+        garden.set(seen);
+        setTimeout(() => garden.set(done, { animate: true }), 450);
+      } else garden.set(done);
+      P.store.set(key, done);
+    }
     if (P.review) P.review.courseCard(view.querySelector('[data-review-slot]'), course.id); // "2 to review · 1 of 3 mistakes fixed"
     if (P.courseLength) P.courseLength.mountCourse(view, course); // "Length: 20 lessons, as you asked"
     if (P.reuse) P.reuse.mountCourse(view, course); // what an update with new information changed, and "Add new information"

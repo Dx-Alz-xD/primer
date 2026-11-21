@@ -254,3 +254,30 @@ button{font:inherit;color:inherit}
 @media (max-width:560px){ .btn{white-space:normal;text-align:center} }
 .sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 html.i18n-wait body{visibility:hidden}
+
+/* ---------------------------------------------------------------------
+   Motion: every control answers the pointer. A button lifts and presses,
+   a chip steps up, a link's underline draws in, a card that opens
+   something lifts. (Under reduced motion the rule above stills it all.)
+--------------------------------------------------------------------- */
+.btn:not([disabled]):not(.is-busy):hover{transform:translateY(-1px)}
+.btn:not([disabled]):not(.is-busy):active{transform:translateY(1px) scale(.985);filter:brightness(.96)}
+.chip{transition:color .2s, border-color .2s, background-color .2s, transform .2s var(--ease-out)}
+.chip:not([disabled]):hover{transform:translateY(-1px)}
+.chip:not([disabled]):active{transform:scale(.96)}
+.textlink{
+  border-bottom-color:transparent;
+  background-image:linear-gradient(var(--gold),var(--gold)),linear-gradient(rgba(214,165,84,.4),rgba(214,165,84,.4));
+  background-size:0 1px,100% 1px;background-position:0 100%,0 100%;background-repeat:no-repeat;
+  transition:background-size .35s var(--ease-out), color .2s;
+}
+.textlink:hover{border-bottom-color:transparent;background-size:100% 1px,100% 1px}
+.nav__link{
+  border-bottom-color:transparent;
+  background-image:linear-gradient(rgba(214,165,84,.75),rgba(214,165,84,.75));
+  background-size:0 1px;background-position:0 100%;background-repeat:no-repeat;
+  transition:background-size .35s var(--ease-out);
+}
+.nav__link:hover,.nav__link[aria-current="page"]{border-bottom-color:transparent;background-size:100% 1px}
+a.card,.card--link{transition:transform .2s var(--ease-out), border-color .2s, box-shadow .2s}
+a.card:hover,.card--link:hover{transform:translateY(-2px);border-color:var(--gold-lo)}

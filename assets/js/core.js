@@ -279,4 +279,36 @@
       return t;
     }
   };
+
+  /* ---------- the page enters once ---------- */
+  // The main content rises into place the first time it appears, never again on a re-render.
+  // A part holding something fixed (the tutor, the notebook) only fades: a moving parent
+  // would carry the fixed thing with it for that moment. The landing page has its own.
+  function enter() {
+    if (P.motion.reduce || !Element.prototype.animate || document.querySelector('[data-split]')) return;
+    const main = document.querySelector('main');
+    if (!main) return;
+    const hasFixed = (el) => {
+      const all = el.getElementsByTagName('*');
+      if (all.length > 1500) return true; // a long page: don't look, just fade
+      for (let i = 0; i < all.length; i++) if (getComputedStyle(all[i]).position === 'fixed') return true;
+      return false;
+    };
+    const run = () => {
+      Array.from(main.children).filter((el) => el.offsetParent !== null || getComputedStyle(el).position === 'fixed').slice(0, 6).forEach((el, i) => {
+        const still = getComputedStyle(el).position === 'fixed' || hasFixed(el);
+        el.animate(
+          still ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }],
+          { duration: 560, delay: 30 + i * 70, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }
+        );
+      });
+    };
+    if (main.textContent.trim()) { run(); return; }
+    // content that arrives after a fetch enters when it arrives (once)
+    const mo = new MutationObserver(() => { if (main.textContent.trim()) { mo.disconnect(); run(); } });
+    mo.observe(main, { childList: true, subtree: true, characterData: true });
+    setTimeout(() => mo.disconnect(), 6000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enter, { once: true });
+  else enter();
 })();
