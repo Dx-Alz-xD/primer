@@ -1,0 +1,245 @@
+/* =====================================================================
+   Exams: on the course outline (an exam after every unit, locked units,
+   the final exam, tests), on the lesson page (a locked unit), and the
+   exam page itself (exam.html), which uses the lesson's parchment and
+   question styles (lesson.css) and the marking styles (marking.css).
+   ===================================================================== */
+
+/* numbers read at a glance: Cormorant's lining figures (IM Fell has only old-style ones) */
+.xm-timer,.xm-seal__pct,.xm-pts,.xm-covers__n,.xm-result__score,.xm-bar__count{font-family:var(--font-body);font-weight:600;font-variant-numeric:lining-nums tabular-nums}
+
+/* ---------------------------------------------------------------------
+   The course outline
+--------------------------------------------------------------------- */
+.xm-unit{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:.3rem 1rem;align-items:center;
+  margin-top:.7rem;padding:.85rem 1.1rem;border:1px dashed rgba(214,165,84,.45);border-radius:var(--radius);
+  background:rgba(214,165,84,.06)
+}
+.xm-unit.is-passed{border-style:solid;border-color:rgba(214,165,84,.6);background:rgba(214,165,84,.11)}
+.xm-unit.is-failed{border-color:rgba(214,105,79,.5)}
+.xm-unit__icon{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(214,165,84,.5);color:var(--gold);background:rgba(16,10,5,.55)}
+.xm-unit.is-passed .xm-unit__icon{background:var(--gold);color:var(--gold-ink);border-color:var(--gold-hi)}
+.xm-unit__title{font-family:var(--font-head);font-size:1.22rem;color:var(--cream);line-height:1.2}
+.xm-unit__meta{color:var(--muted);font-style:italic;font-size:.98rem}
+.xm-unit__state{margin-top:.15rem;color:var(--cream-dim);font-size:1.02rem;line-height:1.4}
+.xm-unit__actions{display:flex;flex-direction:column;align-items:flex-end;gap:.45rem}
+.xm-unit__actions .textlink{font-size:.98rem}
+
+.unit.is-locked .lessons{opacity:.62}
+.unit.is-locked .unit__title{opacity:.8}
+.lrow.is-locked .lrow__n::after,.side a.is-locked .side__n::after{content:"";display:inline-block;width:.75em;height:.75em;margin-left:.15em;vertical-align:-.05em;opacity:.85;
+  background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10V7.5a5 5 0 0 1 10 0V10h1.5A1.5 1.5 0 0 1 20 11.5v8A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5v-8A1.5 1.5 0 0 1 5.5 10zm2 0h6V7.5a3 3 0 0 0-6 0z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10V7.5a5 5 0 0 1 10 0V10h1.5A1.5 1.5 0 0 1 20 11.5v8A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5v-8A1.5 1.5 0 0 1 5.5 10zm2 0h6V7.5a3 3 0 0 0-6 0z'/%3E%3C/svg%3E") center/contain no-repeat}
+.xm-lock{
+  display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1rem;margin:0 0 .8rem;padding:.75rem 1rem;
+  border:1px solid rgba(214,165,84,.4);border-radius:var(--radius);color:var(--cream);
+  background:repeating-linear-gradient(-45deg, rgba(214,165,84,.06) 0 10px, rgba(16,10,5,.4) 10px 20px)
+}
+.xm-lock svg{flex:none;color:var(--gold)}
+.xm-lock p{flex:1;min-width:12rem;font-size:1.08rem;line-height:1.35;text-shadow:var(--shadow-text)}
+
+.xm-final{display:flex;gap:1.2rem;align-items:flex-start;margin-top:2.2rem;padding:1.5rem 1.6rem}
+.xm-final.is-done{border-color:var(--gold-lo)}
+.xm-final__seal{flex:none;width:58px;height:58px;display:grid;place-items:center;border-radius:50%;color:var(--gold-ink);
+  background:radial-gradient(circle at 35% 30%, #f6dc9c, #d6a554 55%, #9c6f2f);box-shadow:0 0 0 3px rgba(16,10,5,.6), 0 0 0 4px rgba(214,165,84,.5)}
+.xm-final__body{flex:1;min-width:0}
+.xm-final h2{font-size:clamp(1.5rem,3.2vw,1.9rem);text-shadow:none}
+.xm-final__meta{margin-top:.3rem;color:var(--muted);font-style:italic}
+.xm-final__why{margin-top:.45rem;color:var(--cream-dim);line-height:1.45}
+.xm-final__state{margin-top:.5rem;color:var(--cream);font-family:var(--font-head);font-size:1.1rem}
+.xm-final__actions,.xm-test__actions{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1.2rem;margin-top:.9rem}
+
+.xm-tests{margin-top:1.2rem;padding:1.4rem 1.6rem}
+.xm-tests__head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem 1rem}
+.xm-tests h2{font-size:clamp(1.4rem,3vw,1.7rem);text-shadow:none}
+.xm-tests__help{margin-top:.45rem;color:var(--cream-dim);font-style:italic;line-height:1.4}
+.xm-tests__list{list-style:none;margin:1rem 0 0;padding:0;border-top:1px solid var(--leather-soft)}
+.xm-test{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem 1rem;padding:.75rem 0;border-bottom:1px solid var(--leather-soft)}
+.xm-test__name{font-family:var(--font-head);font-size:1.12rem;color:var(--cream)}
+.xm-test__meta{color:var(--muted);font-size:.98rem;font-style:italic}
+.xm-test__actions{margin-top:0}
+
+.xm-done{display:inline-flex;align-items:center;flex-wrap:wrap;gap:.45rem .7rem;margin-top:.6rem;padding:.3rem .9rem .3rem .45rem;border:1px solid var(--gold-lo);border-radius:999px;background:rgba(214,165,84,.12);color:var(--gold-hi);font-family:var(--font-head);font-size:1.08rem}
+.xm-done svg{width:26px;height:26px;color:var(--gold)}
+
+@media (max-width:640px){
+  .xm-unit{grid-template-columns:auto minmax(0,1fr)}
+  .xm-unit__actions{grid-column:1 / -1;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:.5rem 1.1rem}
+  .xm-final{padding:1.25rem 1.2rem}
+  .xm-final__seal{width:46px;height:46px}
+  .xm-tests{padding:1.25rem 1.2rem}
+}
+@media print{ .xm-unit,.xm-lock,.xm-final,.xm-tests,.xm-done{display:none !important} }
+
+/* ---------------------------------------------------------------------
+   The lesson page: a lesson in a unit that isn't open yet
+--------------------------------------------------------------------- */
+.xm-gate{margin-top:2rem;padding:1.6rem 1.5rem 1.5rem;text-align:center;border:1px dashed rgba(138,97,40,.6);border-radius:var(--radius);
+  background:repeating-linear-gradient(-45deg, rgba(138,97,40,.05) 0 10px, transparent 10px 20px)}
+.xm-gate__lock{display:inline-grid;place-items:center;width:58px;height:58px;border-radius:50%;border:1px solid var(--ink-gold);color:var(--ink-gold);background:var(--parchment)}
+.xm-gate__lock svg{width:28px;height:28px}
+.xm-gate h2{margin-top:.7rem;font-size:clamp(1.5rem,3.4vw,1.9rem)}
+.xm-gate__why{margin-top:.5rem;font-size:1.18rem;color:var(--ink)}
+.xm-gate__how{margin:.45rem auto 0;max-width:34rem;color:var(--ink-soft);font-style:italic;line-height:1.45}
+.xm-gate__actions{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:.8rem 1.4rem;margin-top:1.2rem}
+.side a.is-locked{opacity:.55}
+.xm-done-note{margin-top:.7rem;color:var(--ink);font-size:1.08rem}
+
+/* ---------------------------------------------------------------------
+   The exam page
+--------------------------------------------------------------------- */
+.xm.wrap{width:min(860px, 100% - var(--pad-l) - var(--pad-r))}
+.xm{padding:clamp(24px,5vh,52px) 0 0;outline:none}
+.xm__root{display:grid;gap:1.4rem}
+.xm-paper{max-width:none}
+.xm-paper h1{font-size:clamp(2rem,4.6vw,2.8rem);line-height:1.08}
+.xm-paper h1:focus{outline:none}
+.xm-loading{color:var(--ink-soft);font-style:italic}
+.xm-head__course{font-style:italic;color:var(--ink-gold);font-size:1.08rem}
+.xm-head__course + h1{margin-top:.25rem}
+.xm-head__sub{margin-top:.35rem;font-family:var(--font-head);font-size:1.25rem;color:var(--ink-soft)}
+.xm-head__rules{margin-top:.75rem;color:var(--ink-soft);font-size:1.06rem;line-height:1.45}
+.xm-msg h1{font-size:clamp(1.8rem,4vw,2.4rem)}
+.xm-msg p{margin-top:.6rem;color:var(--ink-soft)}
+.xm-msg__go{margin-top:1.2rem !important}
+.xm-note{padding:.7rem .9rem;border:1px dashed rgba(154,51,36,.45);border-radius:4px;color:var(--ink-red);background:rgba(154,51,36,.05)}
+
+/* before the exam */
+.xm-intro__state{margin-top:.7rem;font-family:var(--font-head);font-size:1.2rem;color:var(--ink-green)}
+.xm-rules{margin:1.1rem 0 0;padding:0;list-style:none;display:grid;gap:.55rem}
+.xm-rules li{position:relative;padding-left:1.5rem;font-size:1.12rem;line-height:1.5}
+.xm-rules li::before{content:"";position:absolute;left:.25rem;top:.62em;width:.5rem;height:.5rem;transform:rotate(45deg);border:1px solid var(--ink-gold);background:rgba(214,165,84,.35)}
+.xm-intro__h{margin-top:1.6rem;font-size:1.3rem}
+.xm-covers{list-style:none;margin:.5rem 0 0;padding:0;columns:2 18rem;column-gap:2rem}
+.xm-covers li{break-inside:avoid;display:flex;gap:.55rem;padding:.22rem 0;font-size:1.08rem;line-height:1.35}
+.xm-covers__n{flex:none;min-width:1.6rem;text-align:right;color:var(--ink-gold)}
+.xm-covers__ok{font-style:italic;color:var(--ink-green);font-size:.95rem}
+.xm-intro__retake{margin-top:1.2rem;color:var(--ink-red);font-style:italic}
+.xm-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem 1.4rem;margin-top:1.5rem}
+.xm-actions .btn[aria-disabled="true"],.xm-actions .btn:disabled{opacity:.5;cursor:not-allowed;filter:none}
+/* buttons that are links keep their own ink on the parchment (lesson.css colours every link there) */
+.xm-paper a.btn,.xm-gate a.btn{color:var(--gold-ink)}
+/* the outlined button, made for dark panels, in ink on the parchment */
+.xm-paper .btn--ghost,.xm-paper a.btn--ghost{color:var(--ink-gold);background:transparent;border-color:var(--ink-gold);box-shadow:none;text-shadow:none}
+.xm-paper .btn--ghost:hover{background:rgba(214,165,84,.16)}
+.xm-ready{margin-bottom:1.2rem;padding:.7rem .95rem;border-left:3px solid var(--ink-green);background:rgba(61,106,44,.1);color:var(--ink);border-radius:0 4px 4px 0}
+.xm-past{margin:.5rem 0 0;padding-left:1.2rem}
+.xm-past li{margin:.25rem 0}
+
+/* the clock */
+.xm-bar{position:sticky;top:0;z-index:45;padding-top:env(safe-area-inset-top, 0px);background:rgba(16,10,5,.94);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--leather)}
+.xm-bar__inner{display:flex;align-items:center;gap:.5rem 1.2rem;width:min(860px, 100% - var(--pad-l) - var(--pad-r));margin-inline:auto;min-height:60px}
+.xm-bar__title{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.xm-bar__name{font-family:var(--font-head);font-size:1.08rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xm-bar__count{font-size:.95rem;color:var(--muted)}
+.xm-bar__saved{flex:none;font-style:italic;color:var(--muted);font-size:.95rem;min-width:4.5rem;text-align:right}
+.xm-timer{flex:none;min-width:4.6ch;padding:.18rem .75rem;border:1px solid var(--gold-lo);border-radius:999px;color:var(--gold-hi);font-size:1.4rem;line-height:1.2;text-align:center;background:rgba(60,40,18,.6)}
+.xm-timer.is-low{color:#ffd0c2;border-color:#d6694f;background:rgba(120,36,22,.55);animation:xm-pulse 1s ease-in-out infinite}
+.xm-timer.is-free{font-size:1rem;font-style:italic;color:var(--cream-dim)}
+@keyframes xm-pulse{0%,100%{box-shadow:0 0 0 0 rgba(214,105,79,.5)}50%{box-shadow:0 0 0 5px rgba(214,105,79,0)}}
+body.is-taking #xm-nav{display:none}
+/* no tutor while an exam is open: it comes back with the results, to talk the mistakes through */
+body.is-taking .tutor-seal,body.is-taking .tutor{display:none !important}
+
+/* the questions */
+.xm-part{margin-top:2rem;padding-top:1.4rem;border-top:1px solid rgba(138,97,40,.35);font-size:clamp(1.4rem,3vw,1.7rem)}
+.xm-part__sub{margin-top:.3rem;color:var(--ink-soft);font-style:italic;font-size:1.04rem;line-height:1.45}
+.xm-qs{list-style:none;margin:1rem 0 0;padding:0;display:grid;gap:1rem}
+.xm-q{position:relative;padding:1.05rem 1.15rem 1.1rem;background:var(--parchment-2);border:1px solid var(--parchment-edge);border-radius:var(--radius)}
+.xm-q::before{content:"";position:absolute;inset:4px;border:3px double rgba(138,97,40,.22);border-radius:3px;pointer-events:none}
+.xm-q > *{position:relative}
+.xm-q__n{font-family:var(--font-head);font-size:1.08rem;color:var(--ink-gold);margin-bottom:.3rem}
+.xm-q__marks,.xm-q__from{font-family:var(--font-body);font-style:italic;font-size:.95rem;color:var(--ink-soft)}
+.xm-q .q__choices{margin-top:.6rem}
+.xm-q .q__choice{position:relative;align-items:center}
+.xm-q .q__choice input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.xm-q .q__choice:focus-within{outline:2px solid var(--ink-gold);outline-offset:2px}
+.xm-letter{flex:none;width:1.75rem;height:1.75rem;display:grid;place-items:center;border-radius:50%;border:1px solid var(--ink-gold);font-family:var(--font-head);font-size:.98rem;color:var(--ink-gold);background:#f7efdc}
+.q__choice.is-checked .xm-letter{background:var(--ink-gold);color:#fbf6ea}
+.xm-handin{margin-top:1.8rem;padding-top:1.2rem;border-top:1px solid rgba(138,97,40,.35);display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1.2rem}
+.xm-handin__help{color:var(--ink-soft);font-style:italic}
+
+/* results */
+.xm-result__head{display:flex;gap:1.4rem;align-items:center}
+.xm-result__main{flex:1;min-width:0}
+.xm-seal{flex:none;width:118px;height:118px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:var(--ink);background:radial-gradient(circle at 35% 30%, #fbf2d6, #e9d29b 60%, #c99a4e);
+  box-shadow:0 0 0 4px var(--parchment), 0 0 0 5px var(--ink-gold), 0 0 0 9px rgba(214,165,84,.35), 0 14px 26px -12px rgba(60,30,5,.6)}
+.xm-seal.is-fail{background:radial-gradient(circle at 35% 30%, #f6e6dc, #e2c3b3 60%, #b98f7c);box-shadow:0 0 0 4px var(--parchment), 0 0 0 5px var(--ink-red), 0 0 0 9px rgba(154,51,36,.18)}
+.xm-seal.is-wait{background:var(--parchment-2)}
+.xm-seal__pct{font-size:2.1rem;line-height:1}
+.xm-seal__word{margin-top:.2rem;font-family:var(--font-head);font-size:.95rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-gold)}
+.xm-seal.is-fail .xm-seal__word{color:var(--ink-red)}
+.xm-result__score{margin-top:.5rem;font-size:1.25rem;color:var(--ink)}
+.xm-result__score strong{font-size:1.5rem}
+.xm-result__verdict{margin-top:.25rem;font-family:var(--font-head);font-size:1.2rem;color:var(--ink)}
+.xm-result__more{margin-top:.35rem;color:var(--ink-soft);line-height:1.45}
+.xm-result__when{margin-top:.35rem;color:var(--ink-soft);font-style:italic;font-size:.98rem}
+.xm-wait{margin-top:1.2rem;padding:.8rem 1rem;border:1px dashed rgba(138,97,40,.55);border-radius:4px;background:rgba(138,97,40,.06);display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1rem;color:var(--ink-soft)}
+.xm-q--result{border-left-width:4px}
+.xm-q--result.is-right{border-left-color:var(--ink-green)}
+.xm-q--result.is-partly{border-left-color:var(--ink-gold)}
+.xm-q--result.is-wrong{border-left-color:var(--ink-red)}
+.xm-pts{display:inline-block;margin-left:.3rem;padding:.02rem .55rem;border-radius:999px;font-size:.92rem;color:#fbf6ea;background:var(--ink-soft);vertical-align:.08em}
+.is-right .xm-pts{background:var(--ink-green)}
+.is-partly .xm-pts{background:var(--ink-gold)}
+.is-wrong .xm-pts{background:var(--ink-red)}
+.xm-choices{list-style:none;margin:.6rem 0 0;padding:0;display:grid;gap:.4rem}
+.xm-choice{display:flex;align-items:center;gap:.7rem;padding:.5rem .75rem;border:1px solid #c4ad80;border-radius:4px;background:#f2e8d0;font-size:1.08rem;line-height:1.4}
+.xm-choice__text{flex:1;min-width:0}
+.xm-choice__tag{flex:none;font-style:italic;font-size:.92rem;color:var(--ink-soft)}
+.xm-choice.is-answer{border-color:var(--ink-green);background:#e2ebcf}
+.xm-choice.is-answer .xm-letter{background:var(--ink-green);border-color:var(--ink-green);color:#fbf6ea}
+.xm-choice.is-answer .xm-choice__tag{color:var(--ink-green)}
+.xm-choice.is-picked{border-color:var(--ink-red);background:#f3dfd3}
+.xm-choice.is-picked .xm-letter{background:var(--ink-red);border-color:var(--ink-red);color:#fbf6ea}
+.xm-choice.is-picked .xm-choice__tag{color:var(--ink-red)}
+.xm-none{margin-top:.5rem;color:var(--ink-red);font-style:italic}
+.xm-explain{margin-top:.6rem;font-size:1.08rem;line-height:1.5}
+.xm-explain strong{font-family:var(--font-head);font-weight:400}
+.xm-given{margin-top:.6rem}
+.xm-given__label{font-family:var(--font-head);font-size:1rem;color:var(--ink-soft)}
+.xm-given blockquote{margin:.25rem 0 0;padding:.55rem .8rem;border-left:3px solid var(--ink-soft);background:#f7efdc;white-space:pre-wrap;font-size:1.06rem;line-height:1.5}
+
+/* make a test */
+.xm-make__form{margin-top:1.3rem;display:grid;gap:1.4rem}
+.xm-make__form fieldset{margin:0;padding:0;border:0;min-width:0}
+.xm-legend{font-family:var(--font-head);font-size:1.25rem;color:var(--ink);padding:0}
+.xm-legend small{font-family:var(--font-body);font-style:italic;font-size:.9rem;color:var(--ink-soft)}
+.xm-tree__tools{margin-top:.2rem;display:flex;gap:1.1rem}
+.xm-tree__units{list-style:none;margin:.6rem 0 0;padding:0;display:grid;gap:.7rem}
+.xm-tree__unit{padding:.7rem .9rem;border:1px solid var(--parchment-edge);border-radius:var(--radius);background:var(--parchment-2)}
+.xm-tree__lessons{list-style:none;margin:.35rem 0 0;padding:0 0 0 1.9rem;display:grid;gap:.1rem}
+.xm-tree__u{font-family:var(--font-head);color:var(--ink-gold)}
+.xm-check{display:flex;align-items:center;gap:.6rem;padding:.25rem 0;cursor:pointer;font-size:1.08rem;line-height:1.35}
+.xm-check input[type="checkbox"],.xm-check input[type="radio"]{flex:none;width:18px;height:18px;accent-color:#8a6128;margin:0}
+.xm-check--unit{font-size:1.12rem}
+.xm-counts{display:flex;flex-wrap:wrap;gap:.8rem 2rem}
+.xm-counts .xm-legend{flex-basis:100%}
+.xm-num{display:grid;gap:.25rem;font-size:1.08rem}
+.xm-num small{font-style:italic;color:var(--ink-soft)}
+.xm-num .q__input,.xm-check .xm-mins{width:6.5rem;padding:.35rem .6rem}
+.xm-timer-pick{display:grid;gap:.2rem}
+.xm-timer-pick .xm-check{flex-wrap:wrap}
+.xm-name{display:grid;gap:.35rem}
+.xm-name .q__input{width:min(28rem,100%)}
+.xm-sum{color:var(--ink-soft);font-style:italic}
+.xm-err{color:var(--ink-red);font-size:1rem;margin-top:.3rem}
+.xm-err:empty{display:none}
+
+@media (max-width:640px){
+  .xm-bar__inner{flex-wrap:wrap;gap:.35rem .8rem;padding:.45rem 0}
+  .xm-bar__title{flex-basis:100%;flex-direction:row;align-items:baseline;gap:.6rem}
+  .xm-bar__saved{min-width:0;margin-right:auto;text-align:left}
+  .xm-timer{font-size:1.25rem}
+  .xm-result__head{flex-direction:column;align-items:flex-start}
+  .xm-seal{width:96px;height:96px}
+  .xm-seal__pct{font-size:1.75rem}
+  .xm-q{padding:.9rem .85rem}
+  .xm-covers{columns:1}
+}
+@media (prefers-reduced-motion: reduce){ .xm-timer.is-low{animation:none} }
+@media print{
+  .xm-bar,.xm-actions,.xm-handin,.xm-wait{display:none !important}
+}

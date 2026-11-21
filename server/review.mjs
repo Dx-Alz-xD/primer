@@ -67,11 +67,13 @@ function findQuestion(lesson, qid) {
   return null;
 }
 
-// Questions asked beside a lesson rather than in it: the quizzes after its videos (videos.mjs).
+// Questions asked beside a lesson rather than in it: the quizzes after its videos (videos.mjs),
+// and exam questions (exams.mjs), which need no written lesson.
 // extraQuestion(courseId, n, qid) -> { q, section: { title } } | null
 export const reviewHooks = { extraQuestion: null };
 const findAny = (lesson, courseId, n, qid) => findQuestion(lesson, qid)
-  || (lesson && reviewHooks.extraQuestion ? reviewHooks.extraQuestion(courseId, n, qid) : null);
+  || (reviewHooks.extraQuestion ? reviewHooks.extraQuestion(courseId, n, qid) : null);
+const besideLesson = (qid) => !/^q\d+$/.test(qid); // a lesson's own questions are q1, q2, ...
 
 // Only what the browser needs to ask the question again and check the answer.
 const KEYS = ['id', 'type', 'prompt', 'choices', 'answer', 'tolerance', 'unit', 'accept', 'hint', 'explain'];
@@ -97,7 +99,7 @@ function schedule(user, courseId, body) {
   // checked here; every other lesson is saved before it's shown, so the question must be in it.
   if (meta.source !== 'sample') {
     const stored = q('SELECT data FROM lessons WHERE course_id = ? AND n = ?').get(courseId, n);
-    const found = stored && findAny(parseJSON(stored.data, null), courseId, n, qid);
+    const found = (stored || besideLesson(qid)) && findAny(stored ? parseJSON(stored.data, null) : null, courseId, n, qid);
     if (!found || !REVIEWABLE.has(found.q.type)) return;
   }
   const t = now();
@@ -182,13 +184,15 @@ function resolver(user) {
       dueAt: r.due_at, createdAt: r.created_at,
       question: null, section: null, translated: null, builtIn: false
     };
-    if (item.course.source === 'sample') {
+    // an exam's question is kept with the exam, even in a sample course or for a lesson never written
+    const beside = besideLesson(r.qid) && reviewHooks.extraQuestion ? reviewHooks.extraQuestion(r.course_id, r.lesson_n, r.qid) : null;
+    if (item.course.source === 'sample' && !beside) {
       item.builtIn = true; // the browser builds sample lessons itself (P.courseGen.lesson), as the lesson page does
       return item;
     }
-    const lesson = lessonOf(r.course_id, r.lesson_n);
-    if (lesson) {
-      const f = findAny(lesson, r.course_id, r.lesson_n, r.qid);
+    const lesson = beside ? null : lessonOf(r.course_id, r.lesson_n);
+    if (lesson || beside) {
+      const f = beside || findAny(lesson, r.course_id, r.lesson_n, r.qid);
       if (!f || !REVIEWABLE.has(f.q.type)) return null;
       item.question = questionOut(f.q);
       item.section = typeof f.section.title === 'string' ? f.section.title : null;

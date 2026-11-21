@@ -1,0 +1,95 @@
+/* =====================================================================
+   paper.html: a question paper and its answer key, as sheets of
+   parchment on screen and as clean A4 pages when printed.
+   ===================================================================== */
+.pp{padding:clamp(20px,4vh,40px) var(--pad-r) 64px var(--pad-l);outline:none}
+.pp-status{text-align:center;color:var(--cream-dim);font-style:italic;text-shadow:var(--shadow-text)}
+.pp-msg{max-width:640px;margin:2rem auto;padding:2.2rem 2rem;text-align:center}
+.pp-msg p{margin-top:.6rem;color:var(--cream-dim)}
+.pp-msg__go{margin-top:1.3rem !important}
+
+.pp-tools{
+  display:flex;flex-wrap:wrap;align-items:center;gap:.7rem 1.4rem;width:min(210mm,100%);margin:0 auto 1.4rem;
+  padding:.9rem 1.1rem;border:1px solid var(--leather);border-radius:var(--radius);background:rgba(24,15,8,.92);box-shadow:var(--shadow-card)
+}
+.pp-opt{display:inline-flex;align-items:center;gap:.45rem;color:var(--cream);cursor:pointer}
+.pp-opt input{accent-color:#d6a554;width:17px;height:17px}
+.pp-tip{flex-basis:100%;color:var(--muted);font-style:italic;font-size:.98rem}
+
+/* a sheet of paper */
+.pp-sheet{
+  width:min(210mm,100%);margin:0 auto 1.6rem;padding:16mm 15mm 14mm;
+  color:var(--ink);background-color:var(--parchment);
+  background-image:radial-gradient(ellipse at 20% 0%, rgba(255,250,235,.55), transparent 55%), radial-gradient(ellipse at 100% 100%, rgba(160,120,60,.14), transparent 50%);
+  border-radius:3px;box-shadow:0 40px 80px -30px rgba(0,0,0,.92), 0 0 0 1px #b39a6b;
+  font-size:12.5pt;line-height:1.45;color-scheme:light
+}
+.pp-sheet h1,.pp-sheet h2{color:var(--ink);text-shadow:none}
+body.pp-no-key .pp-key{display:none}
+
+.pp-head{padding-bottom:5mm;margin-bottom:5mm;border-bottom:2px solid var(--ink)}
+.pp-head__top{display:flex;justify-content:space-between;align-items:center;gap:1rem;font-size:10.5pt;color:var(--ink-soft)}
+.pp-brand{display:inline-flex;align-items:center;gap:.35em;font-family:var(--font-head);font-size:12pt;color:var(--ink-gold);letter-spacing:.04em}
+.pp-course{margin-top:4mm;font-style:italic;color:var(--ink-gold);font-size:12pt}
+.pp-head h1{margin-top:1mm;font-size:22pt;line-height:1.1}
+.pp-sub{margin-top:1mm;font-family:var(--font-head);font-size:13pt;color:var(--ink-soft)}
+.pp-fields{display:flex;flex-wrap:wrap;gap:3mm 7mm;margin-top:6mm}
+.pp-field{display:flex;align-items:flex-end;gap:2mm;flex:1 1 70mm;font-family:var(--font-head);font-size:11.5pt}
+.pp-field--short{flex:0 1 38mm}
+.pp-field__line{flex:1;min-width:15mm;height:6mm;border-bottom:1px solid var(--ink)}
+.pp-rules{margin-top:4mm;font-size:11pt;color:var(--ink-soft)}
+
+.pp-part{margin-top:6mm}
+.pp-part + .pp-part{margin-top:8mm}
+.pp-part__title{font-size:15pt;padding-bottom:1mm;border-bottom:1px solid rgba(138,97,40,.5)}
+.pp-part__sub{margin-top:1mm;font-style:italic;color:var(--ink-soft);font-size:11pt}
+/* a part's heading never ends a page: it goes over with its first question */
+.pp-part__title,.pp-part__sub{break-after:avoid;page-break-after:avoid}
+.pp-qs{margin:3mm 0 0;padding-left:8mm}
+.pp-q{margin-top:5mm;padding-left:1mm;break-inside:avoid;page-break-inside:avoid}
+.pp-q::marker{font-family:var(--font-head);font-weight:400;color:var(--ink-gold)}
+.pp-q__prompt{font-size:12.5pt}
+.pp-q__prompt p{margin:0 0 1mm}
+.pp-q__marks{margin-top:.5mm;font-style:italic;color:var(--ink-soft);font-size:10.5pt}
+.pp-choices{list-style:none;margin:2.5mm 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2mm 6mm}
+.pp-choices li{display:flex;align-items:baseline;gap:2.5mm;font-size:12pt;line-height:1.35}
+.pp-bubble{flex:none;display:inline-grid;place-items:center;width:6.5mm;height:6.5mm;border:1px solid var(--ink);border-radius:50%;font-family:var(--font-head);font-size:10.5pt;transform:translateY(1mm)}
+.pp-short{display:flex;align-items:flex-end;gap:2mm;margin-top:3mm;font-family:var(--font-head)}
+.pp-short__line{width:60mm;height:6mm;border-bottom:1px solid var(--ink)}
+.pp-lines{margin-top:2mm}
+.pp-lines span{display:block;height:8.5mm;border-bottom:1px solid rgba(43,29,17,.45)}
+.pp-end{margin-top:8mm;text-align:center;font-style:italic;color:var(--ink-soft);font-size:10.5pt}
+.pp-end::before,.pp-end::after{content:"";display:inline-block;width:18mm;height:0;margin:0 3mm;vertical-align:middle;border-top:1px solid rgba(138,97,40,.6)}
+
+/* the answer key */
+.pp-key__title{margin-top:1mm;font-size:18pt;line-height:1.15}
+.pp-key__list{list-style:none;margin:2mm 0 0;padding:0;counter-reset:key}
+.pp-key__item{display:grid;grid-template-columns:9mm 8mm minmax(0,1fr);gap:0 2mm;align-items:baseline;padding:2.5mm 0;border-bottom:1px dotted rgba(91,71,48,.5);break-inside:avoid;page-break-inside:avoid;counter-increment:key}
+.pp-key__item::before{content:attr(value) ".";font-family:var(--font-head);color:var(--ink-gold);text-align:right}
+.pp-key__ans{font-family:var(--font-head);font-size:13pt;text-align:center;color:var(--ink)}
+.pp-key__body{font-size:11.5pt}
+.pp-key__label{font-style:italic;color:var(--ink-soft)}
+.pp-key__why{margin-top:1mm;color:var(--ink-soft);font-size:10.5pt}
+.pp-key__note{margin-top:1mm;font-style:italic;color:var(--ink-red);font-size:10pt}
+
+.pp-sheet .katex{font-size:1.05em}
+
+@media screen and (max-width:640px){
+  .pp{padding-left:max(10px, env(safe-area-inset-left, 0px));padding-right:max(10px, env(safe-area-inset-right, 0px))}
+  .pp-sheet{padding:9mm 6mm 8mm;font-size:11.5pt}
+  .pp-head h1{font-size:18pt}
+  .pp-choices{grid-template-columns:1fr}
+  .pp-short__line{width:40mm}
+}
+
+@media print{
+  @page{size:A4;margin:14mm 15mm 15mm}
+  html,body{background:#fff !important}
+  .backdrop,.skip,.nav,.pp-tools,.toast,.offline-bar,.tutor,.tfab{display:none !important}
+  .page,.pp{display:block;min-height:0;padding:0;margin:0}
+  .pp-sheet{width:auto;margin:0;padding:0 3mm;border-radius:0;box-shadow:none;background:#fff;color:#1d140c;font-size:11.5pt}
+  .pp-sheet + .pp-sheet{break-before:page;page-break-before:always}
+  .pp-head{border-bottom-color:#1d140c}
+  .pp-course,.pp-brand,.pp-q::marker,.pp-key__item::before{color:#8a6128}
+  .pp-sheet a{color:inherit;text-decoration:none}
+}

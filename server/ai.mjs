@@ -344,7 +344,8 @@ function shuffleChoices(choices, answer, seed) {
   return { choices: order.map((i) => choices[i]), answer: order.indexOf(answer) };
 }
 
-function normQuestion(q) {
+// Exported for exams (server/exams.mjs), whose questions follow the same rules as lessons'.
+export function normQuestion(q) {
   if (!q || typeof q !== 'object') return null;
   const type = str(q.type, 20).toLowerCase();
   const base = { prompt: mstr(q.prompt, 1200), hint: mstr(q.hint, 600), explain: mstr(q.explain || q.explanation, 1200) };

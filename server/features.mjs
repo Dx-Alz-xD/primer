@@ -17,5 +17,6 @@ export default [
   () => import('./offline.mjs'),
   () => import('./photos.mjs'),
   () => import('./videos.mjs'),
-  () => import('./reuse.mjs')
+  () => import('./reuse.mjs'),
+  () => import('./exams.mjs')
 ];

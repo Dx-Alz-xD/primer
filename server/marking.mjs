@@ -43,7 +43,8 @@ const VERDICTS = new Map([
   ['not yet', 'not yet'], ['notyet', 'not yet'], ['incorrect', 'not yet'], ['wrong', 'not yet'], ['not correct', 'not yet']
 ]);
 
-const SYSTEM = (lang) => String.raw`You mark one answer a learner wrote in their own words, for a question at the end of a part of an online lesson. Mark the way a kind, honest teacher would: give credit for what is right, and say plainly what is wrong or missing. Never call a weak answer good.
+// Also used to mark the written answers in exams (server/exams.mjs).
+export const SYSTEM = (lang) => String.raw`You mark one answer a learner wrote in their own words, for a question at the end of a part of an online lesson. Mark the way a kind, honest teacher would: give credit for what is right, and say plainly what is wrong or missing. Never call a weak answer good.
 Return ONLY a JSON object (no prose, no code fences) like this:
 {"verdict": "partly", "feedback": "You explain why the slope stays the same, but not what the slope measures.", "missing": ["the slope is the change in y for each step in x"]}
 - verdict: "good" when the answer gets the main idea right, even if it is short, informal or imperfectly worded; "partly" when it is on the right track but leaves out or muddles a key point; "not yet" when it misses the main idea, is wrong, or doesn't answer the question.
