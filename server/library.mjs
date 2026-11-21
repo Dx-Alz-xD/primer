@@ -182,6 +182,7 @@ function sliceUnits(outline, start, end) {
 
 async function planCourse(user, input, style) {
   if (input.instructions) return null;
+  if (input.lang && input.lang !== 'en') return null; // shared lessons are written in English
   const hasRange = Boolean(input.from || input.to);
   let entry = findExact(input.topic);
   let cut = null;

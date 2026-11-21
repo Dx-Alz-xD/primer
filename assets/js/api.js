@@ -247,11 +247,30 @@
         const fresh = P.courses.get(course.id) || course;
         fresh.written = Array.from(new Set((fresh.written || []).concat(n))).sort((a, b) => a - b);
       }
+      let translated = null;
+      if (P.api.wantsTranslation(course)) {
+        try {
+          translated = await P.post('/api/lesson/translate', { courseId: course.id, n, lang: P.lang }, {
+            timeout: 330000, timeoutMessage: 'The translation took too long. Showing the original.'
+          });
+        } catch (err) {
+          P.toast(`The translation isn’t ready: ${err.message} Showing the original.`, 'error');
+        }
+      }
       // AI-written HTML is cleaned every time it is shown, never trusted as stored.
-      const lesson = cleanLesson(JSON.parse(JSON.stringify(res.lesson)));
+      const lesson = cleanLesson(JSON.parse(JSON.stringify((translated || res).lesson)));
       lesson.model = res.model;
+      if (translated) { lesson.translated = { lang: P.lang, model: translated.model }; }
       return withMeta(lesson);
     },
+
+    // Lessons written in another language are shown translated once the learner asks, per course.
+    lessonLang: (course) => course.lang || 'en',
+    wantsTranslation(course) {
+      if (!P.lang || course.source === 'sample' || P.api.lessonLang(course) === P.lang) return false;
+      try { return P.store.get('primer.tr.' + course.id, null) === P.lang; } catch (e) { return false; }
+    },
+    setTranslation(course, on) { P.store.set('primer.tr.' + course.id, on ? P.lang : null); },
 
     // Objective answers are checked locally. Returns { correct, invalid? }
     checkAnswer(q, raw) {

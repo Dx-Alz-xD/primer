@@ -7,5 +7,6 @@ export default [
   () => import('./voice.mjs'),
   () => import('./community.mjs'),
   () => import('./folders.mjs'),
-  () => import('./library.mjs')
+  () => import('./library.mjs'),
+  () => import('./translate.mjs')
 ];

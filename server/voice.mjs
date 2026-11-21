@@ -168,7 +168,10 @@ async function narrate({ req, res }) {
   const n = Number(body.n), si = Number(body.section);
   const lesson = q('SELECT data FROM lessons WHERE course_id = ? AND n = ?').get(row.id, n);
   if (!lesson) throw new HttpError('That lesson hasn’t been written yet.', 404);
-  const section = (parseJSON(lesson.data, {}).sections || [])[si];
+  // read the learner's translation when there is one, since that's what the page shows
+  let tr = null;
+  try { tr = q('SELECT data FROM lesson_translations WHERE course_id = ? AND n = ? AND lang = ?').get(row.id, n, u.lang); } catch { /* no translations yet */ }
+  const section = (parseJSON((tr || lesson).data, {}).sections || [])[si];
   if (!section) throw new HttpError('That part of the lesson doesn’t exist.', 404);
   const script = typeof body.script === 'string' && body.script.trim() ? text(body.script, 4500) : sectionScript(section);
   const name = path.join(AUDIO_DIR, '');

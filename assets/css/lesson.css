@@ -380,3 +380,7 @@ body.is-wb .toast{bottom:calc(88px + env(safe-area-inset-bottom, 0px))}
 .doubt__mic.is-rec{color:#f0a48f;border-bottom-color:#f0a48f}
 @media (max-width:720px){ .vplayer__on{display:none} }
 @media (prefers-reduced-motion: reduce){ .vplayer{animation:none} }
+
+/* a lesson written in another language */
+.trnote{margin-top:.8rem;padding:.55rem .8rem;border:1px dashed rgba(138,97,40,.5);border-radius:5px;background:rgba(214,165,84,.1);color:var(--ink-soft);font-style:italic;font-size:1.02rem}
+.trnote .textlink{font-style:normal;margin-left:.3rem}

@@ -55,6 +55,7 @@ export function cleanMeta(c) {
     style: (Array.isArray(c.style) ? c.style : []).slice(0, 8)
       .map((s) => ({ key: text(s && s.key, 20), label: text(s && s.label, 40) })).filter((s) => s.key),
     source: SOURCES.has(c.source) ? c.source : 'sample',
+    lang: ['en', 'hi', 'ru'].includes(c.lang) ? c.lang : 'en',
     model: text(c.model, 120) || null,
     units
   };
@@ -176,7 +177,7 @@ function folderFor(user, body) {
 async function outline({ req, res }) {
   const u = requireUser(req);
   const body = await readBody(req, 8_000);
-  const input = courseInput(body);
+  const input = { ...courseInput(body), lang: u.lang || 'en' }; // courses are written in the learner's language
   const style = Array.isArray(body.style) ? body.style : [];
   const folderId = folderFor(u, body);
   let meta;
@@ -210,7 +211,7 @@ async function lesson({ req, res }) {
   if (!out) {
     out = await generateLesson({
       topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions,
-      courseTitle: meta.title || meta.topic, n,
+      courseTitle: meta.title || meta.topic, n, lang: meta.lang || 'en',
       outline: flat.map((l) => ({ n: l.n, unit: l.unit, title: l.title, desc: l.desc }))
     });
   }

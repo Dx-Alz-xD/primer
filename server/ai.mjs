@@ -58,7 +58,8 @@ Rules:
 - tags: "maths" if the lesson uses formulas, "diagram" if a figure helps, "practice" if it is problem-heavy, "written" if it asks for a written explanation. Use only these four tags; an empty list is fine.
 - minutes: realistic study time between 8 and 25.
 - Titles and descriptions are plain text shown in a list: no LaTeX, no $ signs, no markdown. Describe formulas in words (for example "the power rule for powers of x").
-- Follow the learner's teaching instructions wherever they affect the plan.`;
+- Follow the learner's teaching instructions wherever they affect the plan.
+- Write every title and description in the language the request names (English unless it names another).`;
 
 const LESSON_SYSTEM = String.raw`You write one lesson of an online course as JSON. The app shows the lesson one section at a time: a learner must answer a section's checkpoint questions before the next section appears, and a wrong answer re-shows that section's "recap" points.
 
@@ -94,20 +95,26 @@ Rules:
 - Teach at the level the course and its range imply. Don't re-teach earlier lessons; set up the next one.
 - Follow the learner's teaching instructions (e.g. mnemonics: add mnemonic callouts; "like I'm 5": eli5 callouts and simpler words; LaTeX: write all maths in LaTeX).
 - Every piece of maths, everywhere (paragraphs, questions, choices, hints, explanations, recap), goes inside \\( and \\). Never use $ for maths.
-- Plain, warm, precise English. Be factually correct; leave out anything you are unsure of.
+- Plain, warm, precise writing in the language the request names (English unless it names another); maths notation stays LaTeX. Be factually correct; leave out anything you are unsure of.
 - This is JSON: every backslash in LaTeX must be written twice, for example "\\frac{1}{2}" and "\\(x\\)".`;
 
 const lineFor = (l) => `${l.n}. [${l.unit}] ${l.title}${l.desc ? ` — ${l.desc}` : ''}`;
 
-function outlineUser({ topic, from, to, instructions }) {
+export const LANG_NAMES = { en: 'English', hi: 'Hindi', ru: 'Russian' };
+const langLine = (lang) => (lang && lang !== 'en' && LANG_NAMES[lang] ? `Language: write everything in ${LANG_NAMES[lang]} (keep LaTeX as LaTeX).` : '');
+// English requests keep their old cache keys; other languages get their own.
+const langKey = (lang) => (lang && lang !== 'en' ? { lang } : {});
+
+function outlineUser({ topic, from, to, instructions, lang }) {
   return [
     `Topic: ${topic}`,
     `Range: from ${from || 'the very beginning'} up to ${to || 'the end of the subject'}`,
-    `Teaching instructions from the learner: ${instructions || 'none'}`
-  ].join('\n');
+    `Teaching instructions from the learner: ${instructions || 'none'}`,
+    langLine(lang)
+  ].filter(Boolean).join('\n');
 }
 
-function lessonUser({ topic, from, to, instructions, courseTitle, outline, n }) {
+function lessonUser({ topic, from, to, instructions, courseTitle, outline, n, lang }) {
   const me = outline.find((l) => l.n === n);
   return [
     `Course: "${courseTitle}", on ${topic}.`,
@@ -117,8 +124,9 @@ function lessonUser({ topic, from, to, instructions, courseTitle, outline, n }) 
     'Full course outline:',
     ...outline.map(lineFor),
     '',
-    `Write lesson ${n}: "${me.title}"${me.desc ? ` — ${me.desc}` : ''}`
-  ].join('\n');
+    `Write lesson ${n}: "${me.title}"${me.desc ? ` — ${me.desc}` : ''}`,
+    langLine(lang)
+  ].filter(Boolean).join('\n');
 }
 
 /* ------------------------------------------------------------------ */
@@ -453,7 +461,7 @@ async function cached(kind, keyObj, produce) {
 /* ------------------------------------------------------------------ */
 
 export function generateOutline(input) {
-  const key = { v: 3, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions) };
+  const key = { v: 3, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions), ...langKey(input.lang) };
   return cached('outline', key, async () => {
     const { value, model } = await generate({
       system: OUTLINE_SYSTEM,
@@ -474,7 +482,7 @@ export function generateLesson(input) {
   const next = input.outline.find((l) => l.n === input.n + 1);
   const key = {
     v: 2, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions),
-    n: input.n, title: norm(me.title), prev: norm(prev && prev.title), next: norm(next && next.title)
+    n: input.n, title: norm(me.title), prev: norm(prev && prev.title), next: norm(next && next.title), ...langKey(input.lang)
   };
   return cached('lesson', key, async () => {
     const { value, model } = await generate({
@@ -632,5 +640,42 @@ export function pickLibraryCut({ subject, outline, from, to }) {
       label: `library cut "${subject}"`
     });
     return { cut: value, model };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Translating a lesson that was written in another language          */
+/* ------------------------------------------------------------------ */
+
+const TRANSLATE_SYSTEM = String.raw`You translate one lesson of an online course, given as JSON, for a learner who reads another language.
+Return ONLY the same JSON object (no prose, no code fences) with every piece of text a learner reads translated:
+section titles, paragraph "html" (keep every HTML tag exactly), list items, callout titles and "html", figure captions (never change "svg"), recap points, question prompts, choices, hints, explanations and model answers.
+Keep exactly the same structure: the same sections, blocks, questions and choices, in the same order.
+Never change: maths inside \( \) and in "tex", numbers, "answer", "tolerance", "type", "t", "kind", "id", or "unit" symbols.
+For "text" questions, put the translated accepted answers first in "accept" and keep the original ones after them.
+Natural, warm, precise wording, the way a good teacher writes in that language. This is JSON: every backslash in LaTeX must be written twice.`;
+
+export function translateLesson({ lesson, lang, title }) {
+  const target = LANG_NAMES[lang];
+  if (!target) throw new AIError('That language isn’t available yet.', 400);
+  const counts = (l) => (l.sections || []).map((s) => (s.checkpoint || []).length).join(',');
+  const want = counts(lesson);
+  const key = { v: 1, lang, lesson: createHash('sha256').update(JSON.stringify(lesson)).digest('hex').slice(0, 24) };
+  return cached('translate', key, async () => {
+    const { value, model } = await generate({
+      system: TRANSLATE_SYSTEM,
+      user: `Translate into ${target}.\n\n${JSON.stringify({ sections: lesson.sections })}`,
+      maxTokens: 14000,
+      timeoutMs: 120000,
+      deadlineMs: 300000,
+      validate: (raw) => {
+        const out = normalizeLesson(raw, title);
+        // the learner's saved answers are keyed by question order, so the shape must not move
+        if (out.sections.length !== lesson.sections.length || counts(out) !== want) throw new Error('the translation changed the lesson’s shape');
+        return out;
+      },
+      label: `translate lesson "${title}" to ${target}`
+    });
+    return { lesson: value, model };
   });
 }

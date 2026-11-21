@@ -211,7 +211,21 @@
       <h1 id="lesson-title">${esc(lesson.title)}</h1>
       <div class="lhead__meta"><span>About ${lesson.minutes} minutes</span>${style.map((s) => `<span class="lhead__style">${esc(s.label)}</span>`).join('')}${lesson.model ? `<span class="lhead__model">Written by ${esc(lesson.model.replace(/:free$/, ''))}</span>` : ''}</div>
       ${lesson.draft ? '<p class="draft-note"><strong>Draft lesson.</strong> The full AI-written theory, diagrams and questions will appear here once the course generator is connected. The checkpoints below already work, so you can try the flow.</p>' : ''}
+      ${translationNote()}
       <p class="lhead__tip">Select any sentence to ask a doubt about it, or open the whiteboard to sketch on these notes.</p>`;
+    const tr = $('#lhead [data-tr]');
+    if (tr) tr.addEventListener('click', () => { P.api.setTranslation(course, tr.dataset.tr === 'on'); location.reload(); });
+  }
+
+  // A lesson written in another language than the learner's: offer it in theirs, or the original back.
+  function translationNote() {
+    const from = P.api.lessonLang(course);
+    if (course.source === 'sample' || !P.lang || from === P.lang || !P.LANGS) return '';
+    const fromName = (P.LANGS[from] || {}).label || from;
+    const toName = (P.LANGS[P.lang] || {}).name || P.lang;
+    return lesson.translated
+      ? `<p class="trnote">Translated from ${esc(fromName)}. <button class="textlink" type="button" data-tr="off">Show the original</button></p>`
+      : `<p class="trnote">This lesson is written in ${esc(fromName)}. <button class="textlink" type="button" data-tr="on">Read it in ${esc(toName)}</button></p>`;
   }
 
   function blockHTML(b, i) {
