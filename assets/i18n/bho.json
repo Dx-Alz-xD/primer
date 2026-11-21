@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "एगो टेस्ट में 20 बहुविकल्पीय आ 5 लिखित सवाल हो सकेला।",
     "Set the timer between 5 and 180 minutes, or have no timer.": "टाइमर के 5 से 180 मिनट के बीच सेट करीं, या टाइमर ना राखीं।",
     "Something went wrong on the server.": "सर्वर पर कुछ गड़बड़ हो गइल।",
-    "Free, at any time, in India.": "मुफ्त, कवनो भी समय, भारत में।"
+    "Free, at any time, in India.": "मुफ्त, कवनो भी समय, भारत में।",
+    "Knowledge given for this course: {title}": "इ कोर्स खातिर दिहल गेल ज्ञान: {title}",
+    "Textbook pages given for this course: {title}": "इ कोर्स खातिर दिहल गेल किताब के पन्ना: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "ई पाठ खाली एह कोर्स खातिर दिहल गेल सामग्री से AI द्वारा लिखल गइल बा, फेरु बाहर के कौनो स्रोत नइखे इस्तेमाल भइल। जाँच लीं कि जवन कहल गइल रहे, ओही लिखल बा कि ना।",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "ई पाठ AI द्वारा एह स्रोत सभ से लिखल गइल बा। हर हिस्सा के बगल में दिहल छोट अंक ई बतावे ला कि ओकरा खातिर कवन स्रोत इस्तेमाल भइल बा।",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "ई पाठ AI द्वारा लिखल गइल बा; एकरा बाद एह स्रोत सभ के जाँच कइल गइल। हर हिस्सा के बगल में दिहल छोट अंक ई बतावे ला कि ओकरा के कवन स्रोत सही साबित करे ला।",
+    "The small numbers beside each part show which sources it uses.": "हर हिस्सा के बगल में दिहल छोट अंक ई बतावे ला कि ओकरा में कवन स्रोत इस्तेमाल भइल बा।",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "एह पाठ खातिर बाहर के कौनो स्रोत ना मिलल; ई AI द्वारा लिखल गइल बा — जरूरी बातन के जाँच जरूर करीं।",
+    "Looking for sources for this lesson…": "एह पाठ खातिर स्रोत खोजल जात बा…",
+    "Upload an image": "फोटो अपलोड करीं",
+    "Upload pages": "पन्ना अपलोड करीं",
+    "What you added": "जवन रउआ जोड़ले बानी"
   }
 }

@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "একটি টেস্টে সর্বোচ্চ 20টি বহুনির্বাচনী এবং 5টি লিখিত প্রশ্ন থাকতে পারে।",
     "Set the timer between 5 and 180 minutes, or have no timer.": "টাইমার 5 থেকে 180 মিনিটের মধ্যে সেট করুন, অথবা কোনো টাইমার রাখবেন না।",
     "Something went wrong on the server.": "সার্ভারে কিছু সমস্যা হয়েছে।",
-    "Free, at any time, in India.": "বিনামূল্যে, যেকোনো সময়, ভারতে।"
+    "Free, at any time, in India.": "বিনামূল্যে, যেকোনো সময়, ভারতে।",
+    "Knowledge given for this course: {title}": "এই কোর্সের জন্য দেওয়া জ্ঞান: {title}",
+    "Textbook pages given for this course: {title}": "এই কোর্সের জন্য দেওয়া পাঠ্যবইয়ের পাতা: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "এই পাঠটি শুধুমাত্র এই কোর্সটি যে উপাদান থেকে তৈরি করা হয়েছে তা থেকে AI দ্বারা লেখা হয়েছে, কোনো বাইরের সোর্স ছাড়াই। এতে ঠিকমতো বলা হয়েছে কিনা তা চেক করুন।",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "এই পাঠটি এই সোর্সগুলি থেকে AI দ্বারা লেখা হয়েছে। প্রতিটি অংশের পাশের ছোট নম্বরগুলি দেখায় এটি কোন সোর্সগুলি অনুসরণ করে।",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "এই পাঠটি AI দ্বারা লেখা হয়েছে; এই সোর্সগুলি পরবর্তীতে এর সাথে মিলিয়ে চেক করা হয়েছে। প্রতিটি অংশের পাশের ছোট নম্বরগুলি দেখায় কোন সোর্সগুলি এটিকে সমর্থন করে।",
+    "The small numbers beside each part show which sources it uses.": "প্রতিটি অংশের পাশের ছোট নম্বরগুলি দেখায় এটি কোন সোর্সগুলি ব্যবহার করে।",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "এই পাঠের জন্য কোনো বাইরের সোর্স পাওয়া যায়নি; এটি AI দ্বারা লেখা হয়েছে — গুরুত্বপূর্ণ তথ্যগুলি চেক করুন।",
+    "Looking for sources for this lesson…": "এই পাঠের সোর্স খোঁজা হচ্ছে...",
+    "Upload an image": "ছবি আপলোড করুন",
+    "Upload pages": "পাতাগুলি আপলোড করুন",
+    "What you added": "আপনি যা যোগ করেছেন"
   }
 }

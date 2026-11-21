@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "ஒரு டெஸ்டில் 20 பல விருப்பத்தேர்வு கேள்விகள் மற்றும் 5 சொந்தமாக எழுதும் கேள்விகள் வரை இருக்கலாம்.",
     "Set the timer between 5 and 180 minutes, or have no timer.": "டைமரை 5 முதல் 180 நிமிடங்களுக்குள் அமைக்கவும், அல்லது டைமர் இல்லாமல் இருக்கவும்.",
     "Something went wrong on the server.": "சர்வரில் ஏதோ தவறு நடந்துவிட்டது.",
-    "Free, at any time, in India.": "இலவசம், எந்த நேரத்திலும், இந்தியாவில்."
+    "Free, at any time, in India.": "இலவசம், எந்த நேரத்திலும், இந்தியாவில்.",
+    "Knowledge given for this course: {title}": "இந்த கோர்ஸுக்கு வழங்கப்பட்ட அறிவு: {title}",
+    "Textbook pages given for this course: {title}": "இந்த கோர்ஸுக்கு வழங்கப்பட்ட பாடநூல் பக்கங்கள்: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "இந்தப் பாடம் வெளி மூலங்கள் எதுவும் இல்லாமல், இந்த கோர்ஸ் உருவாக்கப்பட்ட பொருளைக் கொண்டு மட்டுமே AI ஆல் எழுதப்பட்டது. அது சொல்ல வந்ததைச் சரியாகச் சொல்கிறதா எனச் சரிபார்க்கவும்.",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "இந்தப் பாடம் இந்த மூலங்களிலிருந்து AI ஆல் எழுதப்பட்டது. ஒவ்வொரு பகுதிக்கும் அருகில் உள்ள சிறிய எண்கள் அது எந்த மூலங்களைப் பின்பற்றுகிறது என்பதைக் காட்டுகின்றன.",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "இந்தப் பாடம் AI ஆல் எழுதப்பட்டது; இந்த மூலங்கள் பின்னர் அதனுடன் சரிபார்க்கப்பட்டன. ஒவ்வொரு பகுதிக்கும் அருகில் உள்ள சிறிய எண்கள் அதை எந்த மூலங்கள் ஆதரிக்கின்றன என்பதைக் காட்டுகின்றன.",
+    "The small numbers beside each part show which sources it uses.": "ஒவ்வொரு பகுதிக்கும் அருகில் உள்ள சிறிய எண்கள் அது எந்த மூலங்களைப் பயன்படுத்துகிறது என்பதைக் காட்டுகின்றன.",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "இந்தப் பாடத்திற்கு வெளி மூலங்கள் எதுவும் கிடைக்கவில்லை; இது AI ஆல் எழுதப்பட்டது — முக்கியமான உண்மைகளைச் சரிபார்க்கவும்.",
+    "Looking for sources for this lesson…": "இந்தப் பாடத்திற்கான மூலங்களைத் தேடுகிறது…",
+    "Upload an image": "படத்தைப் பதிவேற்றுக",
+    "Upload pages": "பக்கங்களைப் பதிவேற்றுக",
+    "What you added": "நீங்கள் சேர்த்தவை"
   }
 }

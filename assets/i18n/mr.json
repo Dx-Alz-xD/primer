@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "टेस्टमध्ये 20 मल्टिपल चॉईस आणि 5 लिखित प्रश्न असू शकतात.",
     "Set the timer between 5 and 180 minutes, or have no timer.": "टायमर 5 ते 180 मिनिटांच्या दरम्यान सेट करा, किंवा टायमर नको असल्यास तसे निवडा.",
     "Something went wrong on the server.": "सर्व्हरवर काहीतरी चूक झाली.",
-    "Free, at any time, in India.": "मोफत, कधीही, भारतात."
+    "Free, at any time, in India.": "मोफत, कधीही, भारतात.",
+    "Knowledge given for this course: {title}": "या कोर्ससाठी दिलेले ज्ञान: {title}",
+    "Textbook pages given for this course: {title}": "या कोर्ससाठी दिलेली पाठ्यपुस्तकाची पाने: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "हा धडा AI ने केवळ या कोर्ससाठी वापरलेल्या साहित्यामधून लिहिला आहे, बाहेरील स्रोतांशिवाय. यात योग्य ती माहिती आली आहे का ते तपासा.",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "हा धडा AI ने या स्रोतांच्या आधारे लिहिला आहे. प्रत्येक भागा शेजारील छोटे नंबर तो कोणत्या स्रोताचे अनुसरण करतो ते दाखवतात.",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "हा धडा AI ने लिहिला आहे; त्यानंतर हे स्रोत तपासले गेले. प्रत्येक भागा शेजारील छोटे नंबर तो कोणत्या स्रोतांना आधार देतो ते दाखवतात.",
+    "The small numbers beside each part show which sources it uses.": "प्रत्येक भागा शेजारील छोटे नंबर तो कोणते स्रोत वापरतो ते दाखवतात.",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "या धड्यासाठी कोणतेही बाहेरील स्रोत सापडले नाहीत; हा AI ने लिहिला आहे — महत्त्वाचे मुद्दे तपासा.",
+    "Looking for sources for this lesson…": "या धड्यासाठी स्रोत शोधत आहे…",
+    "Upload an image": "इमेज अपलोड करा",
+    "Upload pages": "पाने अपलोड करा",
+    "What you added": "तुम्ही जोडलेली माहिती"
   }
 }

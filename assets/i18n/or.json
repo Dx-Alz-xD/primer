@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "ଏକ ଟେଷ୍ଟରେ 20ଟି ବହୁବିକଳ୍ପ ଏବଂ 5ଟି ଲିଖିତ ପ୍ରଶ୍ନ ରହିପାରିବ।",
     "Set the timer between 5 and 180 minutes, or have no timer.": "ଟାଇମରକୁ 5 ଏବଂ 180 ମିନିଟ୍ ମଧ୍ୟରେ ସେଟ୍ କରନ୍ତୁ, କିମ୍ବା କୌଣସି ଟାଇମର୍ ରଖନ୍ତୁ ନାହିଁ।",
     "Something went wrong on the server.": "ସର୍ଭରରେ କିଛି ଗଡ଼ବଡ଼ ହୋଇଛି।",
-    "Free, at any time, in India.": "ମାଗଣା, ଯେକୌଣସି ସମୟରେ, ଭାରତରେ।"
+    "Free, at any time, in India.": "ମାଗଣା, ଯେକୌଣସି ସମୟରେ, ଭାରତରେ।",
+    "Knowledge given for this course: {title}": "ଏହି କୋର୍ସ ପାଇଁ ଦିଆଯାଇଥିବା ଜ୍ଞାନ: {title}",
+    "Textbook pages given for this course: {title}": "ଏହି କୋର୍ସ ପାଇଁ ଦିଆଯାଇଥିବା ପାଠ୍ୟପୁସ୍ତକ ପୃଷ୍ଠାଗୁଡ଼ିକ: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "ଏହି ପାଠଟି କେବଳ ଏହି କୋର୍ସ ନିର୍ମାଣ ହୋଇଥିବା ସାମଗ୍ରୀରୁ AI ଦ୍ୱାରା ଲେଖାଯାଇଛି, କୌଣସି ବାହ୍ୟ ସୋର୍ସ ବିନା। ଏଥିରେ ସଠିକ ଜିନିଷ ଅଛି କି ନାହିଁ ଯାଞ୍ଚ କରନ୍ତୁ।",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "ଏହି ପାଠଟି AI ଦ୍ୱାରା ଏହି ସୋର୍ସଗୁଡ଼ିକରୁ ଲେଖାଯାଇଛି। ପ୍ରତ୍ୟେକ ଅଂଶ ପାଖରେ ଥିବା ଛୋଟ ସଂଖ୍ୟାଗୁଡ଼ିକ ଦର୍ଶାଏ ଯେ ଏହା କେଉଁ ସୋର୍ସକୁ ଅନୁସରଣ କରେ।",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "ଏହି ପାଠଟି AI ଦ୍ୱାରା ଲେଖାଯାଇଥିଲା; ଏହି ସୋର୍ସଗୁଡ଼ିକ ପରେ ଏହା ସହିତ ମେଳ କରାଯାଇଥିଲା। ପ୍ରତ୍ୟେକ ଅଂଶ ପାଖରେ ଥିବା ଛୋଟ ସଂଖ୍ୟାଗୁଡ଼ିକ ଦର୍ଶାଏ ଯେ କେଉଁ ସୋର୍ସଗୁଡ଼ିକ ଏହାକୁ ସମର୍ଥନ କରେ।",
+    "The small numbers beside each part show which sources it uses.": "ପ୍ରତ୍ୟେକ ଅଂଶ ପାଖରେ ଥିବା ଛୋଟ ସଂଖ୍ୟାଗୁଡ଼ିକ ଦର୍ଶାଏ ଯେ ଏହା କେଉଁ ସୋର୍ସ ବ୍ୟବହାର କରେ।",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "ଏହି ପାଠ ପାଇଁ କୌଣସି ବାହ୍ୟ ସୋର୍ସ ମିଳିଲା ନାହିଁ; ଏହା AI ଦ୍ୱାରା ଲେଖାଯାଇଥିଲା — ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ତଥ୍ୟ ଯାଞ୍ଚ କରନ୍ତୁ।",
+    "Looking for sources for this lesson…": "ଏହି ପାଠ ପାଇଁ ସୋର୍ସ ଖୋଜାଯାଉଛି…",
+    "Upload an image": "ଗୋଟିଏ ଛବି ଅପଲୋଡ୍ କରନ୍ତୁ",
+    "Upload pages": "ପୃଷ୍ଠାଗୁଡ଼ିକ ଅପଲୋଡ୍ କରନ୍ତୁ",
+    "What you added": "ଆପଣ ଯାହା ଯୋଡିଛନ୍ତି"
   }
 }

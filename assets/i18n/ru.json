@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "Тест может содержать до 20 вопросов с множественным выбором и 5 письменных вопросов.",
     "Set the timer between 5 and 180 minutes, or have no timer.": "Установите таймер от 5 до 180 минут или выберите без таймера.",
     "Something went wrong on the server.": "Что-то пошло не так на сервере.",
-    "Free, at any time, in India.": "Бесплатно, в любое время, в Индии."
+    "Free, at any time, in India.": "Бесплатно, в любое время, в Индии.",
+    "Knowledge given for this course: {title}": "Знания, предоставленные для этого курса: {title}",
+    "Textbook pages given for this course: {title}": "Страницы учебника, предоставленные для этого курса: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "Этот урок был написан ИИ исключительно на основе материала, из которого создан курс, без сторонних источников. Убедитесь, что в нем сказано именно то, что задумывалось.",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "Этот урок был написан ИИ на основе этих источников. Маленькие цифры рядом с каждой частью показывают, какому источнику она соответствует.",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "Этот урок был написан ИИ, после чего эти источники были сверены с ним. Маленькие цифры рядом с каждой частью показывают, какие источники ее подтверждают.",
+    "The small numbers beside each part show which sources it uses.": "Маленькие цифры рядом с каждой частью показывают, какие источники в ней используются.",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "Для этого урока не найдено сторонних источников; он написан ИИ — проверьте важные факты.",
+    "Looking for sources for this lesson…": "Поиск источников для этого урока…",
+    "Upload an image": "Загрузить изображение",
+    "Upload pages": "Загрузить страницы",
+    "What you added": "То, что вы добавили"
   }
 }
