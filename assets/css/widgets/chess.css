@@ -1,0 +1,114 @@
+/* =====================================================================
+   The chess board in lessons (assets/js/widgets/chess.js), on parchment:
+   squares in two parchment tones, the pieces above them, arrows above
+   those, and under the board its status, controls and moves.
+   ===================================================================== */
+.chs{
+  --chs-light:#efe2c4;--chs-dark:#b48c5c;--chs-edge:#6f4f2c;
+  --chs-last:rgba(214,165,84,.55);--chs-sel:rgba(138,97,40,.6);--chs-hl:rgba(61,106,44,.36);
+  --chs-dot:rgba(43,29,17,.3);
+  width:100%;max-width:440px;margin:0 auto;color:var(--ink,#2b1d11);font-family:var(--font-body,Georgia,serif)
+}
+.chs--task{max-width:400px}
+
+/* the board */
+.chs__frame{
+  position:relative;container-type:inline-size;border:5px solid var(--chs-edge);border-radius:4px;background:var(--chs-dark);
+  box-shadow:0 0 0 1px rgba(43,29,17,.35),0 10px 22px -14px rgba(43,29,17,.7);
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent
+}
+.chs__board{display:flex;flex-direction:column;aspect-ratio:1/1;width:100%}
+.chs__row{display:flex;flex:1 1 0;min-height:0}
+.chs__sq{position:relative;flex:1 1 0;min-width:0;outline:none}
+.chs__sq.is-light{background:var(--chs-light)}
+.chs__sq.is-dark{background:var(--chs-dark)}
+/* a tint (last move, chosen, marked) under the piece, and a dot or ring for a legal move */
+.chs__sq::before,.chs__sq::after{content:"";position:absolute;pointer-events:none}
+.chs__sq::before{inset:0}
+.chs__sq.is-last::before{background:var(--chs-last)}
+.chs__sq.is-hl::before{background:var(--chs-hl)}
+.chs__sq.is-sel::before{background:var(--chs-sel)}
+.chs__sq.is-check::before{background:radial-gradient(circle at 50% 52%,rgba(205,48,26,.95) 0,rgba(176,46,28,.75) 28%,rgba(154,51,36,0) 72%)}
+.chs__sq.is-target::after{left:35%;top:35%;width:30%;height:30%;border-radius:50%;background:var(--chs-dot)}
+.chs__sq.is-capture::after{inset:4%;border-radius:50%;border:max(3px,1.1cqw) solid var(--chs-dot)}
+.chs__sq.is-mark::before{background:rgba(138,97,40,.28);box-shadow:inset 0 0 0 max(3px,.9cqw) var(--ink-gold,#8a6128)}
+.chs__sq.is-mark::after{left:38%;top:38%;width:24%;height:24%;border-radius:50%;background:var(--ink-gold,#8a6128)}
+.chs__sq.is-good::before{background:rgba(61,106,44,.5);box-shadow:inset 0 0 0 max(3px,.9cqw) var(--ink-green,#3d6a2c)}
+.chs__sq.is-bad::before{background:rgba(154,51,36,.38);box-shadow:inset 0 0 0 max(3px,.9cqw) var(--ink-red,#9a3324)}
+.chs__sq:focus-visible{outline:3px solid #1f140c;outline-offset:-3px;z-index:1}
+.chs__frame.is-input .chs__sq.is-mine,.chs__frame.is-input .chs__sq.is-target,.chs__frame.is-input .chs__sq.is-capture{cursor:pointer}
+.chs__frame.is-input .chs__sq.is-mine{touch-action:none}
+.chs__frame.is-dragging,.chs__frame.is-dragging .chs__sq{cursor:grabbing}
+/* the coordinates, in the corners of the edge squares */
+.chs__co{position:absolute;font-size:10px;font-size:max(9px,2.7cqw);line-height:1;font-weight:600;pointer-events:none;font-family:var(--font-body,Georgia,serif)}
+.chs__co--rank{left:5%;top:5%}
+.chs__co--file{right:6%;bottom:4%}
+.chs__sq.is-light .chs__co{color:#8a6a43}
+.chs__sq.is-dark .chs__co{color:#f3e8cf}
+
+/* the pieces, moved by transform; dragged ones follow the pointer */
+.chs__pieces{position:absolute;inset:0;pointer-events:none;z-index:2}
+.chs__pc{position:absolute;left:0;top:0;width:12.5%;height:12.5%;will-change:transform}
+.chs__pc svg{display:block;width:90%;height:90%;margin:5%;filter:drop-shadow(0 1px 0 rgba(43,29,17,.22))}
+.chs__pc.is-moving{transition:transform .26s cubic-bezier(.25,.7,.3,1)}
+.chs__pc.is-drag{z-index:5;transition:none;filter:drop-shadow(0 6px 6px rgba(43,29,17,.35))}
+.chs__pc.is-drag svg{transform:scale(1.12)}
+.chs__pc.is-gone{animation:chs-gone .28s ease forwards}
+@keyframes chs-gone{to{opacity:0;transform-origin:center}}
+.chs__arrows{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+
+/* the promotion chooser, over the board */
+.chs__promo{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(31,20,12,.45)}
+.chs__promo[hidden]{display:none}
+.chs__promo-box{display:flex;gap:6px;padding:8px;background:var(--parchment,#ece0c4);border:1px solid var(--parchment-edge,#c9b48a);border-radius:6px;box-shadow:0 10px 24px -10px rgba(0,0,0,.6)}
+.chs__promo-btn{width:min(52px,11cqw);height:min(52px,11cqw);min-width:38px;min-height:38px;padding:2px;border:1px solid rgba(138,97,40,.5);border-radius:5px;background:var(--chs-light);cursor:pointer;color:var(--ink,#2b1d11);display:grid;place-items:center}
+.chs__promo-btn svg{width:100%;height:100%}
+.chs__promo-btn:hover,.chs__promo-btn:focus-visible{background:#f7eccd;border-color:var(--ink-gold,#8a6128);outline:none;box-shadow:0 0 0 2px rgba(138,97,40,.35)}
+.chs__promo-cancel svg{width:55%;height:55%}
+
+/* for the screen reader only */
+.chs__live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+
+/* under the board */
+.chs .chs__status{margin:.6rem 0 0;min-height:1.45em;font-size:1.04rem;line-height:1.45;font-style:italic;color:var(--ink-soft,#5b4730);text-align:center}
+.chs__bar{display:flex;flex-wrap:wrap;justify-content:center;gap:.4rem;margin-top:.5rem}
+.chs__btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.35rem;min-width:42px;height:40px;padding:0 .7rem;
+  border:1px solid rgba(138,97,40,.55);border-radius:6px;background:rgba(251,246,234,.55);color:var(--ink,#2b1d11);
+  font:inherit;font-size:1rem;font-weight:600;line-height:1;cursor:pointer;transition:background-color .15s,border-color .15s
+}
+.chs__btn svg{width:18px;height:18px;flex:none}
+.chs__btn:hover:not([disabled]){background:#f7eccd;border-color:var(--ink-gold,#8a6128)}
+.chs__btn:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:2px}
+.chs__btn[disabled]{opacity:.38;cursor:default}
+.chs__btn[hidden]{display:none}
+.chs__btn--play{min-width:52px;background:rgba(214,165,84,.28)}
+.chs__btn--reset{margin-left:.5rem}
+
+.chs .chs__moves{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:.1rem .2rem;margin:.65rem 0 0;padding:.55rem .2rem 0;list-style:none;
+  border-top:1px dashed rgba(138,97,40,.45);max-height:8.6em;overflow-y:auto;font-size:1.06rem;line-height:1.55
+}
+.chs .chs__moves[hidden]{display:none}
+.chs .chs__moves li{margin:0;font-size:inherit;line-height:inherit}
+.chs .chs__setup{color:var(--ink-soft,#5b4730);opacity:.8;font-style:italic;margin-right:.35rem}
+.chs .chs__ply{display:inline-flex;align-items:baseline}
+.chs__num{color:var(--ink-soft,#5b4730);margin:0 .1rem 0 .3rem;font-variant-numeric:tabular-nums}
+.chs__mv{padding:.05rem .3rem;border:0;border-radius:4px;background:none;color:var(--ink,#2b1d11);font:inherit;font-weight:600;cursor:pointer}
+.chs__mv:hover{background:rgba(138,97,40,.14)}
+.chs__mv:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:1px}
+.chs__mv.is-current{background:rgba(138,97,40,.26)}
+.chs__mv.is-own{color:var(--ink-green,#3d6a2c);font-style:italic}
+
+/* a task inside a checkpoint question */
+.q.is-correct .chs__frame{box-shadow:0 0 0 2px var(--ink-green,#3d6a2c),0 10px 22px -14px rgba(43,29,17,.7)}
+
+@media (max-width:420px){
+  .chs__btn{min-width:40px;height:40px;padding:0 .55rem}
+  .chs__btn--reset{margin-left:.2rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .chs__pc.is-moving{transition:none}
+  .chs__pc.is-gone{animation:none;opacity:0}
+  .chs__btn{transition:none}
+}

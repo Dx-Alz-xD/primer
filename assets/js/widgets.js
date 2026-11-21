@@ -61,7 +61,7 @@
       s.src = `/assets/js/widgets/${kind}.js`;
       s.async = true;
       s.dataset.widget = kind;
-      s.onload = () => (impls[kind] ? resolve(impls[kind]) : reject(new Error(kind + ' did not register')));
+      s.onload = () => (impls[kind] ? Promise.resolve(impls[kind].ready).then(() => resolve(impls[kind]), reject) : reject(new Error(kind + ' did not register')));
       s.onerror = () => { delete loading[kind]; reject(new Error(kind + ' could not be loaded')); };
       document.head.appendChild(s);
     });
