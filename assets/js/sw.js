@@ -531,8 +531,12 @@ function filesIn(html, base) {
 function fontsIn(css, base, lang) {
   const google = base.startsWith('https://fonts.googleapis.com/');
   const want = new Set(['latin', 'latin-ext']);
-  if (lang === 'ru') { want.add('cyrillic'); want.add('cyrillic-ext'); }
-  if (lang === 'hi') want.add('devanagari');
+  // the script of the interface language (the subsets Google Fonts names in its stylesheets)
+  const SCRIPT = {
+    ru: 'cyrillic cyrillic-ext', hi: 'devanagari', bho: 'devanagari', mr: 'devanagari', mai: 'devanagari', bn: 'bengali', as: 'bengali',
+    te: 'telugu', ta: 'tamil', gu: 'gujarati', ur: 'arabic', ar: 'arabic', kn: 'kannada', or: 'oriya', ml: 'malayalam', pa: 'gurmukhi'
+  };
+  (SCRIPT[lang] || '').split(' ').filter(Boolean).forEach((s) => want.add(s));
   const out = [];
   const re = /(?:\/\*\s*([\w-]+)\s*\*\/\s*)?@font-face\s*\{([^}]*)\}/g;
   let m;

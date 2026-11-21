@@ -124,6 +124,22 @@
     syncFolders();
     document.addEventListener('primer:folders', syncFolders);
 
+    // The language the course is written in: the interface language unless the learner picks another.
+    // Each language by its own name, with its name in the interface language beside it.
+    const langSel = $('#b-lang');
+    const fillLangs = () => {
+      const keep = langSel.value || P.lang || 'en';
+      const opt = (code) => {
+        const C = P.COURSE_LANGS[code], local = P.langName(code);
+        return `<option value="${code}" lang="${code}">${esc(C.name)}${local && local !== C.name ? ` · ${esc(local)}` : ''}</option>`;
+      };
+      const more = P.MORE_LANGS.slice().sort((a, b) => P.langName(a).localeCompare(P.langName(b), P.lang));
+      langSel.innerHTML = Object.keys(P.LANGS).map(opt).join('') +
+        `<optgroup label="${esc(P.t('More languages'))}">${more.map(opt).join('')}</optgroup>`;
+      langSel.value = P.COURSE_LANGS[keep] ? keep : 'en';
+    };
+    if (langSel && P.COURSE_LANGS) { fillLangs(); P.tReady.then(fillLangs); }
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const t = P.clean(topic.value, 120);
@@ -163,7 +179,7 @@
       try {
         const course = await P.api.generateCourse({
           topic: t, from: from.value, to: to.value, instructions: instr.value,
-          extra: { folderId, syllabus: P.syllabus ? P.syllabus.value() : '' }
+          extra: { folderId, syllabus: P.syllabus ? P.syllabus.value() : '', lang: langSel && langSel.value ? langSel.value : undefined }
         });
         clearInterval(tick);
         steps.forEach((li) => { li.className = 'is-done'; });
@@ -228,7 +244,15 @@
     const started = Object.keys(prog).length > 0;
     const resume = P.courses.resumeAt(course);
     const cta = !started ? 'Start lesson 1' : stats.done === stats.total ? 'Review from lesson 1' : `Continue with lesson ${resume}`;
-    const range = `${course.from ? esc(P.cap(course.from)) : 'The very beginning'} to ${course.to ? esc(course.to) : 'the end of the subject'}`;
+    const rangeHTML = () => {
+      const from = course.from ? `<span class="ugc">${esc(P.cap(course.from))}</span>` : '';
+      const to = course.to ? `<span class="ugc">${esc(course.to)}</span>` : '';
+      const line = from ? (to ? '{from} to {to}' : '{from} to the end of the subject') : (to ? 'The very beginning to {to}' : 'The very beginning to the end of the subject');
+      return esc(P.t ? P.t(line) : line).replace('{from}', () => from).replace('{to}', () => to);
+    };
+    const lang = course.lang || 'en';
+    const langRow = P.COURSE_LANGS && lang !== P.lang
+      ? `<dt>Language</dt><dd><span lang="${esc(lang)}" data-no-i18n>${esc((P.COURSE_LANGS[lang] || {}).name || lang)}</span></dd>` : '';
     const teaching = course.instructions ? `“${esc(course.instructions)}”` : 'No special instructions';
 
     const unitsHTML = course.units.map((u, ui) => {
@@ -276,8 +300,9 @@
         <div data-fit-slot></div>
         <dl class="spec">
           <dt>Topic</dt><dd>${esc(course.topic)}</dd>
-          <dt>Range</dt><dd>${range}</dd>
+          <dt>Range</dt><dd data-range>${rangeHTML()}</dd>
           <dt>Teaching</dt><dd>${teaching}</dd>
+          ${langRow}
           ${folderRow}
         </dl>
         <div class="course-head__progress">
@@ -298,6 +323,10 @@
       <ol class="units">${unitsHTML}</ol>`;
 
     if (P.review) P.review.courseCard(view.querySelector('[data-review-slot]'), course.id); // "2 to review · 1 of 3 mistakes fixed"
+    // the range again once the dictionary is in, if the page was drawn before it
+    if (P.tReady) P.tReady.then(() => { const dd = view.querySelector('[data-range]'); if (dd) dd.innerHTML = rangeHTML(); });
+    // the course's own words (its title, units and lessons) in its language, its direction and its script's font
+    if (P.contentLang) [view.querySelector('.course-head h1'), view.querySelector('.units')].forEach((el) => P.contentLang(el, lang));
 
     // The quiet note when the AI thinks this topic doesn't belong in its folder.
     const fitSlot = view.querySelector('[data-fit-slot]');

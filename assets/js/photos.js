@@ -47,7 +47,8 @@
     if (c.author) parts.push(`<span class="photo__author">${esc(c.author)}</span>`);
     if (c.license) parts.push(c.licenseUrl ? out(c.licenseUrl, esc(c.license)) : esc(c.license));
     parts.push(c.source ? out(c.source, 'Wikimedia Commons') : 'Wikimedia Commons');
-    return `<small class="photo__credit">${esc(t('Photo'))}: ${parts.join(' · ')}</small>`;
+    // the label is interface text inside a lesson: data-i18n has it translated even if the dictionary arrives later
+    return `<small class="photo__credit"><span data-i18n>${esc(t('Photo'))}</span>: ${parts.join(' · ')}</small>`;
   }
 
   function html(b, opts) {

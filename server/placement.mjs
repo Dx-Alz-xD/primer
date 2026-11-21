@@ -92,7 +92,8 @@ async function placement({ req, res }) {
   const to = text(body.to, 80);
   const s = screen(topic, to);
   if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);
-  const lang = LANG_NAMES[u.lang] ? u.lang : 'en';
+  // the course's language when the builder chose one, or else the learner's own
+  const lang = typeof body.lang === 'string' && LANG_NAMES[body.lang] ? body.lang : LANG_NAMES[u.lang] ? u.lang : 'en';
   const key = { v: 1, topic: norm(topic), to: norm(to), ...(lang !== 'en' ? { lang } : {}), ...safetyKey(s) };
   const out = await cached('placement', key, async () => {
     // only a request that reaches the AI counts towards the limit

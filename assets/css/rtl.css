@@ -1,0 +1,62 @@
+/* =====================================================================
+   Right-to-left: the page in Urdu or Arabic (dir="rtl" on <html>), or
+   right-to-left content in a left-to-right page (a lesson in Arabic).
+   Flex and grid layouts turn round on their own; this mirrors the rules
+   that name a side, and keeps maths, code and addresses left-to-right.
+   Loaded by assets/js/i18n.js only when something is right-to-left.
+   ===================================================================== */
+
+/* maths, code, email addresses, passwords and links read left to right */
+[dir="rtl"] .katex, [dir="rtl"] .katex-display, [dir="rtl"] .math-display{direction:ltr;unicode-bidi:isolate}
+[dir="rtl"] code, [dir="rtl"] pre{direction:ltr;unicode-bidi:isolate;text-align:left}
+[dir="rtl"] input[type="email"], [dir="rtl"] input[type="password"], [dir="rtl"] input[type="url"]{direction:ltr;text-align:right}
+[dir="rtl"] input[type="email"]::placeholder, [dir="rtl"] input[type="password"]::placeholder{text-align:right}
+
+/* Nastaliq (Urdu) sits tall: more room between lines, and headings that don't clip */
+:root[lang="ur"] body, :root[lang="ur"] :is(p, li, dd, dt, label, small, figcaption, blockquote, .help, .lead){line-height:1.95}
+:root[lang="ur"] h1, :root[lang="ur"] h2, :root[lang="ur"] h3, :root[lang="ur"] h4{line-height:1.7}
+:root[lang="ur"] .btn, :root[lang="ur"] .chip, :root[lang="ur"] .input, :root[lang="ur"] .select, :root[lang="ur"] .textlink, :root[lang="ur"] .label{line-height:1.8}
+:root[lang="ur"] select{line-height:2.1;padding-top:.05rem;padding-bottom:.2rem}
+:root[lang="ar"] h1, :root[lang="ar"] h2, :root[lang="ar"] h3{line-height:1.35}
+/* Arabic script has no italics: italic text stays upright rather than being slanted by the browser */
+[dir="rtl"]{font-synthesis-style:none}
+
+/* base */
+[dir="rtl"] .skip{left:auto;right:12px}
+[dir="rtl"] .chips__label{margin-right:0;margin-left:.2rem}
+[dir="rtl"] .label small{margin-left:0;margin-right:.35rem}
+
+/* selects: the arrow on the left */
+[dir="rtl"] .select{padding-right:.85rem;padding-left:2.3rem;background-position:left .85rem center}
+[dir="rtl"] .select--small{padding:.3rem .65rem .3rem 2rem;background-position:left .6rem center}
+
+/* landing: the typed example sits where the input's text starts */
+[dir="rtl"] .ask__type{text-align:right}
+
+/* app: course outline rows and notes */
+[dir="rtl"] .lrow__n{text-align:left}
+[dir="rtl"] .lrow__side{text-align:left}
+@media (max-width:640px){ [dir="rtl"] .lrow__side{text-align:right} }
+[dir="rtl"] .fitwarn, [dir="rtl"] .lvl-result{border-left:0;border-right:2px solid rgba(214,105,79,.55);border-radius:3px 0 0 3px}
+[dir="rtl"] .lvl-result{border-right-color:var(--gold)}
+[dir="rtl"] .ccover--card .ccover__credit{text-align:left}
+
+/* lesson */
+[dir="rtl"] .side__n{text-align:left}
+[dir="rtl"] .lsec__content ul, [dir="rtl"] .q__revise ul, [dir="rtl"] .qmark__missing{padding-left:0;padding-right:1.3rem}
+[dir="rtl"] .callout{border-left:0;border-right:3px solid var(--ink-gold);border-radius:4px 0 0 4px}
+[dir="rtl"] .callout--mnemonic{border-right-color:var(--ink-red)}
+[dir="rtl"] .callout--eli5{border-right-color:var(--ink-green)}
+[dir="rtl"] .q__feedback strong{margin-right:0;margin-left:.35rem}
+[dir="rtl"] .model__body{border-left:0;border-right:3px solid var(--ink-gold)}
+[dir="rtl"] .qmark{border-left-width:1px;border-right-width:3px;border-radius:4px 0 0 4px}
+[dir="rtl"] .qmark__dots{margin-right:0;margin-left:.55rem}
+[dir="rtl"] .lnav__next{margin-left:0;margin-right:auto;text-align:left}
+[dir="rtl"] .trnote .textlink{margin-left:0;margin-right:.3rem}
+[dir="rtl"] .doubt__quote, [dir="rtl"] .ditem__quote{padding-left:0;border-left:0;padding-right:.7rem;border-right:2px solid var(--gold)}
+[dir="rtl"] .ditem__a{border-left:0;border-right:3px solid var(--gold);border-radius:4px 0 0 4px}
+[dir="rtl"] .doubt__note{margin-right:0;margin-left:auto}
+[dir="rtl"] .wb-group{border-right:0;border-left:1px solid var(--leather-soft)}
+@media (max-width:720px){ [dir="rtl"] .wb-group{border-left:0} [dir="rtl"] .lbar__tools{margin-left:0;margin-right:auto} }
+[dir="rtl"] .nb__entry.is-here{padding-left:0;border-left:0;padding-right:.7rem;border-right:2px solid var(--ink-red)}
+[dir="rtl"] .nb__swatches{margin-left:0;margin-right:.2rem}

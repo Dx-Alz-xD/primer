@@ -16,6 +16,10 @@
   const P = window.Primer;
   const $ = P.$, $$ = P.$$, esc = P.esc;
   if (!P.auth.current()) return;
+  // The lesson body is content, which the dictionary leaves alone, so its interface text (checkpoints,
+  // buttons, feedback) is translated here, and marked data-i18n in case the dictionary arrives later.
+  const t = (s) => (P.t ? P.t(s) : s);
+  const T = (s) => esc(t(s));
 
   /* ---------- maths (KaTeX auto-render) ---------- */
   const MATH_OPTS = {
@@ -101,8 +105,8 @@
       <div class="lload" role="status">
         <span class="quill" aria-hidden="true"><i></i><i></i><i></i></span>
         <div>
-          <p class="lload__title">Writing this lesson</p>
-          <p>Free AI models usually take 20 to 60 seconds. Once it’s written it’s saved, so it opens instantly next time.</p>
+          <p class="lload__title" data-i18n>${T('Writing this lesson')}</p>
+          <p data-i18n>${T('Free AI models usually take 20 to 60 seconds. Once it’s written it’s saved, so it opens instantly next time.')}</p>
         </div>
       </div>`;
   }
@@ -111,11 +115,11 @@
     $('#lbody').innerHTML = `
       <div class="lload lload--error" role="alert">
         <div>
-          <p class="lload__title">This lesson couldn’t be written</p>
-          <p>${esc(err && err.message ? err.message : 'Something went wrong.')}</p>
-          <div class="lload__actions">
-            <button class="btn btn--small" type="button" data-retry>Try again</button>
-            <a class="textlink" href="${outlineHref}">Back to the outline</a>
+          <p class="lload__title" data-i18n>${T('This lesson couldn’t be written')}</p>
+          <p data-i18n>${T(err && err.message ? err.message : 'Something went wrong.')}</p>
+          <div class="lload__actions" data-i18n>
+            <button class="btn btn--small" type="button" data-retry>${T('Try again')}</button>
+            <a class="textlink" href="${outlineHref}">${T('Back to the outline')}</a>
           </div>
         </div>
       </div>`;
@@ -177,6 +181,12 @@
     prog.tries = prog.tries || {};
 
     renderHead();
+    // the course's own words in their language, direction and script's font: titles come from the outline,
+    // and the lesson's body is in the learner's language when it was translated for them
+    if (P.contentLang) {
+      ['#lesson-title', '#side', '#lbar-course'].forEach((sel) => P.contentLang($(sel), P.api.lessonLang(course)));
+      P.contentLang($('#lbody'), L.translated ? P.lang : P.api.lessonLang(course));
+    }
     if (P.voice) P.voice.init({ course, n, sections, sectionEl: (i) => $(`#sec-${i}`), unlocked: () => unlocked });
     renderParts();
     save();
@@ -236,7 +246,7 @@
   function translationNote() {
     const from = P.api.lessonLang(course);
     if (course.source === 'sample' || !P.lang || from === P.lang || !P.LANGS) return '';
-    const fromName = (P.LANGS[from] || {}).label || from;
+    const fromName = P.langName ? P.langName(from) : from; // in the interface language
     const toName = (P.LANGS[P.lang] || {}).name || P.lang;
     return lesson.translated
       ? `<p class="trnote">Translated from ${esc(fromName)}. <button class="textlink" type="button" data-tr="off">Show the original</button></p>`
@@ -271,8 +281,8 @@
       cp.className = 'checkpoint';
       const more = i < sections.length - 1;
       const count = s.checkpoint.length;
-      cp.innerHTML = `<p class="checkpoint__title">${CHECK_SVG}Check your understanding</p>
-        <p class="checkpoint__sub">${more ? (count > 1 ? `Answer all ${count} to open the next part of the lesson.` : 'Answer to open the next part of the lesson.') : 'Answer to finish the lesson.'}</p>`;
+      cp.innerHTML = `<p class="checkpoint__title" data-i18n>${CHECK_SVG}${T('Check your understanding')}</p>
+        <p class="checkpoint__sub" data-i18n>${T(more ? (count > 1 ? `Answer all ${count} to open the next part of the lesson.` : 'Answer to open the next part of the lesson.') : 'Answer to finish the lesson.')}</p>`;
       s.checkpoint.forEach((q) => cp.appendChild(renderQuestion(q, i)));
       el.appendChild(cp);
     }
@@ -300,11 +310,11 @@
         q.choices.map((c, ci) => `<label class="q__choice"><input type="radio" name="q-${q.id}" value="${ci}"><span>${c}</span></label>`).join('') +
         '</div>';
     } else if (q.type === 'subjective') {
-      body += `<textarea class="q__textarea" aria-labelledby="${pid}" maxlength="3000" placeholder="Write your answer in your own words"></textarea>`;
+      body += `<textarea class="q__textarea" aria-labelledby="${pid}" maxlength="3000" placeholder="${T('Write your answer in your own words')}"></textarea>`;
     } else {
-      body += `<div class="q__row"><input class="q__input" type="text" inputmode="${q.type === 'numeric' ? 'decimal' : 'text'}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-labelledby="${pid}" placeholder="${q.type === 'numeric' ? 'Your answer' : 'Type your answer'}">${q.unit ? `<span class="q__unit">${esc(q.unit)}</span>` : ''}</div>`;
+      body += `<div class="q__row"><input class="q__input" type="text" inputmode="${q.type === 'numeric' ? 'decimal' : 'text'}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-labelledby="${pid}" placeholder="${T(q.type === 'numeric' ? 'Your answer' : 'Type your answer')}" data-i18n>${q.unit ? `<span class="q__unit">${esc(q.unit)}</span>` : ''}</div>`;
     }
-    body += `<div class="q__actions"><button class="btn btn--small q__check" type="submit">${q.type === 'subjective' ? 'Submit answer' : 'Check'}</button></div>
+    body += `<div class="q__actions" data-i18n><button class="btn btn--small q__check" type="submit">${T(q.type === 'subjective' ? 'Submit answer' : 'Check')}</button></div>
       <div class="q__feedback" role="status" aria-live="polite"></div>
       <div class="q__revise" hidden></div>`;
     w.innerHTML = body;
@@ -359,13 +369,13 @@
     if (prog.answered[q.id] || w.classList.contains('is-locked')) return;
     const value = readValue(q, w);
     if (!value) {
-      setFeedback(w, 'warn', q.type === 'choice' ? 'Choose an answer first.' : q.type === 'subjective' ? 'Write your answer first.' : 'Enter an answer first.');
+      setFeedback(w, 'warn', T(q.type === 'choice' ? 'Choose an answer first.' : q.type === 'subjective' ? 'Write your answer first.' : 'Enter an answer first.'));
       return;
     }
 
     if (q.type === 'subjective') {
       lockQ(w, true);
-      setFeedback(w, 'warn', 'Saving your answer…');
+      setFeedback(w, 'warn', T('Saving your answer…'));
       await P.api.submitSubjective(course, n, q, value);
       record(q, { status: 'submitted', value });
       showSubmitted(q, w, true);
@@ -375,7 +385,7 @@
 
     const res = P.api.checkAnswer(q, value);
     if (res.invalid) {
-      setFeedback(w, 'warn', 'Enter a number, like 7, 2.5 or 3/4.');
+      setFeedback(w, 'warn', T('Enter a number, like 7, 2.5 or 3/4.'));
       return;
     }
     prog.tries[q.id] = (prog.tries[q.id] || 0) + 1;
@@ -397,7 +407,7 @@
     w.classList.add('is-correct');
     lockQ(w, true);
     w.querySelector('.q__revise').hidden = true;
-    setFeedback(w, 'correct', `<strong>Correct.</strong>${q.explain ? `<span class="explain">${q.explain}</span>` : ''}`);
+    setFeedback(w, 'correct', `<strong data-i18n>${T('Correct.')}</strong>${q.explain ? `<span class="explain">${q.explain}</span>` : ''}`);
   }
 
   async function showWrong(q, w, secIdx, value, ctx) {
@@ -405,19 +415,19 @@
     const section = (ctx && ctx.section) || sections[secIdx];
     w.classList.add('is-wrong');
     lockQ(w, true);
-    setFeedback(w, 'wrong', '<strong>Not quite.</strong> Revise this part of the lesson, then try again.');
+    setFeedback(w, 'wrong', `<strong>${T('Not quite.')}</strong> ${T('Revise this part of the lesson, then try again.')}`);
 
     const panel = w.querySelector('.q__revise');
     const rev = await P.api.getRevision(course, lesson, section, q, value);
     panel.innerHTML = `
-      <h4>Revise: ${esc(section.title)}</h4>
-      <p>The key points from this part of the lesson:</p>
+      <h4>${T('Revise: ' + section.title)}</h4>
+      <p>${T('The key points from this part of the lesson:')}</p>
       <ul>${rev.points.map((p) => `<li>${p}</li>`).join('')}</ul>
-      ${tries >= 2 && q.hint ? `<p class="q__hint"><strong>Hint:</strong> ${q.hint}</p>` : ''}
+      ${tries >= 2 && q.hint ? `<p class="q__hint"><strong>${T('Hint:')}</strong> ${q.hint}</p>` : ''}
       <div class="q__revise-actions">
-        <button class="btn btn--small" type="button" data-retry>I’ve revised, try again</button>
-        <button class="textlink" type="button" data-reread>${ctx && ctx.rereadLabel ? esc(ctx.rereadLabel) : 'Re-read the section'}</button>
-        ${tries >= 3 ? '<button class="textlink" type="button" data-reveal>Show the answer</button>' : ''}
+        <button class="btn btn--small" type="button" data-retry>${T('I’ve revised, try again')}</button>
+        <button class="textlink" type="button" data-reread>${ctx && ctx.rereadLabel ? esc(T(ctx.rereadLabel)) : T('Re-read the section')}</button>
+        ${tries >= 3 ? `<button class="textlink" type="button" data-reveal>${T('Show the answer')}</button>` : ''}
       </div>`;
     panel.hidden = false;
     P.math(panel);
@@ -467,16 +477,16 @@
       const ans = $$('.q__choice', w)[q.answer];
       if (ans) ans.classList.add('is-answer');
     }
-    setFeedback(w, 'revealed', `<strong>Answer:</strong> ${answerText(q)}${q.explain ? `<span class="explain">${q.explain}</span>` : ''}`);
+    setFeedback(w, 'revealed', `<strong data-i18n>${T('Answer:')}</strong> ${answerText(q)}${q.explain ? `<span class="explain">${q.explain}</span>` : ''}`);
   }
 
   function showSubmitted(q, w, fresh) {
     lockQ(w, true);
-    setFeedback(w, 'submitted', '<strong>Answer saved.</strong>');
+    setFeedback(w, 'submitted', `<strong data-i18n>${T('Answer saved.')}</strong>`);
     if (q.model && !w.querySelector('.model')) {
       const d = document.createElement('details');
       d.className = 'model';
-      d.innerHTML = `<summary>Compare with a model answer</summary><div class="model__body">${q.model}</div>`;
+      d.innerHTML = `<summary data-i18n>${T('Compare with a model answer')}</summary><div class="model__body">${q.model}</div>`;
       w.appendChild(d);
       P.math(d);
     }

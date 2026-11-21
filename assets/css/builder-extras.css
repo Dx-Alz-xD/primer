@@ -93,3 +93,9 @@
   .lvl__title{font-size:1.35rem}
 }
 @media (prefers-reduced-motion: reduce){ .lvl[open]{animation:none} }
+
+/* the course language, beside the topic's label */
+.field__head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.35rem 1rem}
+.blang{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .55rem}
+.blang .help{font-size:1rem}
+.blang .select{max-width:17rem}
