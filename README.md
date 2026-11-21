@@ -20,6 +20,12 @@ Primer turns one topic into a full course. You name the subject, say where to st
 - **A shared topic library.** One general course per subject: a later request for the same or a synonymous topic reuses its lessons, cut to your range, so they open at once.
 - **A community board.** Share the sources you learn from, with photos and links; threaded comments and votes. Anyone can read; sign in to take part.
 - **Read a course as a book**, save it as a PDF, or download it as an EPUB with real maths.
+- **Review today.** A question you get wrong comes back the next day, then three days later, until you’ve answered it right twice in a row. Each course shows how many of your mistakes you’ve fixed.
+- **Class mode for teachers.** Turn a course into a class with a six-character join code. Every student gets their own copy, each lesson is written once for the whole class, and the teacher’s dashboard shows progress, the questions the class gets wrong and the doubts students ask.
+- **Works offline.** Install Primer like an app and download a course: written lessons, checkpoints and notes keep working with no internet, and your progress syncs when you’re back. (Offline use needs https or localhost.)
+- **Build from a syllabus.** Paste a syllabus or chapter list (NCERT, your university’s) and the course follows its chapters and order.
+- **A two-minute level check** before a course sets where it starts, from the first idea you don’t know yet.
+- **Answers in your own words are marked**, with short feedback and the key points you missed.
 - **Accounts that keep everything**: courses, progress, notes, doubts and the tutor’s memory follow you to any device.
 - **Risky topics are taught safely, not turned away.** A request like “bomb making” becomes a course on the chemistry and safety of explosives, and a hateful premise becomes critical history. Lessons and the tutor stay at textbook level and never give instructions for causing harm. Someone who seems to be struggling gets a supportive answer with a helpline. The only thing always refused is sexual content involving children.
 
@@ -69,6 +75,7 @@ Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` 
 ```
 index.html, auth.html, app.html, lesson.html   pages
 community.html, post.html, book.html            community board, one post, the book reader
+review.html, class.html                         review of past mistakes, a teacher’s class dashboard
 assets/js, assets/css                           front end (one file per feature)
 assets/i18n                                     interface translations (Hindi, Russian)
 server/index.mjs                                HTTP server, pages, security headers
@@ -80,6 +87,11 @@ server/voice.mjs                                ElevenLabs narration, sound effe
 server/folders.mjs, server/library.mjs          folders and the shared topic library
 server/community.mjs                            posts, comments, votes, photos
 server/safety.mjs                               safe framing for risky topics
+server/review.mjs                               the review schedule for past mistakes
+server/classes.mjs                              classes, join codes, the class dashboard
+server/placement.mjs, server/marking.mjs        the level check, marking written answers
+server/offline.mjs, assets/js/sw.js             the installable app and offline courses
+assets/icons                                    app icons
 server/ebook.mjs, server/translate.mjs          the book view, lesson translation
 server/features.mjs                             the list of feature modules
 docs/                                           images for this README
