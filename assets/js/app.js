@@ -394,5 +394,6 @@
       }
     });
     if (P.classes) P.classes.mountCourse(view, course);
+    if (P.exams) P.exams.mountCourse(view, course); // unit exams, the final exam and tests (assets/js/exams.js)
   }
 })();

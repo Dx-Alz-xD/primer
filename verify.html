@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Check a certificate | Primer</title>
+<meta name="theme-color" content="#120b06">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23120b06'/%3E%3Ctext x='32' y='47' font-family='Georgia,serif' font-size='44' text-anchor='middle' fill='%23d6a554'%3EP%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&display=swap">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/offline.css">
+<link rel="stylesheet" href="assets/css/passport.css">
+<script defer src="assets/js/core.js"></script>
+<script defer src="assets/js/i18n.js"></script>
+<script defer src="assets/js/backdrop.js"></script>
+<script defer src="assets/js/qr.js"></script>
+<script defer src="assets/js/passport.js"></script>
+<script defer src="assets/js/offline.js"></script>
+</head>
+<body class="pc-body" data-page="verify" data-backdrop="calm">
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop__photo"></div>
+    <div class="backdrop__vignette"></div>
+    <div class="backdrop__glow"></div>
+    <canvas class="backdrop__glitch"></canvas>
+  </div>
+
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="page">
+    <header class="nav wrap">
+      <a class="logo" href="index.html" aria-label="Primer">
+        <svg viewBox="0 0 32 32" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M16 9.2c-3-2.3-7-2.7-11-1.6v16c4-1.1 8-.7 11 1.6 3-2.3 7-2.7 11-1.6v-16c-4-1.1-8-.7-11 1.6z"/><path d="M16 9.2v16"/></svg>
+        Primer
+      </a>
+      <nav class="nav__links" aria-label="Site">
+        <a class="nav__link" href="community.html">Community</a>
+        <a class="nav__link" href="app.html#library" data-when="user" hidden>My courses</a>
+        <span class="user" data-when="user" hidden><span class="user__name" data-user-name></span><button class="textlink" type="button" data-signout>Sign out</button></span>
+        <a class="nav__link" href="auth.html#signin" data-when="guest">Sign in</a>
+      </nav>
+    </header>
+
+    <main id="main" class="wrap pc vf" tabindex="-1">
+      <header class="vf-head">
+        <h1>Check a Primer certificate</h1>
+        <p>Type the code printed on the certificate, or scan its QR code. Anyone can check one, with no account.</p>
+      </header>
+      <form class="vf-form card card--solid" id="vf-form" novalidate>
+        <label class="label" for="vf-code">Certificate code</label>
+        <div class="vf-row">
+          <input class="input" id="vf-code" name="code" type="text" maxlength="12" placeholder="e.g. K7PQ-X4AB" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="vf-err">
+          <button class="btn" type="submit">Check</button>
+        </div>
+        <p class="field__error" id="vf-err" role="alert"></p>
+      </form>
+      <div id="pc-root" class="vf-result" aria-live="polite"></div>
+    </main>
+
+    <footer class="foot wrap">
+      <p>© 2026 Primer. Learn anything, credibly.</p>
+    </footer>
+  </div>
+</body>
+</html>

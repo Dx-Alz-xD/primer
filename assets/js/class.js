@@ -181,6 +181,7 @@
     return `<section class="cls-sheet" aria-labelledby="h-wrong">
         <h2 id="h-wrong">Questions the class gets wrong</h2>
         <p class="cls-sheet__help">Checkpoint questions students answered wrongly, the most missed first. Worth going over with everyone.</p>
+        ${list ? `<p class="cls-sheet__help"><a class="textlink" href="paper.html?worksheet=${id}">Print a worksheet of these questions</a></p>` : ''}
         ${list ? `<ol class="wrongs">${list}</ol>` : '<p class="cls-sheet__empty">No wrong answers yet. When students miss a checkpoint question, it shows up here.</p>'}
       </section>`;
   }

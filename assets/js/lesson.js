@@ -83,7 +83,8 @@
   renderNav();
 
   let lesson, sections, prog, unlocked = 0;
-  loadLesson();
+  // a lesson in a unit whose earlier unit exams aren't passed yet stays closed (assets/js/exams.js)
+  (P.exams ? P.exams.gate(course, meta) : Promise.resolve(true)).then((open) => { if (open) loadLesson(); });
 
   // AI lessons are written the first time they're opened, which takes a while on free models.
   function loadLesson() {
@@ -586,6 +587,7 @@
       </div>`;
     box.hidden = false;
     renderSide();
+    if (P.exams) P.exams.lessonDone(box, course, meta); // the end of a unit points to its exam
   }
   } // run
 })();
