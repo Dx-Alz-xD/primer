@@ -774,6 +774,82 @@ export function askJSON({ system, user, maxTokens = 1800, timeoutMs = 60000, dea
 
 // Adds \( \) around bare LaTeX, as lessons get, for any AI text shown on a page.
 export { mathify };
+// The course and lesson prompts, for features that plan or write in their own way (sources-in.mjs).
+export { OUTLINE_SYSTEM, LESSON_SYSTEM };
+
+/* ------------------------------------------------------------------ */
+/* Vision: what a photo shows, or the text on a photographed page     */
+/* ------------------------------------------------------------------ */
+
+// Models that take an image through the chat-completions `image_url` part (a data: URL), per
+// provider, best first. Only providers that are configured are used, in PRIMER_VISION_ORDER
+// (Gemini first by default: it reads Indian scripts and equations best); GEMINI_VISION_MODELS,
+// GROQ_VISION_MODELS and so on list other models. Requesty's vision models all cost credit.
+export const VISION_MODELS = {
+  gemini: ['gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest'],
+  groq: ['qwen/qwen3.8-27b'],
+  openrouter: ['nvidia/nemotron-3.5-super-vl:free', 'google/gemma-4-31b-it:free'],
+  requesty: []
+};
+const VISION_ORDER = ['gemini', 'groq', 'openrouter', 'requesty'];
+
+function visionCandidates(cfg) {
+  const asked = [...new Set(csv(env('PRIMER_VISION_ORDER').toLowerCase()))].filter((id) => PROVIDERS[id]);
+  const all = (asked.length ? asked : VISION_ORDER)
+    .filter((id) => cfg.providers.some((p) => p.id === id))
+    .flatMap((id) => {
+      const own = env(PROVIDERS[id].modelsVar.replace(/_MODELS$/, '_VISION_MODELS'));
+      return (own ? csv(own) : VISION_MODELS[id]).map((model) => ({ id, model }));
+    });
+  const t = Date.now();
+  const tired = (c) => (resting.get(`${c.id}:${c.model}`) || 0) > t;
+  return [...all.filter((c) => !tired(c)), ...all.filter(tired)];
+}
+
+// Whether any configured provider has a model that can read photos (safe to show: no keys).
+export const visionReady = () => visionCandidates(config()).length > 0;
+
+// Like askJSON, with images (data: URLs) sent along with the user text, to image-capable models only.
+export async function askVision({ system, user, images, maxTokens = 3000, timeoutMs = 60000, deadlineMs = 150000, validate, label }) {
+  const cfg = config();
+  const list = visionCandidates(cfg);
+  if (!list.length) throw new AIError('Reading photos needs a Gemini, Groq or OpenRouter key in .env.', 503);
+  const content = [{ type: 'text', text: user }, ...images.map((url) => ({ type: 'image_url', image_url: { url } }))];
+  const failures = [];
+  const refused = new Set();
+  const started = Date.now();
+  for (const { id, model } of list) {
+    if (refused.has(id)) continue;
+    const name = PROVIDERS[id].name;
+    const left = deadlineMs - (Date.now() - started);
+    if (left < 10000) { console.log(`[ai] ${label}: out of time, skipping the remaining vision models`); break; }
+    const t0 = Date.now();
+    const r = await callModel(id, model, [{ role: 'system', content: system }, { role: 'user', content }], maxTokens, Math.min(timeoutMs, left));
+    const secs = ((Date.now() - t0) / 1000).toFixed(1);
+    if (!r.ok) {
+      console.log(`[ai] ${label}: ${name} ${model} failed (${r.status}) after ${secs}s: ${short(r.message)}`);
+      failures.push({ id, status: r.status });
+      if (r.status === 401 || r.status === 403 || (r.status === 402 && id === 'openrouter')) refused.add(id);
+      rest(id, model, r);
+      continue;
+    }
+    try {
+      const value = validate(parseJSON(r.content));
+      console.log(`[ai] ${label}: ${name} ${r.model} answered in ${secs}s`);
+      return { value, model: r.model, provider: id };
+    } catch (err) {
+      console.log(`[ai] ${label}: ${name} ${model} gave an unusable reply after ${secs}s (${err.message}${r.finish === 'length' ? ', reply was cut off' : ''})`);
+      failures.push({ id, status: 'bad' });
+    }
+  }
+  const account = (f) => f.status === 401 || f.status === 402 || f.status === 403;
+  if (failures.length && failures.every(account)) throw accountError(failures[0]);
+  const others = failures.filter((f) => !account(f));
+  if (others.length && others.every((f) => f.status === 429 || f.status === 503)) {
+    throw new AIError('Every model that can read photos is busy just now. Try again in a minute.', 429);
+  }
+  throw new AIError('No model could read that photo this time. Try again in a moment.', 502);
+}
 /* ------------------------------------------------------------------ */
 /* Small calls: folder fit, shared-library match and cut               */
 /* Short prompts and small budgets; callers treat a failure as "skip". */

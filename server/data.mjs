@@ -210,6 +210,9 @@ hooks.photos = null;
 // reuse.mjs: reuseHint(user, input, body) -> what its check before building already found out about this
 // request ({ skipLibrary, library }), so the shared library isn't asked twice; null when nothing.
 hooks.reuseHint = null;
+// sources-in.mjs: groundedLesson(user, row, meta, n, safety) -> { lesson, model } for a course built from
+// material the learner gave (their knowledge, a textbook page), null for every other course.
+hooks.groundedLesson = null;
 const withPhotos = (row, meta, n, lesson, stored) => (hooks.photos && lesson ? hooks.photos(row, meta, n, lesson, stored) : lesson);
 
 // The folder a new course should be filed in, if the request names one.
@@ -265,7 +268,10 @@ async function lesson({ req, res }) {
   // the usual way: the shared library's copy if it has one, otherwise the AI
   const write = async () => {
     let out = null;
-    if (hooks.writeLesson && !safety && !update) out = await hooks.writeLesson(u, row, meta, n);
+    // a course built from the learner's own material is written from that material (sources-in.mjs)
+    if (hooks.groundedLesson) out = await hooks.groundedLesson(u, row, meta, n, safety);
+    // the shared library never writes a lesson that is being rewritten with new information
+    if (!out && hooks.writeLesson && !safety && !update) out = await hooks.writeLesson(u, row, meta, n);
     if (!out) {
       out = await generateLesson({
         topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions, safety, syllabus: Boolean(meta.syllabus),
