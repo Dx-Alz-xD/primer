@@ -185,7 +185,8 @@
     save();
     if (allComplete()) finish();
 
-    P.initDoubts({
+    let notebook = null;
+    const board = P.initDoubts({
       paper,
       courseId: course.id,
       lessonN: n,
@@ -194,8 +195,10 @@
       bar: $('#wb-bar'),
       countEl: $('#doubts-count'),
       drawerToggle: $('#doubts-toggle'),
-      drawer: $('#doubts')
+      drawer: $('#doubts'),
+      onSketchChange: (strokes) => { if (notebook) notebook.onPageSketch(strokes); }
     });
+    notebook = P.initNotebook({ course, n, lessonTitle: meta.title, toggle: $('#nb-toggle'), board, paper });
   }
 
   function renderHead() {

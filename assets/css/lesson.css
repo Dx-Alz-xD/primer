@@ -275,3 +275,76 @@ body.is-wb .toast{bottom:calc(88px + env(safe-area-inset-bottom, 0px))}
 .ditem__a p{margin:.35rem 0 0}
 .ditem__a p:first-of-type{margin-top:0}
 .ditem__by{font-family:var(--font-head);color:var(--gold);font-size:.95rem;margin:0 0 .2rem !important}
+
+/* =====================================================================
+   Notebook: a bound notebook beside the lesson
+   ===================================================================== */
+.nb{
+  position:fixed;z-index:60;top:calc(74px + env(safe-area-inset-top, 0px));right:max(12px, env(safe-area-inset-right, 0px));bottom:calc(12px + env(safe-area-inset-bottom, 0px));
+  width:min(420px, calc(100vw - 24px));display:flex;flex-direction:column;overflow:hidden;
+  background:#f7efdc;color:var(--ink);color-scheme:light;
+  border-radius:5px 12px 12px 5px;
+  box-shadow:-26px 34px 70px -30px rgba(0,0,0,.95), 0 0 0 1px #b39a6b, inset 18px 0 0 #4a2c18, inset 21px 0 0 rgba(0,0,0,.25), inset 24px 0 0 #8a6128;
+  animation:nbIn .35s var(--ease-out);
+}
+@keyframes nbIn{from{opacity:0;transform:translateX(24px) rotate(.6deg)}to{opacity:1;transform:none}}
+.nb__ribbon{position:absolute;top:-2px;right:38px;width:16px;height:70px;background:linear-gradient(180deg,#7d2618,#a8402c);
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 84%,0 100%);box-shadow:0 2px 0 rgba(0,0,0,.2);pointer-events:none}
+.nb__head{display:flex;justify-content:space-between;align-items:flex-start;gap:.8rem;padding:16px 62px 10px 40px}
+.nb__eyebrow{margin:0;font-family:var(--font-head);font-size:.78rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-red)}
+.nb__title{margin:.2rem 0 0;font-size:1.22rem;line-height:1.2;color:var(--ink);text-shadow:none}
+.nb__close{position:absolute;top:12px;right:10px;width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--ink-soft);cursor:pointer}
+.nb__close:hover{background:rgba(138,97,40,.12);color:var(--ink)}
+.nb__tabs{display:flex;gap:1.2rem;padding:0 18px 0 40px;border-bottom:1px solid rgba(138,97,40,.32)}
+.nb__tab{padding:.45rem 0 .5rem;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;cursor:pointer;font-family:var(--font-head);font-size:1.02rem;color:var(--ink-soft)}
+.nb__tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink-red)}
+.nb__tab:focus-visible,.nb__close:focus-visible,.nb__tool:focus-visible,.nb__swatch:focus-visible{outline:2px solid var(--ink-gold);outline-offset:2px}
+.nb__body{flex:1;min-height:0;position:relative}
+.nb__page{position:absolute;inset:0;display:flex;flex-direction:column}
+.nb__text{
+  flex:1;width:100%;resize:none;border:0;outline:none;margin:0;
+  padding:7px 20px 34px 70px;
+  font-family:"Caveat","Segoe Print","Bradley Hand",cursive;font-size:25px;line-height:34px;color:#23305e;
+  background-color:#fbf6ea;background-attachment:local;
+  background-image:
+    linear-gradient(90deg, transparent 56px, rgba(154,51,36,.5) 56px, rgba(154,51,36,.5) 58px, transparent 58px),
+    repeating-linear-gradient(180deg, transparent 0 33px, rgba(74,110,160,.3) 33px 34px);
+  background-position:0 0, 0 7px;
+}
+.nb__text::placeholder{color:rgba(35,48,94,.45)}
+.nb__text:focus{box-shadow:inset 0 0 0 2px rgba(138,97,40,.35)}
+.nb__page--sketch{background:#fbf6ea}
+.nb__tools{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem;padding:8px 14px 8px 40px;border-bottom:1px solid rgba(138,97,40,.22)}
+.nb__tool{padding:.25rem .6rem;border:1px solid transparent;border-radius:999px;background:none;cursor:pointer;font-family:var(--font-body);font-size:.98rem;color:var(--ink-soft)}
+.nb__tool:hover{border-color:rgba(138,97,40,.4)}
+.nb__tool[aria-pressed="true"]{border-color:var(--ink-gold);background:rgba(214,165,84,.22);color:var(--ink)}
+.nb__swatches{display:inline-flex;gap:.3rem;margin-left:.2rem}
+.nb__swatch{width:22px;height:22px;padding:0;border-radius:50%;background:var(--c);border:2px solid #fbf6ea;box-shadow:0 0 0 1px rgba(43,29,17,.35);cursor:pointer}
+.nb__swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink-gold)}
+.nb__spacer{flex:1}
+.nb__pad{flex:1;min-height:0;display:grid;place-items:center;padding:10px 14px 14px 36px;overflow:auto}
+.nb__pad canvas{width:100%;max-width:520px;aspect-ratio:600/820;height:auto;touch-action:none;cursor:crosshair;border-radius:3px;
+  background-color:#fffdf6;background-image:radial-gradient(rgba(74,110,160,.32) 1px, transparent 1.3px);background-size:24px 24px;
+  box-shadow:0 1px 0 rgba(43,29,17,.08), 0 10px 22px -14px rgba(43,29,17,.45)}
+.nb__page--all{overflow:auto;background:#fbf6ea}
+.nb__all{padding:12px 20px 24px 40px;display:grid;gap:1rem}
+.nb__entry h3{margin:0;font-family:var(--font-head);font-size:1.04rem;line-height:1.25;color:var(--ink);text-shadow:none}
+.nb__entry h3 a{color:inherit;text-decoration:none}
+.nb__entry h3 a:hover{text-decoration:underline}
+.nb__entry small{font-family:var(--font-body);font-style:italic;color:var(--ink-red);font-size:.85rem}
+.nb__entry p{margin:.25rem 0 0;font-family:"Caveat","Segoe Print",cursive;font-size:22px;line-height:28px;color:#23305e}
+.nb__entry.is-here{padding-left:.7rem;border-left:2px solid var(--ink-red)}
+.nb__empty{font-style:italic;color:var(--ink-soft);margin:.6rem 0 0}
+.nb__foot{display:flex;justify-content:space-between;gap:1rem;padding:7px 18px 9px 40px;border-top:1px solid rgba(138,97,40,.32);background:#f2e7cf;font-size:.92rem;font-style:italic;color:var(--ink-soft)}
+.nb__status{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doubt__note{margin-right:auto}
+
+/* wide screens: the notebook takes its own column beside the lesson instead of floating over it */
+@media (min-width:1600px){
+  body.nb-open .lesson-layout{grid-template-columns:270px minmax(0,1fr) 420px;width:min(1720px, 100% - var(--pad-l) - var(--pad-r))}
+  body.nb-open .lesson-layout > .nb{position:sticky;top:86px;right:auto;bottom:auto;z-index:auto;width:auto;height:calc(100vh - 110px);align-self:start}
+}
+@media (max-width:720px){
+  .nb{top:auto;left:max(8px, env(safe-area-inset-left, 0px));right:max(8px, env(safe-area-inset-right, 0px));width:auto;height:min(78vh, 640px);border-radius:12px 12px 6px 6px}
+}
+@media (prefers-reduced-motion: reduce){ .nb{animation:none} }

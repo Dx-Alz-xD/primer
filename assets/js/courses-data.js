@@ -45,7 +45,7 @@
     if (/mnemonic/.test(s)) out.push({ key: 'mnemonic', label: 'Mnemonics' });
     if (/like i['’]?m (5|five)|eli5|five[- ]year|simpl/.test(s)) out.push({ key: 'eli5', label: 'Explain like I’m five' });
     if (/example/.test(s)) out.push({ key: 'examples', label: 'Worked examples' });
-    if (/exam|test prep/.test(s)) out.push({ key: 'exam', label: 'Exam-focused' });
+    if (/\bexams?\b|test prep/.test(s)) out.push({ key: 'exam', label: 'Exam-focused' }); // whole word, so not "examples"
     if (/analog/.test(s)) out.push({ key: 'analogies', label: 'Analogies' });
     return out;
   };

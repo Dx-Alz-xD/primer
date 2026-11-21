@@ -24,7 +24,8 @@
   }
   const renderMath = (el) => { if (P.math) P.math(el); };
 
-  P.initDoubts = function ({ paper, courseId, lessonN, lessonTitle, wbToggle, bar, countEl, drawerToggle, drawer }) {
+  P.initDoubts = function ({ paper, courseId, lessonN, lessonTitle, wbToggle, bar, countEl, drawerToggle, drawer, onSketchChange }) {
+    const sketchChanged = () => { if (onSketchChange) onSketchChange(wb.strokes); };
     /* ================================================================
        The "Any doubt?" box
     ================================================================ */
@@ -39,6 +40,7 @@
       <textarea class="textarea" id="doubt-text" rows="3" maxlength="1000" placeholder="What’s unclear about this part?"></textarea>
       <p class="doubt__error" role="alert"></p>
       <div class="doubt__actions">
+        <button class="textlink doubt__note" type="button" data-note>Add to notebook</button>
         <button class="textlink" type="button" data-cancel>Cancel</button>
         <button class="btn btn--small" type="button" data-ask>Ask</button>
       </div>`;
@@ -100,6 +102,14 @@
     }
 
     box.querySelector('[data-cancel]').addEventListener('click', closeBox);
+    box.querySelector('[data-note]').addEventListener('click', () => {
+      if (!current || !P.notebook) return;
+      const quote = current.kind === 'drawing' ? current.context : current.quote;
+      P.notebook.append(`“${trim(quote || '', 600)}”` + (ta.value.trim() ? `\n${ta.value.trim()}` : ''));
+      closeBox();
+      const sel = window.getSelection();
+      if (sel) sel.removeAllRanges();
+    });
     box.querySelector('[data-ask]').addEventListener('click', ask);
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ask(); });
 
@@ -296,6 +306,7 @@
       }
       wb.strokes.push(s);
       redraw(); // repaint with smoothing
+      sketchChanged();
     };
     canvas.addEventListener('pointerup', endStroke);
     canvas.addEventListener('pointercancel', endStroke);
@@ -331,12 +342,14 @@
       wb.strokes.pop();
       wb.askedFrom = Math.min(wb.askedFrom, wb.strokes.length);
       redraw();
+      sketchChanged();
     });
     bar.querySelector('[data-act="clear"]').addEventListener('click', () => {
       if (!wb.strokes.length) return;
       wb.strokes = [];
       wb.askedFrom = 0;
       redraw();
+      sketchChanged();
     });
     bar.querySelector('[data-act="done"]').addEventListener('click', () => setActive(false));
     bar.querySelector('[data-act="ask"]').addEventListener('click', askAboutDrawing);
@@ -442,6 +455,15 @@
 
     refreshCount();
     P.api.loadDoubts(courseId, lessonN).then(refreshCount).catch(() => {});
-    return { refresh: refreshCount, canvas, wb, redraw };
+    return {
+      refresh: refreshCount,
+      strokes: () => wb.strokes,
+      // restore saved drawings (they are not "asked about" yet, so new strokes start a fresh doubt)
+      setStrokes(strokes) {
+        wb.strokes = Array.isArray(strokes) ? strokes.filter((s) => s && TOOLS[s.tool] && Array.isArray(s.pts)) : [];
+        wb.askedFrom = wb.strokes.length;
+        redraw();
+      }
+    };
   };
 })();
