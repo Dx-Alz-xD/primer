@@ -126,6 +126,8 @@
 
   async function render() {
     const gen = ++renderGen;
+    // drawn with P.t, so the dictionary must be in first ("Video {n} of {total}" can't be translated afterwards)
+    if (P.tReady) { await P.tReady; if (gen !== renderGen) return; }
     stopAll();
     players.forEach((p) => p.destroy());
     players.clear();

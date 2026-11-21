@@ -15,7 +15,8 @@ Primer turns one topic into a full course. You name the subject, say where to st
 - **A tutor that remembers.** A conversation on every page that knows your courses, your doubts and the questions you got wrong, so it can point out a pattern.
 - **A notebook beside every lesson**: lined pages that save as you write, a sketch page, and every note in the course in one place. Drawings on the lesson are saved too.
 - **Lessons read aloud** by ElevenLabs, with maths spoken as words, plus sound effects and speaking a doubt instead of typing it.
-- **English, Hindi and Russian.** The interface is translated, new courses are written in your language, and a lesson written in another language can be translated with one click (maths, answers and your progress stay put).
+- **Twenty interface languages**: English, Hindi, Bhojpuri, Bengali, Marathi, Telugu, Tamil, Gujarati, Urdu, Kannada, Odia, Malayalam, Punjabi, Assamese, Maithili, Spanish, French, Arabic, Portuguese and Russian, with right-to-left pages for Urdu and Arabic. Each course has its own language, chosen from 42, and a lesson written in another language can be translated with one click (maths, answers and your progress stay put).
+- **Watch mode.** A lesson can be followed as videos, each followed by a quiz: YouTube videos picked for the lesson (captions on, credited, with a link to YouTube’s transcript), or Primer’s own narrated videos made from the lesson, with word-by-word captions and a full transcript, narrated in the learner’s language. When a video isn’t in your language, Primer offers its own video, the text lesson or translated captions. Sign-language mode keeps captions large and finds videos by real signers (for example ISLRTC) where they exist.
 - **Folders.** Group courses on shelves, add many topics at once, and get a quiet note when a topic doesn’t seem to fit its folder.
 - **A shared topic library.** One general course per subject: a later request for the same or a synonymous topic reuses its lessons, cut to your range, so they open at once.
 - **A community board.** Share the sources you learn from, with photos and links; threaded comments and votes. Anyone can read; sign in to take part.
@@ -37,20 +38,23 @@ You need [Node.js](https://nodejs.org) **24.7 or newer** (Primer uses Node’s b
 ```bash
 git clone https://github.com/Dx-Alz-xD/primer.git
 cd primer
-cp .env.example .env      # then add your OpenRouter key to .env
+cp .env.example .env      # then add at least one AI key to .env
 npm start
 ```
 
-Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` in `.env` (the example uses `PRIMER`; leave it empty to let anyone sign up).
+Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` in `.env` (the example uses `PRIMER`; leave it empty to let anyone sign up). Run the tests with `npm test`.
 
 ### Settings (`.env`)
 
 | Setting | What it does |
 | --- | --- |
-| `OPENROUTER_API_KEY` | Your [OpenRouter](https://openrouter.ai) key. Plans courses, writes lessons, runs the tutor. |
-| `OPENROUTER_MODELS` | Models to try, in order. A busy or failing model hands over to the next. |
+| `GROQ_KEY`, `GEM_KEY`, `REQ_KEY`, `OPENROUTER_API_KEY` | AI keys for Groq, Google Gemini, Requesty and OpenRouter (the usual names like `GROQ_API_KEY` work too). Add at least one; they plan courses, write lessons and run the tutor. |
+| `PRIMER_AI_ORDER` | Which providers to try, in order (default `groq,gemini,requesty,openrouter`). |
+| `GROQ_MODELS`, `GEMINI_MODELS`, `REQUESTY_MODELS`, `OPENROUTER_MODELS` | Optional: each provider’s models, in order. A busy or failing model hands over to the next. |
 | `INVITE_CODE` | The code sign-up asks for. Empty means open sign-up. |
-| `ELEVENLABS_API_KEY` | Turns on narration, sound effects and spoken doubts. |
+| `ELEVENLABS_API_KEY` (or `EL_LAB_KEY`) | Turns on narration, Primer’s own videos, sound effects and spoken doubts. |
+| `YOUTUBE_API_KEY` (or `GOOG_CLOUD`) | A Google Cloud key with the YouTube Data API enabled, for YouTube videos in Watch mode. |
+| `YOUTUBE_REGION` | Optional: the region YouTube searches favour. |
 | `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL` | Optional: another voice or model. |
 | `WIKIMEDIA_CONTACT` | Optional: your email or web page, sent to Wikimedia so photo lookups get a higher rate limit. |
 | `PORT`, `HOST` | Where the server listens (default `127.0.0.1:5173`). |
@@ -60,8 +64,8 @@ Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` 
 - **Front end:** plain HTML, CSS and JavaScript. No framework and no build step. KaTeX for maths, a WebGL2 letter backdrop, canvas whiteboards.
 - **Server:** Node.js 24 with `node:http` and **zero npm dependencies**. Each feature is a small module in `server/` that adds its routes.
 - **Data:** one SQLite file (`data/primer.db`) through the built-in `node:sqlite`.
-- **AI:** OpenRouter’s free models, tried in order. Every reply is repaired (LaTeX and JSON escaping), checked against the lesson format, and cached, so the same lesson is never written twice.
-- **Voice:** ElevenLabs text to speech, sound generation and speech to text, cached in `data/audio`.
+- **AI:** Groq, Gemini, Requesty and OpenRouter, each with free models, tried in order. Every reply is repaired (LaTeX and JSON escaping), checked against the lesson format, and cached, so the same lesson is never written twice.
+- **Voice and video:** ElevenLabs text to speech (with word timings for captions), sound generation and speech to text, cached in `data/audio`, with the browser’s own voice as a fallback. YouTube videos come from the YouTube Data API and play from youtube-nocookie.com only after a click.
 
 ### Security
 
@@ -79,11 +83,14 @@ index.html, auth.html, app.html, lesson.html   pages
 community.html, post.html, book.html            community board, one post, the book reader
 review.html, class.html                         review of past mistakes, a teacher’s class dashboard
 assets/js, assets/css                           front end (one file per feature)
-assets/i18n                                     interface translations (Hindi, Russian)
+assets/i18n                                     interface translations (19 languages besides English)
+assets/css/rtl.css                              right-to-left layout for Urdu and Arabic
 server/index.mjs                                HTTP server, pages, security headers
 server/auth.mjs                                 accounts and sessions (argon2id)
 server/data.mjs                                 courses, lessons, progress, notes, doubts
-server/ai.mjs                                   OpenRouter: plan, write, translate, repair, check, cache
+server/ai.mjs                                   AI providers: plan, write, translate, repair, check, cache
+server/langs.mjs                                interface and course languages
+server/videos.mjs, assets/js/video.js           Watch mode: YouTube picks, quizzes, Primer’s own videos, sign language
 server/tutor.mjs                                doubt answers and the tutor
 server/voice.mjs                                ElevenLabs narration, sound effects, speech to text
 server/folders.mjs, server/library.mjs          folders and the shared topic library
