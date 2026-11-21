@@ -20,8 +20,43 @@
   const smooth = () => (P.motion.reduce ? 'auto' : 'smooth');
 
   const courseId = P.params.get('course');
-  if (courseId) showCourse(courseId);
-  else showBuilder();
+  P.courses.load().then(() => {
+    if (courseId) showCourse(courseId);
+    else showBuilder();
+  }).catch((err) => {
+    $('#view-build').hidden = true;
+    const view = $('#view-course');
+    view.hidden = false;
+    view.innerHTML = `<div class="notfound card card--solid"><h1>Your courses didn’t load</h1><p>${esc(err.message)}</p>
+      <p style="margin-top:1.3rem"><button class="btn" type="button" data-reload>Try again</button></p></div>`;
+    view.querySelector('[data-reload]').addEventListener('click', () => location.reload());
+  });
+
+  // Courses kept by the old browser-only version can be moved into the account once.
+  function offerImport() {
+    const legacy = P.legacyCourses();
+    if (!legacy.length) return;
+    const bar = document.createElement('div');
+    bar.className = 'import card card--solid';
+    bar.setAttribute('role', 'region');
+    bar.setAttribute('aria-label', 'Courses saved in this browser');
+    bar.innerHTML = `<p><strong>${legacy.length} course${legacy.length > 1 ? 's are' : ' is'} saved only in this browser.</strong> Move ${legacy.length > 1 ? 'them' : 'it'} into your account so ${legacy.length > 1 ? 'they follow' : 'it follows'} you to any device.</p>
+      <div class="import__actions"><button class="btn btn--small" type="button" data-import>Move to my account</button><button class="textlink" type="button" data-skip>Not now</button></div>`;
+    $('#library').before(bar);
+    bar.querySelector('[data-skip]').addEventListener('click', () => bar.remove());
+    bar.querySelector('[data-import]').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      try {
+        const n = await P.courses.importLegacy();
+        bar.remove();
+        renderLibrary();
+        P.toast(`Moved ${n} course${n === 1 ? '' : 's'} into your account.`);
+      } catch (err) {
+        e.target.disabled = false;
+        P.toast('Couldn’t move the courses: ' + err.message, 'error');
+      }
+    });
+  }
 
   /* ------------------------------------------------------------------
      Builder
@@ -119,6 +154,7 @@
     });
 
     renderLibrary();
+    offerImport();
     if (location.hash === '#library') requestAnimationFrame(() => $('#library').scrollIntoView());
     else topic.focus({ preventScroll: true });
   }
@@ -216,10 +252,15 @@
       <ol class="units">${unitsHTML}</ol>`;
 
     view.querySelector('[data-print]').addEventListener('click', () => window.print());
-    view.querySelector('[data-delete]').addEventListener('click', () => {
-      if (window.confirm(`Delete “${course.title}” and all its progress? This can’t be undone.`)) {
-        P.courses.remove(course.id);
+    view.querySelector('[data-delete]').addEventListener('click', async (e) => {
+      if (!window.confirm(`Delete “${course.title}” and all its progress? This can’t be undone.`)) return;
+      e.target.disabled = true;
+      try {
+        await P.courses.remove(course.id);
         location.href = 'app.html';
+      } catch (err) {
+        e.target.disabled = false;
+        P.toast('Couldn’t delete the course: ' + err.message, 'error');
       }
     });
   }

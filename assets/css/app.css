@@ -105,3 +105,9 @@ fieldset.field legend{padding:0;margin-bottom:.4rem}
   .lrow{padding:.5rem 0}
   .tag{border-color:#bbb}
 }
+
+/* moving courses from the old browser-only storage into the account */
+.import{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem 1.6rem;padding:1.1rem 1.4rem;margin-top:2rem}
+.import p{margin:0;color:var(--cream-dim);max-width:60ch}
+.import strong{color:var(--cream);font-weight:600}
+.import__actions{display:flex;align-items:center;gap:1.1rem}

@@ -7,16 +7,6 @@
 <meta name="theme-color" content="#120b06">
 <meta name="color-scheme" content="dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23120b06'/%3E%3Ctext x='32' y='47' font-family='Georgia,serif' font-size='44' text-anchor='middle' fill='%23d6a554'%3EP%3C/text%3E%3C/svg%3E">
-<script>
-  /* signed-in pages: send guests to sign in, then back here */
-  (function () {
-    try {
-      if (localStorage.getItem('primer.session')) return;
-      var page = location.pathname.split('/').pop() || 'app.html';
-      location.replace('auth.html?next=' + encodeURIComponent(page + location.search) + '#signin');
-    } catch (e) {}
-  })();
-</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&display=swap">

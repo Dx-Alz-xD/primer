@@ -78,52 +78,89 @@
 
   P.params = new URLSearchParams(location.search);
 
-  // only allow redirects back into our own app pages
+  // only allow redirects back into our own pages
   P.safeNext = (raw, fallback = 'app.html') => {
     if (!raw) return fallback;
-    return /^(app|lesson)\.html(\?[\w=&%.\-+~!*'()]*)?$/.test(raw) ? raw : fallback;
+    return /^[a-z]+\.html(\?[\w=&%.\-+~!*'()]*)?$/.test(raw) && raw.split('?')[0] !== 'auth.html' ? raw : fallback;
   };
 
-  /* ---------- mock auth ---------- */
-  const USERS = 'primer.users';
-  const SESSION = 'primer.session';
+  /* ---------- what the server told this page (user, settings) ---------- */
+  P.boot = window.__PRIMER__ || { user: null, invite: true, ai: false };
 
-  async function hashPassword(password, salt) {
-    const input = `${salt}:${password}`;
-    if (window.crypto && crypto.subtle && window.isSecureContext) {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
-      return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('');
+  /* ---------- talking to the Primer server ---------- */
+  // Every call goes through here: JSON in and out, the session cookie rides along,
+  // and errors come back as plain sentences the page can show.
+  P.request = async (method, url, body, opts = {}) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), opts.timeout || 30000);
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        credentials: 'same-origin',
+        keepalive: Boolean(opts.keepalive),
+        signal: ctrl.signal
+      });
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* not JSON */ }
+      if (res.status === 401 && P.boot.user && !opts.allow401) {
+        location.href = 'auth.html?next=' + encodeURIComponent(location.pathname.replace(/^\//, '') + location.search) + '#signin';
+        throw Object.assign(new Error('Your session has ended. Sign in again.'), { status: 401 });
+      }
+      if (!res.ok || !data || data.ok === false) {
+        const msg = (data && data.error) || (res.status === 404 || res.status === 405
+          ? 'The Primer server isn’t running. Start it with npm start.'
+          : `The server answered with an error (${res.status}).`);
+        throw Object.assign(new Error(msg), { status: res.status, fields: data && data.fields });
+      }
+      return data;
+    } catch (err) {
+      if (err.name === 'AbortError') throw new Error(opts.timeoutMessage || 'The server took too long to answer. Try again.');
+      if (err instanceof TypeError) throw new Error('Can’t reach the Primer server. Start it with npm start.');
+      throw err;
+    } finally {
+      clearTimeout(timer);
     }
-    return 'fnv-' + P.hashStr(input).toString(16); // insecure fallback, mock only
-  }
+  };
+  P.get = (url, o) => P.request('GET', url, undefined, o);
+  P.post = (url, body, o) => P.request('POST', url, body || {}, o);
+  P.put = (url, body, o) => P.request('PUT', url, body || {}, o);
+  P.patch = (url, body, o) => P.request('PATCH', url, body || {}, o);
+  P.del = (url, o) => P.request('DELETE', url, undefined, o);
 
+  /* ---------- accounts (real ones, kept by the server) ---------- */
   P.auth = {
     normalize: (email) => String(email || '').trim().toLowerCase(),
     validEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || '').trim()),
-    user(email) { return (P.store.get(USERS, {}) || {})[P.auth.normalize(email)] || null; },
-    current() { return P.store.get(SESSION, null); },
-    async prepare({ name, email, password }) {
-      const salt = P.uid();
-      return { name: P.clean(name, 60), email: P.auth.normalize(email), salt, hash: await hashPassword(password, salt) };
-    },
-    create(record) {
-      const users = P.store.get(USERS, {}) || {};
-      users[record.email] = { name: record.name, email: record.email, salt: record.salt, hash: record.hash, createdAt: Date.now() };
-      P.store.set(USERS, users);
-      return users[record.email];
-    },
-    startSession(user) { P.store.set(SESSION, { email: user.email, name: user.name, at: Date.now() }); },
-    async signIn(email, password) {
-      const u = P.auth.user(email);
-      if (!u) return { ok: false, reason: 'no-account' };
-      if ((await hashPassword(password, u.salt)) !== u.hash) return { ok: false, reason: 'wrong-password' };
-      P.auth.startSession(u);
-      return { ok: true, user: u };
-    },
-    signOut() {
-      P.store.remove(SESSION);
+    current: () => P.boot.user,
+    inviteRequired: () => P.boot.invite !== false,
+    checkInvite: (code) => P.post('/api/auth/invite', { code }),
+    signUp: (d) => P.post('/api/auth/signup', d),
+    signIn: (email, password) => P.post('/api/auth/signin', { email, password }, { allow401: true }),
+    async signOut() {
+      try { await P.post('/api/auth/signout', {}); } catch (e) { /* the cookie is cleared server-side either way */ }
       location.href = 'index.html';
     }
+  };
+
+  // Courses saved by the old browser-only version, so they can be moved into the account once.
+  P.legacyCourses = () => {
+    const out = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!/^primer\.courses:/.test(k)) continue;
+        const all = P.store.get(k, {}) || {};
+        Object.values(all).forEach((c) => { if (c && Array.isArray(c.units)) out.push(c); });
+      }
+    } catch (e) { /* storage blocked */ }
+    return out;
+  };
+  P.clearLegacy = () => {
+    try {
+      Object.keys(localStorage).filter((k) => /^primer\.(courses|doubts|users|session)/.test(k)).forEach((k) => localStorage.removeItem(k));
+    } catch (e) { /* storage blocked */ }
   };
 
   P.mountUserNav = () => {

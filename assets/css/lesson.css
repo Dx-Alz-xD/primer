@@ -269,3 +269,9 @@ body.is-wb .toast{bottom:calc(88px + env(safe-area-inset-bottom, 0px))}
   .wb-bar{border-radius:14px}
   .wb-group{border-right:0}
 }
+
+/* tutor answers in the doubts drawer */
+.ditem__a{margin-top:.6rem;padding:.65rem .8rem;border-left:3px solid var(--gold);background:rgba(214,165,84,.08);border-radius:0 4px 4px 0;color:var(--cream);font-size:1.02rem;line-height:1.5}
+.ditem__a p{margin:.35rem 0 0}
+.ditem__a p:first-of-type{margin-top:0}
+.ditem__by{font-family:var(--font-head);color:var(--gold);font-size:.95rem;margin:0 0 .2rem !important}

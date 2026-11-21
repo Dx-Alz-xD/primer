@@ -82,13 +82,21 @@
       }
       const btn = box.querySelector('[data-ask]');
       btn.disabled = true;
-      await P.api.askDoubt(Object.assign({}, current, { question, courseId, lesson: lessonN, lessonTitle }));
+      let saved;
+      try {
+        saved = await P.api.askDoubt(Object.assign({}, current, { question, courseId, lesson: lessonN, lessonTitle }));
+      } catch (err) {
+        btn.disabled = false;
+        errEl.textContent = err.message;
+        return;
+      }
       btn.disabled = false;
       closeBox();
       const sel = window.getSelection();
       if (sel) sel.removeAllRanges();
-      P.toast('Doubt saved. The answer will show up under Doubts once the tutor is connected.');
+      P.toast(P.boot.ai ? 'Doubt saved. The tutor is writing an answer; it will appear under Doubts.' : 'Doubt saved under Doubts.');
       refreshCount();
+      if (P.onDoubtAsked) P.onDoubtAsked(saved, { refresh: refreshCount });
     }
 
     box.querySelector('[data-cancel]').addEventListener('click', closeBox);
@@ -400,7 +408,10 @@
         const top = d.kind === 'drawing'
           ? (d.image ? `<img src="${esc(d.image)}" alt="Your sketch on the notes">` : '<p class="ditem__quote">A sketch on the notes</p>')
           : `<p class="ditem__quote">“${esc(trim(d.quote || '', 220))}”</p>`;
-        return `<li class="ditem">${top}<p class="ditem__q">${esc(d.question)}</p><p class="ditem__meta">${esc(fmt(d.at))}. Waiting for the tutor.</p></li>`;
+        const answer = d.answer
+          ? `<div class="ditem__a"><p class="ditem__by">Tutor</p>${P.sanitizeHTML(d.answer)}</div>`
+          : '';
+        return `<li class="ditem">${top}<p class="ditem__q">${esc(d.question)}</p>${answer}<p class="ditem__meta">${esc(fmt(d.at))}.${d.answer ? '' : ' Waiting for the tutor.'}</p></li>`;
       }).join('');
       renderMath(listEl);
       emptyEl.hidden = list.length > 0;
@@ -430,6 +441,7 @@
     });
 
     refreshCount();
-    return { refresh: refreshCount };
+    P.api.loadDoubts(courseId, lessonN).then(refreshCount).catch(() => {});
+    return { refresh: refreshCount, canvas, wb, redraw };
   };
 })();

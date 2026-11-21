@@ -44,6 +44,13 @@
   const CHECK_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.4l2.7 2.7L16.2 9.6"/></svg>';
   const smooth = () => (P.motion.reduce ? 'auto' : 'smooth');
 
+  P.courses.load().then(run).catch((err) => {
+    const main = $('#main');
+    main.className = 'wrap';
+    main.innerHTML = `<div class="lmsg card card--solid"><h1>This lesson didn’t load</h1><p>${esc(err.message)}</p><p style="margin-top:1.3rem"><a class="btn" href="lesson.html${esc(location.search)}">Try again</a></p></div>`;
+  });
+
+  function run() {
   /* ---------- which lesson ---------- */
   const courseId = P.params.get('course');
   const n = Math.max(1, parseInt(P.params.get('lesson') || '1', 10) || 1);
@@ -333,6 +340,7 @@
       afterAnswer(secIdx);
     } else {
       save();
+      P.api.recordMistake(course, n, meta.title, q, value);
       await showWrong(q, w, secIdx, value);
     }
   }
@@ -518,4 +526,5 @@
     box.hidden = false;
     renderSide();
   }
+  } // run
 })();

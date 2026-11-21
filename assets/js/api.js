@@ -1,38 +1,68 @@
 /* =====================================================================
-   Mock backend. Every network call the real app will make goes through
-   P.api, so wiring the backend means replacing these function bodies.
-   Courses and doubts are stored per user in localStorage for now.
+   The browser's side of the Primer server. Every network call goes
+   through P.api or P.courses, which keep a copy of the learner's library
+   in memory and save changes back to their account, so everything
+   follows them across sessions and devices.
    ===================================================================== */
 (function () {
   'use strict';
   const P = window.Primer;
 
-  const userKey = (prefix) => {
-    const u = P.auth.current();
-    return `${prefix}:${u ? u.email : 'guest'}`;
+  /* ---------- progress saves: batched, retried, flushed on leave ---------- */
+  const pending = new Map(); // "courseId|n" -> progress
+  let flushTimer = 0;
+  let warned = false;
+  function flush(keepalive) {
+    clearTimeout(flushTimer);
+    const batch = Array.from(pending.entries());
+    pending.clear();
+    batch.forEach(([key, prog]) => {
+      const [id, n] = key.split('|');
+      P.put(`/api/courses/${encodeURIComponent(id)}/progress/${n}`, { progress: prog }, { keepalive }).then(() => { warned = false; }).catch((err) => {
+        if (!pending.has(key)) pending.set(key, prog);
+        if (!warned) { warned = true; P.toast('Your progress couldn’t be saved yet. It will retry: ' + err.message, 'error'); }
+        flushTimer = setTimeout(() => flush(false), 5000);
+      });
+    });
+  }
+  const queueSave = (id, n, prog) => {
+    pending.set(`${id}|${n}`, prog);
+    clearTimeout(flushTimer);
+    flushTimer = setTimeout(() => flush(false), 500);
   };
+  addEventListener('pagehide', () => { if (pending.size) flush(true); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && pending.size) flush(true); });
 
-  /* ---------- course library ---------- */
+  /* ---------- course library (a cache of what the server holds) ---------- */
   P.courses = {
-    all() { return P.store.get(userKey('primer.courses'), {}) || {}; },
+    _all: {},
+    _loading: null,
+    load(force) {
+      if (!this._loading || force) {
+        this._loading = P.get('/api/courses').then((d) => {
+          this._all = {};
+          d.courses.forEach((c) => { this._all[c.id] = c; });
+          return this;
+        }).catch((err) => { this._loading = null; throw err; });
+      }
+      return this._loading;
+    },
+    all() { return this._all; },
     list() {
-      return Object.values(this.all()).sort((a, b) => (b.openedAt || b.createdAt) - (a.openedAt || a.createdAt));
+      return Object.values(this._all).sort((a, b) => (b.openedAt || b.createdAt) - (a.openedAt || a.createdAt));
     },
-    get(id) { return id ? this.all()[id] || null : null; },
-    save(course) {
-      const all = this.all();
-      all[course.id] = course;
-      if (!P.store.set(userKey('primer.courses'), all)) P.toast('Your browser storage is full, so this course may not be saved.', 'error');
-      return course;
-    },
-    remove(id) {
-      const all = this.all();
-      delete all[id];
-      P.store.set(userKey('primer.courses'), all);
+    get(id) { return id ? this._all[id] || null : null; },
+    put(course) { this._all[course.id] = course; return course; },
+    save(course) { return this.put(course); },
+    async remove(id) {
+      await P.del('/api/courses/' + encodeURIComponent(id));
+      delete this._all[id];
     },
     touch(id) {
       const c = this.get(id);
-      if (c) { c.openedAt = Date.now(); this.save(c); }
+      if (!c) return;
+      c.openedAt = Date.now();
+      P.patch('/api/courses/' + encodeURIComponent(id), { opened: true }).catch(() => {});
     },
     progress(course, n) {
       const p = (course.progress || {})[n];
@@ -42,10 +72,19 @@
       const c = this.get(courseId);
       if (!c) return;
       c.progress = c.progress || {};
-      c.progress[n] = prog;
+      c.progress[n] = JSON.parse(JSON.stringify(prog));
       c.openedAt = Date.now();
       c.lastLesson = n;
-      this.save(c);
+      queueSave(courseId, n, c.progress[n]);
+    },
+    // Moves courses from the old browser-only storage into the account, once.
+    async importLegacy() {
+      const list = P.legacyCourses();
+      if (!list.length) return 0;
+      const d = await P.post('/api/import', { courses: list }, { timeout: 60000 });
+      P.clearLegacy();
+      await this.load(true);
+      return d.imported;
     },
     stats(course) {
       const total = P.courseGen.count(course);
@@ -76,35 +115,6 @@
   }
   const norm = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
-
-  /* ---------- talking to the Primer server (server/index.mjs) ---------- */
-  async function postJSON(url, body, timeoutMs) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: ctrl.signal
-      });
-      let data = null;
-      try { data = await res.json(); } catch (e) { /* not JSON */ }
-      if (!res.ok || !data || !data.ok) {
-        const noServer = res.status === 404 || res.status === 405 || res.status === 501;
-        throw new Error((data && data.error) || (noServer
-          ? 'The Primer server isn’t running, so the AI can’t be reached. Start it with npm start.'
-          : `The server answered with an error (${res.status}).`));
-      }
-      return data;
-    } catch (err) {
-      if (err.name === 'AbortError') throw new Error('The AI took too long to answer. Try again.');
-      if (err instanceof TypeError) throw new Error('Can’t reach the Primer server. Start it with npm start.');
-      throw err;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
 
   /* ---------- cleaning AI-written HTML before it touches the page ---------- */
   const HTML_OK = new Set(['P', 'STRONG', 'EM', 'B', 'I', 'U', 'SUB', 'SUP', 'BR', 'CODE', 'SPAN', 'SMALL', 'MARK', 'UL', 'OL', 'LI']);
@@ -185,31 +195,13 @@
     return lesson;
   }
 
-  function courseFromOutline(input, outline, model) {
-    return {
-      id: P.uid(),
-      topic: input.topic,
-      title: outline.title || P.cap(input.topic),
-      from: input.from,
-      to: input.to,
-      instructions: input.instructions,
-      style: P.parseStyle(input.instructions),
-      createdAt: Date.now(),
-      openedAt: Date.now(),
-      source: 'ai',
-      model,
-      units: outline.units.map((u) => ({
-        title: u.title,
-        lessons: u.lessons.map((l) => ({ title: l.title, desc: l.desc, tags: l.tags || [], minutes: l.minutes || 15, contentId: null }))
-      })),
-      lessons: {},
-      progress: {}
-    };
-  }
-
   /* ---------- the API surface ---------- */
+  const doubtCache = new Map(); // "courseId|n" -> [doubts]
+  const plain = (html) => { const d = document.createElement('div'); d.innerHTML = P.sanitizeHTML(html); return d.textContent.replace(/\s+/g, ' ').trim(); };
+
   P.api = {
-    // AI outline with 20-30 lessons. If the AI can't be reached, a sample outline is built locally.
+    // The server plans the course with the AI and saves it to the account.
+    // If the AI can't be reached, a sample outline is built here and saved instead.
     async generateCourse(req) {
       const input = {
         topic: P.clean(req.topic, 120),
@@ -218,46 +210,46 @@
         instructions: P.clean(req.instructions, 600)
       };
       try {
-        const res = await postJSON('/api/outline', input, 240000);
-        return courseFromOutline(input, res.outline, res.model);
+        const res = await P.post('/api/outline', Object.assign({ style: P.parseStyle(input.instructions) }, input, req.extra || {}), {
+          timeout: 240000, timeoutMessage: 'The AI took too long to plan the course. Try again.'
+        });
+        return P.courses.put(res.course);
       } catch (err) {
+        if (err.status === 401) throw err;
         console.warn('[Primer] AI outline failed:', err);
-        const course = P.courseGen.build(input);
-        course.source = 'sample';
-        course.aiError = err.message;
-        return course;
+        const sample = P.courseGen.build(input);
+        sample.source = 'sample';
+        sample.aiError = err.message;
+        const res = await P.post('/api/courses', { course: sample });
+        return P.courses.put(res.course);
       }
     },
 
-    // A lesson: written by the AI the first time it's opened, then stored with the course.
+    // A lesson: written by the AI the first time it's opened, then saved with the course.
     // Sample courses keep using the built-in sample lessons.
     async getLesson(course, n) {
       const flat = P.courseGen.flatten(course);
       const meta = flat[n - 1];
       if (!meta) return null;
-      if (course.source !== 'ai') {
+      if (course.source === 'sample') {
         await P.delay(120);
         return P.courseGen.lesson(course, n);
       }
       const withMeta = (l) => Object.assign({}, l, { title: meta.title, unit: meta.unit, unitIndex: meta.unitIndex, minutes: meta.minutes });
-      const stored = course.lessons && course.lessons[n];
-      if (stored) return withMeta(stored);
-
-      const res = await postJSON('/api/lesson', {
-        topic: course.topic,
-        from: course.from,
-        to: course.to,
-        instructions: course.instructions,
-        courseTitle: course.title,
-        n,
-        outline: flat.map((l) => ({ n: l.n, unit: l.unit, title: l.title, desc: l.desc }))
-      }, 330000);
-      const lesson = cleanLesson(res.lesson);
+      const id = encodeURIComponent(course.id);
+      let res;
+      if ((course.written || []).includes(n)) {
+        res = await P.get(`/api/courses/${id}/lessons/${n}`);
+      } else {
+        res = await P.post('/api/lesson', { courseId: course.id, n }, {
+          timeout: 330000, timeoutMessage: 'The AI took too long to write this lesson. Try again.'
+        });
+        const fresh = P.courses.get(course.id) || course;
+        fresh.written = Array.from(new Set((fresh.written || []).concat(n))).sort((a, b) => a - b);
+      }
+      // AI-written HTML is cleaned every time it is shown, never trusted as stored.
+      const lesson = cleanLesson(JSON.parse(JSON.stringify(res.lesson)));
       lesson.model = res.model;
-      const fresh = P.courses.get(course.id) || course;
-      fresh.lessons = fresh.lessons || {};
-      fresh.lessons[n] = lesson;
-      P.courses.save(fresh);
       return withMeta(lesson);
     },
 
@@ -286,32 +278,42 @@
       return { points };
     },
 
-    // Written answers: checking mechanism to be decided, so we only record them.
+    // Written answers are saved with the lesson's progress (the answer text is in it).
     async submitSubjective(course, lessonN, q, text) {
-      await P.delay(P.motion.reduce ? 0 : 450);
+      await P.delay(P.motion.reduce ? 0 : 250);
       return { status: 'submitted' };
     },
 
-    // Doubts from a text selection or a whiteboard sketch. Stored until the tutor exists.
+    // Every wrong answer is remembered, so the tutor can see what tends to trip this learner up.
+    recordMistake(course, n, lessonTitle, q, given) {
+      const choiceText = (i) => (q.choices && q.choices[i] != null ? plain(q.choices[i]) : '');
+      const correct = q.type === 'choice' ? choiceText(q.answer) : q.type === 'numeric' ? `${q.answer}${q.unit ? ' ' + q.unit : ''}` : (q.accept || [])[0] || '';
+      const givenText = q.type === 'choice' ? choiceText(Number(given)) : String(given);
+      P.post('/api/mistakes', {
+        courseId: course.id, lesson: n, lessonTitle, prompt: plain(q.prompt), given: givenText, correct
+      }).catch(() => {});
+    },
+
+    // Doubts from a text selection or a whiteboard sketch, saved to the account.
     async askDoubt(payload) {
-      await P.delay(P.motion.reduce ? 0 : 300);
-      const key = userKey('primer.doubts');
-      const list = P.store.get(key, []) || [];
-      const item = Object.assign({ id: P.uid(), at: Date.now(), status: 'waiting' }, payload);
-      list.push(item);
-      if (!P.store.set(key, list)) {
-        // storage full: keep the question, drop the sketch
-        item.image = null;
-        item.imageDropped = true;
-        P.store.set(key, list);
-      }
-      return { status: 'waiting', id: item.id };
+      const res = await P.post('/api/doubts', payload, { timeout: 45000 });
+      const key = `${payload.courseId}|${payload.lesson}`;
+      doubtCache.set(key, [res.doubt].concat(doubtCache.get(key) || []));
+      return res.doubt;
+    },
+
+    async loadDoubts(courseId, lessonN) {
+      const res = await P.get(`/api/doubts?course=${encodeURIComponent(courseId)}&lesson=${lessonN}`);
+      doubtCache.set(`${courseId}|${lessonN}`, res.doubts);
+      return res.doubts;
     },
 
     doubts(courseId, lessonN) {
-      return (P.store.get(userKey('primer.doubts'), []) || [])
-        .filter((d) => d.courseId === courseId && (lessonN == null || d.lesson === lessonN))
-        .sort((a, b) => b.at - a.at);
-    }
+      return doubtCache.get(`${courseId}|${lessonN}`) || [];
+    },
+
+    // The lesson notebook: typed notes and the drawing on the page, per lesson.
+    getNotes: (courseId, n) => P.get(`/api/notes/${encodeURIComponent(courseId)}/${n}`),
+    saveNotes: (courseId, n, data, keepalive) => P.put(`/api/notes/${encodeURIComponent(courseId)}/${n}`, data, { keepalive })
   };
 })();

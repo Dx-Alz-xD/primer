@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { HttpError } from './http.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache');
@@ -26,10 +27,9 @@ export function config() {
   };
 }
 
-export class AIError extends Error {
+export class AIError extends HttpError {
   constructor(message, status = 502) {
-    super(message);
-    this.status = status;
+    super(message, status);
   }
 }
 
