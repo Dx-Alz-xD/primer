@@ -112,7 +112,8 @@
       const counts = {};
       ORDER.forEach((s) => { counts[s] = 0; });
       infos.forEach((i) => { counts[i.state]++; });
-      const summary = ORDER.filter((s) => counts[s]).map((s) => `${counts[s]} ${t(STATES[s].label).toLowerCase()}`).join(' · ');
+      // "Mastered: 3": a label and a number reads right in every language, with no plural forms to get wrong
+      const summary = ORDER.filter((s) => counts[s]).map((s) => `${t(STATES[s].label)}: ${counts[s]}`).join(' · ');
       const shaky = infos.filter((i) => i.state === 'shaky');
       box.innerHTML = `
         <header class="kmap__head">
