@@ -28,6 +28,18 @@ Primer turns one topic into a full course. You name the subject, say where to st
 - **A two-minute level check** before a course sets where it starts, from the first idea you don’t know yet.
 - **Answers in your own words are marked**, with short feedback and the key points you missed.
 - **Real photos in lessons.** Up to two freely licensed photos per lesson from Wikimedia Commons, each credited with its author and licence, kept on the server so they work offline and in the EPUB. Courses get a cover photo too.
+- **Choose how long a course is**: as long as the subject needs, concise (one unit of 1 to 5 lessons), an exact number of lessons, or a total study time.
+- **Start from what you bring.** Type, paste or recite knowledge that may not be written down anywhere (Add2Knowledge), and Primer builds a course from that alone, credited to you, which you can share on the community board so it is kept. Or photograph textbook pages and learn from their text, or photograph an object and get a lesson, a unit or a course on how it works, how it’s made, its history, ethics or uses.
+- **Reuses before it writes.** Before planning a new course, Primer looks for one that already covers it (your courses, the shared library, outlines shared on the community board) and offers it, so no AI credit is spent. New information on a topic revises only the lessons it affects.
+- **Sources for every lesson.** Each lesson ends with its sources (Wikipedia articles, open research papers from OpenAlex, the videos it uses, or the material the course was built from), and small numbers beside each part show which source it follows.
+- **Apps to practise in.** A lesson suggests real apps and websites to try what it teaches (Krita for drawing, GeoGebra for graphs), with their icon and, on hover, what the app is and how to use it for this lesson.
+- **Unit exams, a final exam and your own tests.** Every unit ends with a timed exam of 10 questions (7 multiple choice, 3 in your own words). Passing it opens the next unit, and passing a later one lets you skip ahead. The final exam (2 multiple-choice questions and 1 written one per unit) marks the course complete and adds a certificate to your skill passport, which anyone can check by its code. A custom test takes the lessons, the number of each kind of question and the timer you choose. Any test prints as a worksheet with its answer key.
+- **Course files: one download, the whole village learns.** Turn a course into one file and pass it on by WhatsApp, Bluetooth or a USB stick. It opens on another device with its written lessons, photos and narration, without AI credit or internet.
+- **Talk to the tutor, hands-free.** Speak, pause, and hear the answer in your language; the tutor listens again. It is the same conversation, and the same memory, as the written tutor.
+- **Study methods.** Pick one per course and lessons change to match: active recall, the Feynman technique (your explanation is marked), Cornell notes, mind maps, SQ3R, interleaving, spaced repetition or Pomodoro, each with how it works and why.
+- **A study timer** in the top bar (Pomodoro, deep work, your own lengths, a stopwatch) that keeps running between pages, and the time you’ve studied on each course.
+- **Reminders** about courses you’ve left unfinished, after 2, 7 and 30 days away (or more or less often), in a bell and as notifications.
+- **A knowledge map** of each course: every lesson marked mastered, shaky, in progress, not started or locked, and the ones worth another look.
 - **Accounts that keep everything**: courses, progress, notes, doubts and the tutor’s memory follow you to any device.
 - **Risky topics are taught safely, not turned away.** A request like “bomb making” becomes a course on the chemistry and safety of explosives, and a hateful premise becomes critical history. Lessons and the tutor stay at textbook level and never give instructions for causing harm. Someone who seems to be struggling gets a supportive answer with a helpline. The only thing always refused is sexual content involving children.
 
@@ -56,6 +68,11 @@ Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` 
 | `YOUTUBE_API_KEY` (or `GOOG_CLOUD`) | A Google Cloud key with the YouTube Data API enabled, for YouTube videos in Watch mode. |
 | `YOUTUBE_REGION` | Optional: the region YouTube searches favour. |
 | `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL` | Optional: another voice or model. |
+| `ELEVENLABS_STT_MODEL` | Optional: the speech-to-text model for talking to the tutor (default `scribe_v2`). |
+| `PRIMER_VISION_ORDER` | Which providers read photos (objects and textbook pages), in order (default Gemini first). |
+| `GEMINI_VISION_MODELS`, `GROQ_VISION_MODELS`, `OPENROUTER_VISION_MODELS`, `REQUESTY_VISION_MODELS` | Optional: each provider’s photo-reading models, in order. |
+| `OPENALEX_API_KEY` | Optional: an OpenAlex key, for a higher rate limit on research-paper sources. |
+| `PRIMER_EXAM_PAUSE_MINUTES` | How long to wait before retaking a failed exam (default 10). |
 | `WIKIMEDIA_CONTACT` | Optional: your email or web page, sent to Wikimedia so photo lookups get a higher rate limit. |
 | `PORT`, `HOST` | Where the server listens (default `127.0.0.1:5173`). |
 
@@ -82,6 +99,8 @@ Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` 
 index.html, auth.html, app.html, lesson.html   pages
 community.html, post.html, book.html            community board, one post, the book reader
 review.html, class.html                         review of past mistakes, a teacher’s class dashboard
+exam.html, paper.html                           taking an exam or test, a test on paper
+certificate.html, verify.html                   the skill passport, checking a certificate
 assets/js, assets/css                           front end (one file per feature)
 assets/i18n                                     interface translations (19 languages besides English)
 assets/css/rtl.css                              right-to-left layout for Urdu and Arabic
@@ -103,6 +122,14 @@ server/offline.mjs, assets/js/sw.js             the installable app and offline 
 server/photos.mjs                               lesson photos from Wikimedia Commons, with credits
 assets/icons                                    app icons
 server/ebook.mjs, server/translate.mjs          the book view, lesson translation
+server/length.mjs                               course length
+server/sources-in.mjs                           courses from your knowledge, a photo or textbook pages
+server/reuse.mjs                                reusing a course that already exists, revising one
+server/refs.mjs, sources.mjs, apps.mjs          a lesson's sources and the apps to practise it in
+server/exams.mjs                                unit and final exams, tests, the skill passport
+server/packs.mjs, assets/js/packfmt.js          course files
+server/talk.mjs                                 talking to the tutor
+server/study.mjs, server/reminders.mjs          study methods, time studied, reminders
 server/features.mjs                             the list of feature modules
 docs/                                           images for this README
 ```
