@@ -13,6 +13,7 @@ import { requireUser } from './auth.mjs';
 import { generateOutline, generateLesson } from './ai.mjs';
 import { screen, cleanSafety, courseSafety, softenSample, REFUSED } from './safety.mjs';
 import { isLang } from './langs.mjs';
+import { cleanLength } from './length.mjs';
 
 export const newId = () => Date.now().toString(36) + crypto.randomBytes(5).toString('hex');
 const TAGS = new Set(['maths', 'diagram', 'practice', 'written']);
@@ -68,6 +69,8 @@ export function cleanMeta(c) {
   if (c.library && typeof c.library === 'object') meta.library = c.library;
   const safety = cleanSafety(c.safety);
   if (safety) meta.safety = safety;
+  const length = cleanLength(c.length); // the length the learner chose (server/length.mjs)
+  if (length) meta.length = length;
   return meta;
 }
 
@@ -179,7 +182,8 @@ export function courseInput(body) {
   if (!topic) throw new HttpError('Name a topic first.', 400);
   return {
     topic, from: text(body.from, 80), to: text(body.to, 80), instructions: text(body.instructions, 600),
-    syllabus: longText(body.syllabus, 4000) // optional: a syllabus or chapter list the course must follow
+    syllabus: longText(body.syllabus, 4000), // optional: a syllabus or chapter list the course must follow
+    length: cleanLength(body.length) // optional: concise, a number of lessons or a time budget (server/length.mjs)
   };
 }
 
@@ -203,6 +207,9 @@ hooks.classLesson = null;
 // photos.mjs: photos(row, meta, n, lesson, stored) -> the lesson with its photos looked up. Called for
 // every lesson written (stored: false, saved here after) or opened (stored: true, it saves its changes).
 hooks.photos = null;
+// reuse.mjs: reuseHint(user, input, body) -> what its check before building already found out about this
+// request ({ skipLibrary, library }), so the shared library isn't asked twice; null when nothing.
+hooks.reuseHint = null;
 const withPhotos = (row, meta, n, lesson, stored) => (hooks.photos && lesson ? hooks.photos(row, meta, n, lesson, stored) : lesson);
 
 // The folder a new course should be filed in, if the request names one.
@@ -221,6 +228,7 @@ async function outline({ req, res }) {
   const s = screen(input.topic, input.from, input.to, input.instructions) || screenSyllabus(input.topic, input.syllabus);
   if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);
   if (s) input.safety = s;
+  if (hooks.reuseHint) input.reuse = hooks.reuseHint(u, input, body);
   const style = Array.isArray(body.style) ? body.style : [];
   const folderId = folderFor(u, body);
   let meta;
@@ -252,14 +260,16 @@ async function lesson({ req, res }) {
   // older courses on risky topics (made before this check) are framed safely from here on
   const safety = courseSafety(meta);
   if (safety && safety.kind === 'refuse') throw new HttpError(REFUSED, 400);
+  // a lesson revised (or added) with new information (server/reuse.mjs) is written for this course alone
+  const update = text(meta.revised && meta.revised[n], 600) || null;
   // the usual way: the shared library's copy if it has one, otherwise the AI
   const write = async () => {
     let out = null;
-    if (hooks.writeLesson && !safety) out = await hooks.writeLesson(u, row, meta, n);
+    if (hooks.writeLesson && !safety && !update) out = await hooks.writeLesson(u, row, meta, n);
     if (!out) {
       out = await generateLesson({
         topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions, safety, syllabus: Boolean(meta.syllabus),
-        courseTitle: meta.title || meta.topic, n, lang: meta.lang || 'en',
+        courseTitle: meta.title || meta.topic, n, lang: meta.lang || 'en', update,
         outline: flat.map((l) => ({ n: l.n, unit: l.unit, title: l.title, desc: l.desc }))
       });
     }

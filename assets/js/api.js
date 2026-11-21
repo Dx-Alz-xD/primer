@@ -222,7 +222,7 @@
         // signed out, or a request the server turned down: a sample course wouldn't help
         if (err.status === 401 || err.status === 400) throw err;
         console.warn('[Primer] AI outline failed:', err);
-        const sample = P.courseGen.build(input);
+        const sample = P.courseGen.build(Object.assign({ length: (req.extra && req.extra.length) || null }, input)); // length.js keeps it to the length
         sample.source = 'sample';
         sample.aiError = err.message;
         const res = await P.post('/api/courses', { course: sample, folderId: (req.extra && req.extra.folderId) || null });

@@ -17,12 +17,19 @@
 // Lesson n of the course is library lesson offset + n. Library lessons
 // are written once, in the context of the whole subject, and every later
 // learner gets them instantly.
+//
+// A request with a length (concise, a number of lessons, a time budget:
+// server/length.mjs) uses the library only when the slice already fits
+// that length, since a library course's lessons build on each other and
+// can't be thinned out. It never starts a new subject either: that would
+// be a whole-subject outline nobody asked for, on top of the learner's own.
 // =====================================================================
 import { q, tx, now, schema, parseJSON } from './db.mjs';
 import { HttpError, sendJSON, text } from './http.mjs';
 import { requireUser } from './auth.mjs';
 import { hooks, cleanMeta, flatten } from './data.mjs';
 import { generateOutline, generateLesson, matchLibrary, pickLibraryCut } from './ai.mjs';
+import { fitLength } from './length.mjs';
 
 schema('library-1', `
   CREATE TABLE library (
@@ -70,7 +77,7 @@ const entryOut = (r) => ({
   id: r.id, subject: r.subject, aliases: parseJSON(r.aliases, []), outline: parseJSON(r.outline, { title: '', units: [] }),
   model: r.model, createdAt: r.created_at
 });
-const getEntry = (id) => { const r = q('SELECT * FROM library WHERE id = ?').get(id); return r ? entryOut(r) : null; };
+export const getEntry = (id) => { const r = q('SELECT * FROM library WHERE id = ?').get(id); return r ? entryOut(r) : null; };
 
 function findExact(name) {
   const key = subjectKey(name);
@@ -81,7 +88,7 @@ function findExact(name) {
   return null;
 }
 
-function addAlias(entry, alias) {
+export function addAlias(entry, alias) {
   const a = text(alias, 120).toLowerCase();
   const key = subjectKey(a);
   if (!key || subjectKey(entry.subject) === key) return;
@@ -139,7 +146,7 @@ function createEntry(subject, topic) {
 
 // Used only when the AI can't pick the cut: find the lessons whose titles share most words
 // with the range's ends.
-function guessCut(flat, from, to) {
+export function guessCut(flat, from, to) {
   const words = flat.map((l) => new Set(subjectKey(`${l.title} ${l.desc}`).split(' ')));
   const find = (phrase, last) => {
     const want = subjectKey(phrase).split(' ').filter(Boolean);
@@ -168,7 +175,7 @@ async function chooseCut(entry, flat, input) {
   }
 }
 
-function sliceUnits(outline, start, end) {
+export function sliceUnits(outline, start, end) {
   const units = [];
   let n = 0;
   for (const u of outline.units) {
@@ -185,6 +192,8 @@ async function planCourse(user, input, style) {
   if (input.syllabus) return null; // a course that follows the learner's own syllabus is planned for them alone
   if (input.safety) return null; // risky topics get their own safely framed course, never a shared one
   if (input.lang && input.lang !== 'en') return null; // shared lessons are written in English
+  const hint = input.reuse || {}; // what the check before building found (server/reuse.mjs)
+  if (hint.skipLibrary) return null; // the learner was shown the library's course and chose to build their own
   const hasRange = Boolean(input.from || input.to);
   let entry = findExact(input.topic);
   let cut = null;
@@ -194,16 +203,18 @@ async function planCourse(user, input, style) {
     let subject = '';
     const list = candidates(hasRange);
     if (list.length) {
-      let m;
-      try {
-        m = (await matchLibrary({ topic: input.topic, from: input.from, to: input.to, entries: list })).result;
-      } catch (err) {
-        console.log(`[library] matching "${input.topic}" failed, so it gets its own outline: ${err.message}`);
-        return null;
+      let m = hint.library || null; // the check already compared this request with the library, in its one AI call
+      if (!m) {
+        try {
+          m = (await matchLibrary({ topic: input.topic, from: input.from, to: input.to, entries: list })).result;
+        } catch (err) {
+          console.log(`[library] matching "${input.topic}" failed, so it gets its own outline: ${err.message}`);
+          return null;
+        }
       }
-      if (m.match) {
+      if (m.match && getEntry(m.match)) {
         entry = getEntry(m.match);
-        how = 'AI match';
+        how = hint.library ? 'reuse check' : 'AI match';
         addAlias(entry, input.topic);
         if (m.alias) addAlias(entry, m.alias);
         const shown = list.find((c) => c.id === entry.id);
@@ -214,28 +225,53 @@ async function planCourse(user, input, style) {
       }
     }
     if (!entry) {
+      // a course of a chosen length is planned to that length on its own
+      if (input.length) return null;
       entry = await createEntry(cap(text(subject, 120)) || cap(input.topic), input.topic);
       how = 'new subject';
     }
   }
 
+  const meta = await courseFromEntry(entry, input, style, cut);
+  if (meta) {
+    const lib = meta.library;
+    console.log(`[library] "${input.topic}" -> #${entry.id} "${entry.subject}", lessons ${lib.offset + 1}-${lib.offset + flatten(meta.units).length} of ${lib.total} (${how})`);
+  }
+  return meta;
+}
+
+// The learner's course from a library entry: the slice of it covering their range. With a length,
+// only a slice that already fits it (a concise one becomes one unit); `anyLength` takes the slice
+// whatever its size (the learner chose this course: "Use it" in server/reuse.mjs).
+export async function courseFromEntry(entry, input, style, cut = null, { anyLength = false } = {}) {
   const flat = flatten(entry.outline.units);
   if (!flat.length) return null;
+  const hasRange = Boolean(input.from || input.to);
   if (!cut) cut = hasRange ? await chooseCut(entry, flat, input) : { start: 1, end: flat.length };
   if (!cut || cut.end - cut.start + 1 < Math.min(MIN_SLICE, flat.length)) {
     console.log(`[library] "${input.topic}": no usable cut of "${entry.subject}", so it gets its own outline`);
     return null;
   }
   const whole = cut.start === 1 && cut.end === flat.length;
-  const meta = cleanMeta({
+  let units = sliceUnits(entry.outline, cut.start, cut.end);
+  let length = input.length || null;
+  if (length) {
+    const fit = fitLength(units, length, { title: whole ? entry.outline.title || entry.subject : cap(input.topic) });
+    if (!fit && !anyLength) {
+      console.log(`[library] "${input.topic}": "${entry.subject}" (${flatten(units).length} lessons) doesn't fit the length asked for, so it gets its own outline`);
+      return null;
+    }
+    if (fit) units = fit;
+    else length = null; // kept whole: the course page doesn't claim a length it doesn't have
+  }
+  return cleanMeta({
     ...input,
+    length,
     title: whole ? entry.outline.title || entry.subject : cap(input.topic),
     style, source: 'library', model: entry.model,
-    units: sliceUnits(entry.outline, cut.start, cut.end),
+    units,
     library: { id: entry.id, offset: cut.start - 1, subject: entry.subject, total: flat.length }
   });
-  console.log(`[library] "${input.topic}" -> #${entry.id} "${entry.subject}", lessons ${cut.start}-${cut.end} of ${flat.length} (${how})`);
-  return meta;
 }
 
 async function writeLesson(user, row, meta, n) {
