@@ -245,12 +245,15 @@
         </div>
         <div class="course-head__actions">
           <a class="btn" href="${lessonHref(course.id, resume)}">${cta}</a>
+          <a class="textlink" href="book.html?course=${encodeURIComponent(course.id)}">Read as a book</a>
+          <button class="textlink" type="button" data-epub>Download EPUB</button>
           <button class="textlink" type="button" data-print>Save outline as PDF</button>
           <button class="textlink" type="button" data-delete>Delete course</button>
         </div>
       </header>
       <ol class="units">${unitsHTML}</ol>`;
 
+    view.querySelector('[data-epub]').addEventListener('click', (e) => P.epub.download(course.id, e.currentTarget));
     view.querySelector('[data-print]').addEventListener('click', () => window.print());
     view.querySelector('[data-delete]').addEventListener('click', async (e) => {
       if (!window.confirm(`Delete “${course.title}” and all its progress? This can’t be undone.`)) return;
