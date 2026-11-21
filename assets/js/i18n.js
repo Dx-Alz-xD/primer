@@ -79,7 +79,9 @@
   }
 
   /* ---------------- translating the page ---------------- */
-  const SKIP = '[data-no-i18n], script, style, textarea, code, pre, .katex, .lbody, .lhead h1, .nb__text, .nb__entry, .tmsg, .ditem__q, .ditem__a, .ditem__quote, .doubt__quote, .user__name, .ugc';
+  // content people or the AI wrote is never "translated" by the dictionary: lessons, notes,
+  // tutor replies, posts, and names the learner chose (folder names in shelves and menus)
+  const SKIP = '[data-no-i18n], script, style, textarea, code, pre, .katex, .lbody, .lhead h1, .nb__text, .nb__entry, .tmsg, .ditem__q, .ditem__a, .ditem__quote, .doubt__quote, .user__name, .ugc, .shelf__title:not(#shelf-unfiled), option[value]:not([value=""])';
   const ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
   const done = new WeakMap();
 
