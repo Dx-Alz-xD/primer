@@ -12,6 +12,7 @@ import { HttpError, sendJSON, readBody, text, longText } from './http.mjs';
 import { requireUser } from './auth.mjs';
 import { generateOutline, generateLesson } from './ai.mjs';
 import { screen, cleanSafety, courseSafety, softenSample, REFUSED } from './safety.mjs';
+import { isLang } from './langs.mjs';
 
 export const newId = () => Date.now().toString(36) + crypto.randomBytes(5).toString('hex');
 const TAGS = new Set(['maths', 'diagram', 'practice', 'written']);
@@ -56,7 +57,7 @@ export function cleanMeta(c) {
     style: (Array.isArray(c.style) ? c.style : []).slice(0, 8)
       .map((s) => ({ key: text(s && s.key, 20), label: text(s && s.label, 40) })).filter((s) => s.key),
     source: SOURCES.has(c.source) ? c.source : 'sample',
-    lang: ['en', 'hi', 'ru'].includes(c.lang) ? c.lang : 'en',
+    lang: isLang(c.lang) ? c.lang : 'en',
     model: text(c.model, 120) || null,
     units
   };
@@ -213,7 +214,9 @@ function folderFor(user, body) {
 async function outline({ req, res }) {
   const u = requireUser(req);
   const body = await readBody(req, 24_000); // room for a 4,000-character syllabus in any script
-  const input = { ...courseInput(body), lang: u.lang || 'en' }; // courses are written in the learner's language
+  // courses are written in the language the builder chose, or else the learner's own
+  if (body.lang != null && body.lang !== '' && !isLang(body.lang)) throw new HttpError('That language isn’t available yet.', 400);
+  const input = { ...courseInput(body), lang: body.lang || u.lang || 'en' };
   // risky topics aren't turned away: the AI is told to teach their safe, public side
   const s = screen(input.topic, input.from, input.to, input.instructions) || screenSyllabus(input.topic, input.syllabus);
   if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);

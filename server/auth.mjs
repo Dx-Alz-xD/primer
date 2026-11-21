@@ -14,6 +14,7 @@
 import crypto from 'node:crypto';
 import { q, now } from './db.mjs';
 import { HttpError, sendJSON, readBody, text, parseCookies, setCookie, clientIp, overLimit } from './http.mjs';
+import { UI_LANGS } from './langs.mjs';
 
 const COOKIE = 'primer_sid';
 const SESSION_DAYS = 30;
@@ -99,7 +100,7 @@ export const publicUser = (u) => (u ? { id: u.id, name: u.name, email: u.email, 
 
 const normEmail = (e) => text(e, 254).toLowerCase();
 const validEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
-const LANGS = new Set(['en', 'hi', 'ru']);
+const LANGS = UI_LANGS; // the interface languages (server/langs.mjs)
 
 function checkInvite(code) {
   const want = inviteCode();

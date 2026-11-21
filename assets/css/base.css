@@ -246,5 +246,11 @@ button{font:inherit;color:inherit}
 .langpick select:hover{border-color:var(--gold)}
 .langpick select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .langpick option{background:#1c120a;color:var(--cream)}
+/* a longer translation wraps the lesson's top bar onto a second row rather than running off the page */
+.lbar__inner{flex-wrap:wrap}
+.lbar__tools{margin-inline-start:auto}
+.lbar__pos{white-space:nowrap}
+/* ...and on a phone, a long button label wraps inside its button */
+@media (max-width:560px){ .btn{white-space:normal;text-align:center} }
 .sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 html.i18n-wait body{visibility:hidden}

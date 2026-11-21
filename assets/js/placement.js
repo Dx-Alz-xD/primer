@@ -103,7 +103,8 @@
     showLoading();
     if (!dlg.open) dlg.showModal();
     try {
-      const d = await P.post('/api/placement', { topic, to }, {
+      const langEl = $('#b-lang');
+      const d = await P.post('/api/placement', { topic, to, lang: langEl ? langEl.value : undefined }, {
         timeout: 130000, timeoutMessage: t('The AI took too long to write the questions. Try again.')
       });
       if (my !== run) return;

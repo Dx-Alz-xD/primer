@@ -105,7 +105,9 @@ Rules:
 
 const lineFor = (l) => `${l.n}. [${l.unit}] ${l.title}${l.desc ? ` — ${l.desc}` : ''}`;
 
-export const LANG_NAMES = { en: 'English', hi: 'Hindi', ru: 'Russian' };
+// Every language a course can be written in, named the way the AI is told it (server/langs.mjs).
+import { LANG_NAMES } from './langs.mjs';
+export { LANG_NAMES };
 const langLine = (lang) => (lang && lang !== 'en' && LANG_NAMES[lang] ? `Language: write everything in ${LANG_NAMES[lang]} (keep LaTeX as LaTeX).` : '');
 // English requests keep their old cache keys; other languages get their own.
 const langKey = (lang) => (lang && lang !== 'en' ? { lang } : {});

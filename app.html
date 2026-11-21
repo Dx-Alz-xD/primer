@@ -70,7 +70,13 @@
 
         <form class="builder card card--solid" id="builder" novalidate>
           <div class="field">
-            <label class="label" for="b-topic">Topic</label>
+            <div class="field__head">
+              <label class="label" for="b-topic">Topic</label>
+              <span class="blang">
+                <label class="help" for="b-lang">Course language</label>
+                <select class="select select--small" id="b-lang" name="lang" title="Lessons, questions and the level check are written in this language."></select>
+              </span>
+            </div>
             <input class="input input--lg" id="b-topic" name="topic" type="text" maxlength="120" placeholder="e.g. Derivatives in calculus" autocomplete="off" required>
             <p class="field__error" id="b-topic-err"></p>
             <div class="chips" role="group" aria-label="Example topics">

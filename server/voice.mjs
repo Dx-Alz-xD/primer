@@ -23,6 +23,22 @@ const key = () => (process.env.ELEVENLABS_API_KEY || '').trim();
 const voiceId = () => (process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb').trim(); // "George": a warm narrator
 const MODEL = () => (process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2').trim();
 
+// Which model reads which language (ElevenLabs' /v1/models list). The default, eleven_multilingual_v2,
+// reads 29 languages, Hindi, Tamil, Arabic, Spanish, French, Portuguese and Russian among them, and
+// keeps the voice it always had. eleven_v3 reads most other Indian languages; of the interface languages
+// only Odia needs eleven_v4. Bhojpuri, Maithili, Sanskrit and Konkani are written in Devanagari and are
+// read as Hindi.
+const V2_LANGS = new Set('en ja zh de hi fr ko pt it es id nl tr fil pl sv bg ro ar cs el fi hr ms sk da ta uk ru'.split(' '));
+const V3_LANGS = new Set('bn mr te gu kn ml pa ur as ne fa he sw th vi'.split(' '));
+const AS_HINDI = new Set(['bho', 'mai', 'sa', 'kok']);
+export function voiceFor(lang) {
+  if (!lang || lang === 'en' || V2_LANGS.has(lang)) return { model: MODEL(), code: null }; // as before
+  if (AS_HINDI.has(lang)) return { model: MODEL(), code: 'hi' };
+  if (V3_LANGS.has(lang)) return { model: 'eleven_v3', code: lang };
+  if (lang === 'or') return { model: 'eleven_v4', code: 'or' };
+  return { model: MODEL(), code: null }; // no model lists it (Sinhala): the default does its best
+}
+
 /* ---------------- maths into words ---------------- */
 
 const CMD = {
@@ -102,16 +118,17 @@ export function speakHTML(html) {
     .replace(/\s+([.,;:!?])/g, '$1').replace(/\.\s*\./g, '.').replace(/\s+/g, ' ').trim();
 }
 
-function sectionScript(section) {
+function sectionScript(section, lang) {
+  const en = !lang || lang === 'en';
   const parts = [section.title + '.'];
   for (const b of section.blocks || []) {
     if (b.t === 'p') parts.push(speakHTML(b.html));
     else if (b.t === 'math') parts.push(speakTex(b.tex) + '.');
     else if (b.t === 'list') parts.push(b.items.map(speakHTML).join('. ') + '.');
     else if (b.t === 'callout') parts.push(`${b.title ? b.title + '. ' : ''}${speakHTML(b.html)}`);
-    else if (b.t === 'figure' && b.caption) parts.push(`The figure shows: ${speakHTML(b.caption)}`);
+    else if (b.t === 'figure' && b.caption) parts.push(en ? `The figure shows: ${speakHTML(b.caption)}` : speakHTML(b.caption));
   }
-  if ((section.checkpoint || []).length) parts.push('Now try the checkpoint below.');
+  if (en && (section.checkpoint || []).length) parts.push('Now try the checkpoint below.');
   return parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').slice(0, 4500);
 }
 
@@ -139,13 +156,16 @@ async function eleven(urlPath, init) {
   return res;
 }
 
-function tts(script) {
-  const name = crypto.createHash('sha256').update(`${voiceId()}|${MODEL()}|${script}`).digest('hex').slice(0, 32) + '.mp3';
+const audioName = (script, v) => crypto.createHash('sha256').update(`${voiceId()}|${v.model}${v.code ? '|' + v.code : ''}|${script}`).digest('hex').slice(0, 32) + '.mp3';
+
+function tts(script, lang) {
+  const v = voiceFor(lang);
+  const name = audioName(script, v);
   return cachedAudio(name, async () => {
     const res = await eleven(`/text-to-speech/${encodeURIComponent(voiceId())}?output_format=mp3_44100_128`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-      body: JSON.stringify({ text: script, model_id: MODEL(), voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.15 } })
+      body: JSON.stringify({ text: script, model_id: v.model, ...(v.code ? { language_code: v.code } : {}), voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.15 } })
     });
     return Buffer.from(await res.arrayBuffer());
   });
@@ -173,13 +193,14 @@ async function narrate({ req, res }) {
   try { tr = q('SELECT data FROM lesson_translations WHERE course_id = ? AND n = ? AND lang = ?').get(row.id, n, u.lang); } catch { /* no translations yet */ }
   const section = (parseJSON((tr || lesson).data, {}).sections || [])[si];
   if (!section) throw new HttpError('That part of the lesson doesn’t exist.', 404);
-  const script = typeof body.script === 'string' && body.script.trim() ? text(body.script, 4500) : sectionScript(section);
+  const lang = tr ? u.lang : parseJSON(row.data, {}).lang || 'en'; // the language the page shows it in
+  const script = typeof body.script === 'string' && body.script.trim() ? text(body.script, 4500) : sectionScript(section, lang);
   const name = path.join(AUDIO_DIR, '');
-  const file = crypto.createHash('sha256').update(`${voiceId()}|${MODEL()}|${script}`).digest('hex').slice(0, 32) + '.mp3';
+  const file = audioName(script, voiceFor(lang));
   let fresh = true;
   try { await stat(path.join(name, file)); fresh = false; } catch { /* needs making */ }
   if (fresh && overLimit('voice:' + u.id, 60, 3600_000)) throw new HttpError('You’ve had a lot read aloud this hour. Try again a little later.', 429);
-  const made = await tts(script);
+  const made = await tts(script, lang);
   sendJSON(res, 200, { ok: true, url: '/audio/' + made, chars: script.length });
 }
 
