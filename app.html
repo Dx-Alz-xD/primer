@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/tutor.css">
+<link rel="stylesheet" href="assets/css/classes.css">
 <script defer src="assets/js/core.js"></script>
 <script defer src="assets/js/i18n.js"></script>
 <script defer src="assets/js/backdrop.js"></script>
@@ -20,6 +21,7 @@
 <script defer src="assets/js/api.js"></script>
 <script defer src="assets/js/folders.js"></script>
 <script defer src="assets/js/epub.js"></script>
+<script defer src="assets/js/classes.js"></script>
 <script defer src="assets/js/app.js"></script>
 <script defer src="assets/js/tutor.js"></script>
 </head>
@@ -121,6 +123,7 @@
         <section class="library" id="library" aria-labelledby="library-title">
           <div class="library__head">
             <h2 id="library-title">Your courses</h2>
+            <button class="btn btn--ghost btn--small" type="button" id="class-join-btn" aria-haspopup="dialog" hidden>Join a class</button>
             <button class="btn btn--ghost btn--small" type="button" id="folder-new-btn" aria-expanded="false" aria-controls="folder-new">New folder</button>
           </div>
           <form class="folder-new card card--solid" id="folder-new" hidden novalidate>

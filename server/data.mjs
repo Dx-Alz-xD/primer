@@ -179,6 +179,8 @@ export function courseInput(body) {
 // Hooks other modules can set (the shared library plans courses its own way;
 // the folders module checks a folder belongs to the user: ownFolder(user, id) -> row).
 export const hooks = { planCourse: null, writeLesson: null, ownFolder: null };
+// classes.mjs: classLesson(user, row, n, write) -> { lesson, model } for a class course, null otherwise
+hooks.classLesson = null;
 
 // The folder a new course should be filed in, if the request names one.
 function folderFor(user, body) {
@@ -225,15 +227,21 @@ async function lesson({ req, res }) {
   // older courses on risky topics (made before this check) are framed safely from here on
   const safety = courseSafety(meta);
   if (safety && safety.kind === 'refuse') throw new HttpError(REFUSED, 400);
-  let out = null;
-  if (hooks.writeLesson && !safety) out = await hooks.writeLesson(u, row, meta, n);
-  if (!out) {
-    out = await generateLesson({
-      topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions, safety,
-      courseTitle: meta.title || meta.topic, n, lang: meta.lang || 'en',
-      outline: flat.map((l) => ({ n: l.n, unit: l.unit, title: l.title, desc: l.desc }))
-    });
-  }
+  // the usual way: the shared library's copy if it has one, otherwise the AI
+  const write = async () => {
+    let out = null;
+    if (hooks.writeLesson && !safety) out = await hooks.writeLesson(u, row, meta, n);
+    if (!out) {
+      out = await generateLesson({
+        topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions, safety,
+        courseTitle: meta.title || meta.topic, n, lang: meta.lang || 'en',
+        outline: flat.map((l) => ({ n: l.n, unit: l.unit, title: l.title, desc: l.desc }))
+      });
+    }
+    return out;
+  };
+  // a class course goes through its class first: the teacher's lesson, or one written once for everyone
+  const out = (hooks.classLesson && await hooks.classLesson(u, row, n, write)) || await write();
   saveLesson(row.id, n, out.lesson, out.model);
   sendJSON(res, 200, { ok: true, lesson: out.lesson, model: out.model });
 }
