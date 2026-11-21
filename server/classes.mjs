@@ -134,7 +134,14 @@ async function join({ req, res }) {
     if (q('SELECT COUNT(*) AS n FROM class_members WHERE class_id = ?').get(c.id).n >= MAX_MEMBERS) {
       throw new HttpError(`This class is full: it has ${MAX_MEMBERS} students.`, 400);
     }
-    const meta = cleanMeta(courseMeta(c.course_id) || {});
+    const tm = courseMeta(c.course_id) || {};
+    const meta = cleanMeta(tm);
+    // a course the teacher started from their own material keeps its label; its lessons are still written from
+    // that material (sources-in.mjs finds it through the class), but the copy can't share it or show the cover photo
+    if (tm.startedFrom && typeof tm.startedFrom === 'object') {
+      const { sid, photo, from, ...label } = tm.startedFrom;
+      meta.startedFrom = { ...label, copy: true };
+    }
     const row = insertCourse(u, meta);
     q('INSERT INTO class_members (class_id, user_id, course_id, joined_at) VALUES (?, ?, ?, ?)').run(c.id, u.id, row.id, now());
     return row.id;

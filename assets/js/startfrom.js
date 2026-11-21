@@ -256,7 +256,7 @@
     else if (when) by = esc(t('Made on {date}')).replace('{date}', () => when);
     const gaps = (f.gaps || []).filter(Boolean);
     const grounded = f.kind === 'knowledge' || f.kind === 'page';
-    const canShare = f.kind === 'knowledge' && !f.shared;
+    const canShare = f.kind === 'knowledge' && !f.shared && !f.copy; // a class copy is the teacher's to share
     const invite = canShare && !P.store.get(noShareKey(c.id), false);
     return `<div class="sf-origin">
         <p class="sf-origin__label"><span class="sf-origin__badge">${ICON[f.kind === 'photo' ? 'photo' : f.kind === 'page' ? 'page' : 'knowledge']}<span>${esc(labelOf(f))}</span></span>${by ? ` <span class="sf-origin__by">${by}</span>` : ''}</p>

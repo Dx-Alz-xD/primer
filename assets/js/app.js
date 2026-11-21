@@ -310,7 +310,7 @@
         <div data-fit-slot></div>
         <dl class="spec">
           <dt>Topic</dt><dd>${esc(course.topic)}</dd>
-          <dt>Range</dt><dd data-range>${rangeHTML()}</dd>
+          ${course.startedFrom && !course.from && !course.to ? '' : `<dt>Range</dt><dd data-range>${rangeHTML()}</dd>`}
           <dt>Teaching</dt><dd>${teaching}</dd>
           ${langRow}
           ${folderRow}

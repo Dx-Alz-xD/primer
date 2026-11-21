@@ -50,6 +50,7 @@ import { hooks, ownCourse, insertCourse, loadCourse, cleanMeta, flatten, newId }
 import { askJSON, askVision, visionReady, cached, normalizeLesson, OUTLINE_SYSTEM, LESSON_SYSTEM, LANG_NAMES } from './ai.mjs';
 import { screen, promptNote, safetyKey, REFUSED } from './safety.mjs';
 import { isLang } from './langs.mjs';
+import { refHooks } from './refs.mjs';
 
 schema('sources-in-1', `
   CREATE TABLE source_material (
@@ -473,6 +474,18 @@ async function groundedLesson(user, row, meta, n, safety) {
   });
 }
 hooks.groundedLesson = groundedLesson;
+
+// The material as the only entry in each lesson's "Sources" list (refs.mjs), which then looks nothing up outside.
+refHooks.material = (row, meta) => {
+  const f = meta && meta.startedFrom;
+  if (!f || (f.kind !== 'knowledge' && f.kind !== 'page')) return null;
+  const src = row && row.id && row.user_id != null ? sourceFor({ id: row.user_id }, row, meta) : null;
+  const at = Number(f.at);
+  return {
+    from: f.kind, title: (src && src.title) || meta.topic || meta.title || '', contributor: f.by || '',
+    date: at > 0 ? new Date(at).toISOString().slice(0, 10) : ''
+  };
+};
 
 /* ---------------- photos: checks ---------------- */
 

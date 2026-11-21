@@ -48,7 +48,8 @@
       return {
         n, kind: s.kind, title: text(s.title, 300), url: own ? '' : s.url, site: text(s.site, 160), lang: text(s.lang, 8),
         year: Math.round(Number(s.year)) || 0, authors: arr(s.authors).map((a) => text(a, 80)).filter(Boolean).slice(0, 3), more: Boolean(s.more),
-        doi: text(s.doi, 200), channel: text(s.channel, 120), contributor: text(s.contributor, 120), date: text(s.date, 40)
+        doi: text(s.doi, 200), channel: text(s.channel, 120), contributor: text(s.contributor, 120), date: text(s.date, 40),
+        from: s.from === 'page' ? 'page' : 'knowledge'
       };
     }).filter((s) => s && s.title);
     const have = new Set(sources.map((s) => s.n));
@@ -69,7 +70,7 @@
     return {
       sources, tags, apps,
       status: sources.length ? 'found' : status === 'found' ? 'none' : status,
-      mode: ['grounded', 'checked'].includes(refs.mode) ? refs.mode : null,
+      mode: ['grounded', 'checked', 'own'].includes(refs.mode) ? refs.mode : null,
       appsStatus: apps.length ? 'found' : refs.appsStatus === 'pending' ? 'pending' : 'none'
     };
   }
@@ -105,7 +106,8 @@
     } else if (s.kind === 'video') {
       body = `${link(quoted(s.title))}<span class="src__site">, ${esc(t('YouTube video'))}${s.channel ? ` ${esc(fill('by {channel}', { channel: s.channel }))}` : ''}</span>`;
     } else {
-      body = `<span class="src__own">${esc(fill('From your knowledge: {title}', { title: s.title }))}${s.contributor ? `, ${esc(s.contributor)}` : ''}${s.date ? `, ${esc(s.date)}` : ''}</span>`;
+      const label = s.from === 'page' ? 'Textbook pages given for this course: {title}' : 'Knowledge given for this course: {title}';
+      body = `<span class="src__own">${esc(fill(label, { title: s.title }))}${s.contributor ? `, ${esc(s.contributor)}` : ''}${s.date ? `, ${esc(s.date)}` : ''}</span>`;
     }
     const a = opts.anchor ? ` data-a="${opts.anchor}-${s.n}"` : '';
     return `<li class="src src--${s.kind}" id="${opts.prefix}${s.n}"${a}><span class="src__n" aria-hidden="true">${s.n}</span><span class="src__body">${body}</span></li>`;
@@ -115,6 +117,7 @@
     grounded: 'This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.',
     checked: 'This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.',
     other: 'The small numbers beside each part show which sources it uses.',
+    own: 'This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.',
     none: 'No outside sources were found for this lesson; it was written by AI — check important facts.',
     pending: 'Looking for sources for this lesson…'
   };

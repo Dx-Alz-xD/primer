@@ -158,7 +158,8 @@ function ensure(row, meta, n, lesson, sig) {
   const jobs = [];
   const allowed = () => !overLimit('refs:' + row.user_id, 80, 3600_000);
 
-  if (due(S) && !isBusy(cid, n, 'src') && allowed()) {
+  // a course written only from the learner's own material cites that material, never outside lookups
+  if (!ownOnly(row, meta, n) && due(S) && !isBusy(cid, n, 'src') && allowed()) {
     jobs.push(job(`src|${cid}|${n}`, async () => {
       let out;
       try {
@@ -210,9 +211,12 @@ function materials(row, meta, n) {
   try { m = refHooks.material ? refHooks.material(row, meta, n) : null; } catch { m = null; }
   if (!m) m = meta.materials || meta.material || null;
   return arr(Array.isArray(m) ? m : m ? [m] : []).map((x) => x && typeof x === 'object' && {
-    kind: 'own', title: oneLine(x.title, 200), contributor: oneLine(x.contributor || x.by || x.author, 120), date: oneLine(x.date || x.at, 40)
+    kind: 'own', from: x.from === 'page' ? 'page' : 'knowledge', title: oneLine(x.title, 200), contributor: oneLine(x.contributor || x.by || x.author, 120), date: oneLine(x.date || x.at, 40)
   }).filter((x) => x && x.title).slice(0, 5);
 }
+
+// A course whose lessons are written only from what the learner gave (sources-in.mjs sets refHooks.material).
+const ownOnly = (row, meta, n) => materials(row || {}, meta, n).length > 0;
 
 const APP_ICON = /^\/media\/[a-f0-9]{32}\.(?:png|jpg|gif|webp)$/;
 const cleanApp = (a) => a && /^https:\/\//.test(a.url || '') && {
@@ -224,7 +228,8 @@ export function view(r, lesson, cid, n, meta, row) {
   const S = r && parseJSON(r.sources, null), A = r && parseJSON(r.apps, null), V = (r && parseJSON(r.videos, null)) || {};
   const list = [], tags = {};
   const tag = (i, k) => { if (Number.isInteger(i) && i >= 0 && i < lesson.sections.length) { (tags[i] ||= []); if (!tags[i].includes(k)) tags[i].push(k); } };
-  if (S && S.status === 'found') {
+  const mine = materials(row || { id: cid }, meta, n); // the learner's own material: the only source such a lesson has
+  if (!mine.length && S && S.status === 'found') {
     arr(S.list).forEach((s) => { const e = entry(s); if (e) list.push(e); });
     Object.entries(S.tags || {}).forEach(([i, ks]) => arr(ks).forEach((k) => { if (k >= 1 && k <= list.length) tag(Number(i), k); }));
   }
@@ -234,7 +239,7 @@ export function view(r, lesson, cid, n, meta, row) {
     const k = list.length;
     (arr(v.parts).length ? v.parts : lesson.sections.map((_, i) => i)).forEach((i) => tag(Number(i), k));
   }
-  for (const m of materials(row || { id: cid }, meta, n)) {
+  for (const m of mine) {
     list.push(m);
     const k = list.length;
     lesson.sections.forEach((s, i) => { if (arr(s.blocks).length) tag(i, k); });
@@ -245,7 +250,7 @@ export function view(r, lesson, cid, n, meta, row) {
   const apps = A && A.status === 'found' ? arr(A.list).map(cleanApp).filter(Boolean) : [];
   const appsStatus = apps.length ? 'found' : A && A.status === 'none' ? 'none' : 'pending';
   return {
-    sources: list.map((s, i) => ({ n: i + 1, ...s })), tags, status, mode: S && S.status === 'found' ? S.mode : null,
+    sources: list.map((s, i) => ({ n: i + 1, ...s })), tags, status, mode: mine.length ? 'own' : S && S.status === 'found' ? S.mode : null,
     apps, appsStatus
   };
 }
@@ -259,7 +264,7 @@ function prime(row, meta, n, lesson, sig) {
   if (r && r.sig === sig) return;
   const framed = Boolean(courseSafety(meta)); // risky topics taught safely: no outside lookups, no apps
   save(row.id, n, sig, {
-    sources: framed ? NONE() : fromGrounding(lesson),
+    sources: framed || ownOnly(row, meta, n) ? NONE() : fromGrounding(lesson),
     videos: null,
     apps: framed ? { status: 'none', list: [], at: now() } : null
   });

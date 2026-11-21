@@ -134,3 +134,47 @@ test('askVision sends the photo as an image_url part, to image models only, and 
     ai.resetAI();
   }
 });
+
+/* ---------------- the Sources list of a course built from the learner's material ---------------- */
+
+test('a knowledge course cites only its material, with no outside lookups', async () => {
+  const { q } = await import('../server/db.mjs');
+  const { hooks, insertCourse } = await import('../server/data.mjs');
+  const realFetch = globalThis.fetch, realLog = console.log;
+  const asked = [];
+  globalThis.fetch = async (url) => { asked.push(String(url)); throw new Error('no network in tests'); };
+  console.log = () => {};
+  try {
+    const uid = Number(q(`INSERT INTO users (email, name, pass, created_at) VALUES ('own@test.invalid', 'Asha', 'x', ?)`).run(Date.now()).lastInsertRowid);
+    q(`INSERT INTO source_material (sid, user_id, kind, title, material, created_at) VALUES ('sid-own-1', ?, 'knowledge', 'Sohar songs of Bhojpur', 'Sung at a birth.', ?)`).run(uid, Date.now());
+    const meta = {
+      topic: 'Sohar songs', title: 'Sohar songs', source: 'ai', lang: 'en',
+      units: [{ title: 'Songs', lessons: [{ title: 'What a sohar is' }] }],
+      startedFrom: { kind: 'knowledge', sid: 'sid-own-1', by: 'Asha', at: Date.UTC(2026, 10, 20) }
+    };
+    const row = insertCourse({ id: uid }, meta);
+    const lesson = { title: 'What a sohar is', sections: [
+      { title: 'When it is sung', blocks: [{ type: 'p', text: 'At a birth.' }] },
+      { title: 'Who sings it', blocks: [{ type: 'p', text: 'The women of the family.' }] }
+    ] };
+    const out = await hooks.refs(row, meta, 1, lesson, true);
+    assert.equal(out.refs.mode, 'own');
+    assert.equal(out.refs.status, 'found');
+    assert.deepEqual(out.refs.sources, [{ n: 1, kind: 'own', from: 'knowledge', title: 'Sohar songs of Bhojpur', contributor: 'Asha', date: '2026-11-20' }]);
+    assert.deepEqual(out.refs.tags, { 0: [1], 1: [1] }, 'every part is tagged with the material');
+    assert.ok(!asked.some((u) => /wikipedia|wikimedia|openalex/i.test(u)), 'no outside lookups: ' + asked.join(', '));
+
+    // a textbook-page course is labelled as pages; an ordinary AI course is not given any own material
+    const page = { ...meta, startedFrom: { kind: 'page', by: 'Asha', at: 0 } };
+    const prow = insertCourse({ id: uid }, page);
+    const p = await hooks.refs(prow, page, 1, lesson, true);
+    assert.equal(p.refs.sources[0].from, 'page');
+    const plain = { ...meta, startedFrom: undefined };
+    const r2 = insertCourse({ id: uid }, plain);
+    const o = await hooks.refs(r2, plain, 1, lesson, false);
+    assert.ok(!o.refs || o.refs.mode !== 'own');
+  } finally {
+    globalThis.fetch = realFetch;
+    console.log = realLog;
+  }
+});
