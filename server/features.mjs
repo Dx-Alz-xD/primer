@@ -1,5 +1,7 @@
 // Feature modules the server loads after accounts and user data.
-// Each one exports `routes` (and optionally `pages`: [{ file, protected }]).
+// Each one exports `routes` (and optionally `pages`: [{ file, protected }]
+// and `boot(user)`: extra settings for the page).
 // Add a line here to plug in a new feature.
 export default [
+  () => import('./tutor.mjs')
 ];

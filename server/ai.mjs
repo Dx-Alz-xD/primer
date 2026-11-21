@@ -478,3 +478,12 @@ export function generateLesson(input) {
     return { lesson: value, model };
   });
 }
+
+// A small JSON request for other features (the tutor, voice text...), with the same model
+// fallback, repair and validation as outlines and lessons. Not cached: answers are personal.
+export function askJSON({ system, user, maxTokens = 1800, timeoutMs = 60000, deadlineMs = 120000, validate, label }) {
+  return generate({ system, user, maxTokens, timeoutMs, deadlineMs, validate, label });
+}
+
+// Adds \( \) around bare LaTeX, as lessons get, for any AI text shown on a page.
+export { mathify };

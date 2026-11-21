@@ -10,3 +10,6 @@ data/
 # OS clutter
 .DS_Store
 Thumbs.db
+
+# helper worktrees
+.claude/worktrees/
