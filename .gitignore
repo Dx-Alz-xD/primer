@@ -11,5 +11,5 @@ data/
 .DS_Store
 Thumbs.db
 
-# helper worktrees
-.claude/worktrees/
+# local editor and tool settings
+.claude/
