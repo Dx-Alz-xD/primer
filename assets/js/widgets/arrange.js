@@ -104,7 +104,7 @@
         go.type = 'button';
         go.dataset.go = String(p);
         go.disabled = locked;
-        go.setAttribute('aria-label', m.mode === 'order' ? fill('Place {n}', { n: p + 1 }) : fill('Put it with: {name}', { name }));
+        go.setAttribute('aria-label', m.mode === 'order' ? fill('Put the card in place {n}', { n: p + 1 }) : fill('Put it with: {name}', { name }));
         slot.classList.toggle('is-ready', picked !== null && !locked);
         slot.append(label, drop, go);
         placesEl.appendChild(slot);
