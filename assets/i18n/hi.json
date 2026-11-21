@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "एक टेस्ट में 20 बहुविकल्पीय और 5 लिखित सवाल हो सकते हैं।",
     "Set the timer between 5 and 180 minutes, or have no timer.": "टाइमर को 5 और 180 मिनट के बीच सेट करें, या बिना टाइमर के रखें।",
     "Something went wrong on the server.": "सर्वर पर कुछ गलत हो गया।",
-    "Free, at any time, in India.": "मुफ़्त, किसी भी समय, भारत में।"
+    "Free, at any time, in India.": "मुफ़्त, किसी भी समय, भारत में।",
+    "Knowledge given for this course: {title}": "इस कोर्स के लिए दिया गया ज्ञान: {title}",
+    "Textbook pages given for this course: {title}": "इस कोर्स के लिए दिए गए पाठ्यपुस्तक पृष्ठ: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "यह पाठ केवल उस सामग्री से AI द्वारा लिखा गया था जिससे यह कोर्स बनाया गया था, बिना किसी बाहरी स्रोत के। जाँच लें कि इसमें वही कहा गया है जो इसका मतलब था।",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "यह पाठ AI द्वारा इन स्रोतों से लिखा गया था। प्रत्येक भाग के बगल में दी गई छोटी संख्याएँ दिखाती हैं कि यह किन स्रोतों का अनुसरण करता है।",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "यह पाठ AI द्वारा लिखा गया था; बाद में इन स्रोतों की इससे मिलान करके जाँच की गई। प्रत्येक भाग के बगल में दी गई छोटी संख्याएँ दिखाती हैं कि कौन से स्रोत इसका समर्थन करते हैं।",
+    "The small numbers beside each part show which sources it uses.": "प्रत्येक भाग के बगल में दी गई छोटी संख्याएँ दिखाती हैं कि यह किन स्रोतों का उपयोग करता है।",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "इस पाठ के लिए कोई बाहरी स्रोत नहीं मिले; यह AI द्वारा लिखा गया था — महत्वपूर्ण तथ्यों की जाँच करें।",
+    "Looking for sources for this lesson…": "इस पाठ के लिए स्रोत खोजे जा रहे हैं…",
+    "Upload an image": "इमेज अपलोड करें",
+    "Upload pages": "पेज अपलोड करें",
+    "What you added": "जो आपने जोड़ा"
   }
 }

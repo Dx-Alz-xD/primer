@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "ಒಂದು ಟೆಸ್ಟ್ ಗರಿಷ್ಠ 20 ಬಹುಆಯ್ಕೆ ಮತ್ತು 5 ಲಿಖಿತ ಪ್ರಶ್ನೆಗಳನ್ನು ಹೊಂದಿರಬಹುದು.",
     "Set the timer between 5 and 180 minutes, or have no timer.": "ಟೈಮರ್ ಅನ್ನು 5 ರಿಂದ 180 ನಿಮಿಷಗಳ ನಡುವೆ ಸೆಟ್ ಮಾಡಿ, ಅಥವಾ ಟೈಮರ್ ಇಲ್ಲದೆ ಇರಿ.",
     "Something went wrong on the server.": "ಸರ್ವರ್‌ನಲ್ಲಿ ಏನೋ ತೊಂದರೆಯಾಗಿದೆ.",
-    "Free, at any time, in India.": "ಉಚಿತ, ಯಾವ ಸಮಯದಲ್ಲಾದರೂ, ಭಾರತದಲ್ಲಿ."
+    "Free, at any time, in India.": "ಉಚಿತ, ಯಾವ ಸಮಯದಲ್ಲಾದರೂ, ಭಾರತದಲ್ಲಿ.",
+    "Knowledge given for this course: {title}": "ಈ ಕೋರ್ಸ್‌ಗಾಗಿ ನೀಡಲಾದ ಜ್ಞಾನ: {title}",
+    "Textbook pages given for this course: {title}": "ಈ ಕೋರ್ಸ್‌ಗಾಗಿ ನೀಡಲಾದ ಪಠ್ಯಪುಸ್ತಕ ಪುಟಗಳು: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "ಈ ಪಾಠವನ್ನು ಹೊರಗಿನ ಮೂಲಗಳಿಲ್ಲದೆ, ಈ ಕೋರ್ಸ್ ಅನ್ನು ಯಾವ ವಸ್ತುವಿನಿಂದ ನಿರ್ಮಿಸಲಾಗಿದೆಯೋ ಅದರಿಂದ ಮಾತ್ರ AI ಬರೆದಿದೆ. ಉದ್ದೇಶಿಸಿದ ಅಂಶವೇ ಇದೆಯೆ ಎಂದು ಪರಿಶೀಲಿಸಿ.",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "ಈ ಪಾಠವನ್ನು AI ಈ ಮೂಲಗಳಿಂದ ಬರೆದಿದೆ. ಪ್ರತಿ ಭಾಗದ ಪಕ್ಕದಲ್ಲಿರುವ ಸಣ್ಣ ಸಂಖ್ಯೆಗಳು ಅದು ಯಾವ ಮೂಲಗಳನ್ನು ಅನುಸರಿಸುತ್ತದೆ ಎಂಬುದನ್ನು ತೋರಿಸುತ್ತವೆ.",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "ಈ ಪಾಠವನ್ನು AI ಬರೆದಿದೆ; ನಂತರ ಈ ಮೂಲಗಳನ್ನು ಇದರೊಂದಿಗೆ ಪರಿಶೀಲಿಸಲಾಗಿದೆ. ಪ್ರತಿ ಭಾಗದ ಪಕ್ಕದಲ್ಲಿರುವ ಸಣ್ಣ ಸಂಖ್ಯೆಗಳು ಯಾವ ಮೂಲಗಳು ಇದನ್ನು ಬೆಂಬಲಿಸುತ್ತವೆ ಎಂಬುದನ್ನು ತೋರಿಸುತ್ತವೆ.",
+    "The small numbers beside each part show which sources it uses.": "ಪ್ರತಿ ಭಾಗದ ಪಕ್ಕದಲ್ಲಿರುವ ಸಣ್ಣ ಸಂಖ್ಯೆಗಳು ಅದು ಬಳಸುವ ಮೂಲಗಳನ್ನು ತೋರಿಸುತ್ತವೆ.",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "ಈ ಪಾಠಕ್ಕೆ ಯಾವುದೇ ಹೊರಗಿನ ಮೂಲಗಳು ಕಂಡುಬಂದಿಲ್ಲ; ಇದನ್ನು AI ಬರೆದಿದೆ — ಪ್ರಮುಖ ಸತ್ಯಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.",
+    "Looking for sources for this lesson…": "ಈ ಪಾಠಕ್ಕಾಗಿ ಮೂಲಗಳನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ…",
+    "Upload an image": "ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+    "Upload pages": "ಪುಟಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+    "What you added": "ನೀವು ಸೇರಿಸಿದ್ದೇನು"
   }
 }

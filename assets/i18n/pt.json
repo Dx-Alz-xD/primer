@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "Um teste pode ter até 20 perguntas de múltipla escolha e 5 escritas.",
     "Set the timer between 5 and 180 minutes, or have no timer.": "Defina o cronômetro entre 5 e 180 minutos, ou não use cronômetro.",
     "Something went wrong on the server.": "Algo deu errado no servidor.",
-    "Free, at any time, in India.": "Gratuito, a qualquer momento, na Índia."
+    "Free, at any time, in India.": "Gratuito, a qualquer momento, na Índia.",
+    "Knowledge given for this course: {title}": "Conhecimento fornecido para este curso: {title}",
+    "Textbook pages given for this course: {title}": "Páginas do livro didático fornecidas para este curso: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "Esta lição foi escrita pela IA apenas com o material a partir do qual este curso foi construído, sem fontes externas. Verifique se o conteúdo está correto.",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "Esta lição foi escrita pela IA a partir destas fontes. Os pequenos números ao lado de cada parte indicam quais fontes ela segue.",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "Esta lição foi escrita pela IA; estas fontes foram verificadas posteriormente. Os pequenos números ao lado de cada parte indicam quais fontes a fundamentam.",
+    "The small numbers beside each part show which sources it uses.": "Os pequenos números ao lado de cada parte indicam quais fontes são usadas.",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "Nenhuma fonte externa foi encontrada para esta lição; ela foi escrita pela IA — verifique os fatos importantes.",
+    "Looking for sources for this lesson…": "Procurando fontes para esta lição…",
+    "Upload an image": "Enviar imagem",
+    "Upload pages": "Enviar páginas",
+    "What you added": "O que você adicionou"
   }
 }

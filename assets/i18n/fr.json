@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "Un test peut contenir jusqu'à 20 questions à choix multiples et 5 questions écrites.",
     "Set the timer between 5 and 180 minutes, or have no timer.": "Réglez le minuteur entre 5 et 180 minutes, ou désactivez-le.",
     "Something went wrong on the server.": "Un problème est survenu sur le serveur.",
-    "Free, at any time, in India.": "Gratuit, à tout moment, en Inde."
+    "Free, at any time, in India.": "Gratuit, à tout moment, en Inde.",
+    "Knowledge given for this course: {title}": "Connaissance fournie pour ce cours : {title}",
+    "Textbook pages given for this course: {title}": "Pages de manuel fournies pour ce cours : {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "Cette leçon a été écrite par l'IA uniquement à partir du matériel ayant servi à créer ce cours, sans sources extérieures. Vérifiez qu'elle reflète bien ce qui était attendu.",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "Cette leçon a été écrite par l'IA à partir de ces sources. Les petits numéros à côté de chaque partie indiquent les sources suivies.",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "Cette leçon a été écrite par l'IA ; ces sources ont été vérifiées par la suite. Les petits numéros à côté de chaque partie indiquent les sources qui l'étayent.",
+    "The small numbers beside each part show which sources it uses.": "Les petits numéros à côté de chaque partie indiquent les sources utilisées.",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "Aucune source extérieure n'a été trouvée pour cette leçon ; elle a été écrite par l'IA — vérifiez les faits importants.",
+    "Looking for sources for this lesson…": "Recherche de sources pour cette leçon…",
+    "Upload an image": "Téléverser une image",
+    "Upload pages": "Téléverser des pages",
+    "What you added": "Ce que vous avez ajouté"
   }
 }

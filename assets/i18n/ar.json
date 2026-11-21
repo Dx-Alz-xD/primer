@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "يمكن أن يحتوي الاختبار على ما يصل إلى 20 سؤال اختيار من متعدد و5 أسئلة مكتوبة.",
     "Set the timer between 5 and 180 minutes, or have no timer.": "اضبط المؤقت بين 5 و180 دقيقة، أو اجعله بدون مؤقت.",
     "Something went wrong on the server.": "حدث خطأ ما على الخادم.",
-    "Free, at any time, in India.": "مجاني، في أي وقت، في الهند."
+    "Free, at any time, in India.": "مجاني، في أي وقت، في الهند.",
+    "Knowledge given for this course: {title}": "المعرفة المقدمة لهذا الكورس: {title}",
+    "Textbook pages given for this course: {title}": "صفحات الكتاب المدرسي المقدمة لهذا الكورس: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "تمت كتابة هذا الدرس بواسطة AI فقط من المادة التي بناء الكورس منها، بدون مصادر خارجية. تحقق من أنه يعبر عن المعنى المطلوب.",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "تمت كتابة هذا الدرس بواسطة AI من هذه المصادر. توضح الأرقام الصغيرة بجانب كل جزء المصادر التي يتبعها.",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "تمت كتابة هذا الدرس بواسطة AI؛ وتم التحقق من هذه المصادر تحته بعد ذلك. توضح الأرقام الصغيرة بجانب كل جزء المصادر التي تدعمه.",
+    "The small numbers beside each part show which sources it uses.": "توضح الأرقام الصغيرة بجانب كل جزء المصادر التي يستخدمها.",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "لم يتم العثور على مصادر خارجية لهذا الدرس؛ تمت كتابته بواسطة AI - يرجى التحقق من الحقائق المهمة.",
+    "Looking for sources for this lesson…": "جاري البحث عن مصادر لهذا الدرس…",
+    "Upload an image": "رفع صورة",
+    "Upload pages": "رفع الصفحات",
+    "What you added": "ما أضفته"
   }
 }

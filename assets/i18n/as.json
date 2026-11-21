@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "এটা টেষ্টত 20 টা পৰ্যন্ত বহুবিকল্পী আৰু 5 টা লিখিত প্ৰশ্ন থাকিব পাৰে।",
     "Set the timer between 5 and 180 minutes, or have no timer.": "টাইমাৰটো 5 আৰু 180 মিনিটৰ মাজত ছেট কৰক, বা কোনো টাইমাৰ নাৰাখিব।",
     "Something went wrong on the server.": "চাৰ্ভাৰত কিবা সমস্যা হৈছিল।",
-    "Free, at any time, in India.": "বিনামূলীয়া, যিকোনো সময়তে, ভাৰতত।"
+    "Free, at any time, in India.": "বিনামূলীয়া, যিকোনো সময়তে, ভাৰতত।",
+    "Knowledge given for this course: {title}": "এই কোৰ্চৰ বাবে দিয়া জ্ঞান: {title}",
+    "Textbook pages given for this course: {title}": "এই কোৰ্চৰ বাবে দিয়া পাঠ্যপুথিৰ পৃষ্ঠা: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "এই পাঠটো কেৱল এই কোৰ্চটো নিৰ্মাণ কৰা সামগ্ৰীৰ পৰাই AI দ্বাৰা লিখা হৈছে, কোনো বাহ্যিক উৎস অবিহনে। ই কি বুজাব খুজিছিল সেয়া পৰীক্ষা কৰক।",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "এই পাঠটো AI দ্বাৰা এই উৎসসমূহৰ পৰা লিখা হৈছে। প্ৰতিটো অংশৰ কাষৰ সৰু সংখ্যাসমূহে দেখুৱায় যে ই কোনবোৰ উৎস অনুসৰি চলিছে।",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "এই পাঠটো AI দ্বাৰা লিখা হৈছিল; এই উৎসসমূহ পিছত ইয়াৰ সৈতে মিল আছে নে নাই পৰীক্ষা কৰা হৈছিল। প্ৰতিটো অংশৰ কাষৰ সৰু সংখ্যাসমূহে দেখুৱায় যে কোনবোৰ উৎসই ইয়াক সমৰ্থন কৰে।",
+    "The small numbers beside each part show which sources it uses.": "প্ৰতিটো অংশৰ কাষৰ সৰু সংখ্যাসমূহে দেখুৱায় যে ই কোনবোৰ উৎস ব্যৱহাৰ কৰে।",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "এই পাঠটোৰ বাব কোনো বাহ্যিক উৎস পোৱা নগ’ল; ই AI দ্বাৰা লিখা হৈছিল — গুৰুত্বপূৰ্ণ তথ্যসমূহ পৰীক্ষা কৰক।",
+    "Looking for sources for this lesson…": "এই পাঠটোৰ বাবে উৎস বিচাৰি থকা হৈছে…",
+    "Upload an image": "এটা ছবি আপলোড কৰক",
+    "Upload pages": "পৃষ্ঠা আপলোড কৰক",
+    "What you added": "আপুনি কি যোগ কৰিলে"
   }
 }

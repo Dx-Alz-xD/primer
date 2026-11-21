@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "एकटा टेस्ट में 20 बहुविकल्पीय आ 5 लिखित प्रश्न भ' सकैत अछि।",
     "Set the timer between 5 and 180 minutes, or have no timer.": "टिमर केँ 5 आ 180 मिनटक बीच सेट करू, या कोनो टिमर नहि राखू।",
     "Something went wrong on the server.": "सर्वर पर किछु गड़बड़ भ' गेल।",
-    "Free, at any time, in India.": "मुफ्त, कोनो समय, भारत में।"
+    "Free, at any time, in India.": "मुफ्त, कोनो समय, भारत में।",
+    "Knowledge given for this course: {title}": "ई कोर्सक लेल देल गेल ज्ञान: {title}",
+    "Textbook pages given for this course: {title}": "ई कोर्सक लेल देल गेल पाठ्यपुस्तक पन्ना: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "ई पाठ AI द्वारा केवल ओहि सामग्री सँ लिखल गेल अछि जकरा पर ई कोर्स बनल छल, कोनो बाहरी स्रोत बिना। जाँच करू जे ई ओहि कहैत अछि जे अभिप्रेत छल।",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "ई पाठ AI द्वारा ई सब स्रोत सँ लिखल गेल अछि। प्रत्येक भागक बगलक छोट सङ्ख्या देखाबैत अछि जे ई कोर्-कोर् स्रोत क पालन करैत अछि।",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "ई पाठ AI द्वारा लिखल गेल छल; एकरा बाद मे ई सब स्रोत क जाँच कएल गेल। प्रत्येक भागक बगलक छोट सङ्ख्या देखाबैत अछि जे कोर्-कोर् स्रोत एकर समर्थन करैत अछि।",
+    "The small numbers beside each part show which sources it uses.": "प्रत्येक भागक बगलक छोट सङ्ख्या देखाबैत अछि जे ई कोर्-कोर् स्रोत क उपयोग करैत अछि।",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "ई पाठ लेल कोनो बाहरी स्रोत नहि भेटल; ई AI द्वारा लिखल गेल छल — महत्वपूर्ण तथ्यक जाँच करू।",
+    "Looking for sources for this lesson…": "ई पाठ लेल स्रोत खोजल जा रहल अछि…",
+    "Upload an image": "एकटा इमेज अपलोड करू",
+    "Upload pages": "पन्ना अपलोड करू",
+    "What you added": "अहाँ जे जोड्लहुँ"
   }
 }

@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "ఒక టెస్ట్‌లో గరిష్టంగా 20 మల్టిపుల్ ఛాయిస్ మరియు 5 రాతపూర్వక ప్రశ్నలు ఉండవచ్చు.",
     "Set the timer between 5 and 180 minutes, or have no timer.": "టైమర్‌ను 5 నుండి 180 నిమిషాల మధ్య సెట్ చేయండి, లేదా టైమర్ లేకుండా ఉండండి.",
     "Something went wrong on the server.": "సర్వర్‌లో ఏదో తప్పు జరిగింది.",
-    "Free, at any time, in India.": "ఉచితం, ఎప్పుడైనా, భారతదేశంలో."
+    "Free, at any time, in India.": "ఉచితం, ఎప్పుడైనా, భారతదేశంలో.",
+    "Knowledge given for this course: {title}": "ఈ కోర్సు కోసం ఇచ్చిన పరిజ్ఞానం: {title}",
+    "Textbook pages given for this course: {title}": "ఈ కోర్సు కోసం ఇచ్చిన టెక్స్ట్‌బుక్ పేజీలు: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "ఈ పాఠాన్ని AI, ఈ కోర్సును రూపొందించడానికి ఉపయోగించిన మెటీరియల్ నుండి మాత్రమే రాసింది, బయటి సోర్స్‌లు ఏవీ ఉపయోగించలేదు. ఇందులో చెప్పిన విషయాలు సరైనవేనా అని ఒకసారి సరిచూసుకోండి.",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "ఈ పాఠాన్ని AI ఈ సోర్స్‌ల నుండి రాసింది. ప్రతి భాగం పక్కన ఉన్న చిన్న నంబర్లు, అది ఏ సోర్స్‌లను అనుసరించిందో చూపిస్తాయి.",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "ఈ పాఠాన్ని AI రాసింది; ఆ తర్వాత ఈ సోర్స్‌లను దీనితో సరిచూశారు. ప్రతి భాగం పక్కన ఉన్న చిన్న నంబర్లు, ఏ సోర్స్‌లు దీనికి మద్దతు ఇస్తున్నాయో చూపిస్తాయి.",
+    "The small numbers beside each part show which sources it uses.": "ప్రతి భాగం పక్కన ఉన్న చిన్న నంబర్లు, అది ఏ సోర్స్‌లను ఉపయోగిస్తుందో చూపిస్తాయి.",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "ఈ పాఠం కోసం బయటి సోర్స్‌లేవీ దొరకలేదు; దీన్ని AI రాసింది — ముఖ్యమైన విషయాలను ఒకసారి సరిచూసుకోండి.",
+    "Looking for sources for this lesson…": "ఈ పాఠం కోసం సోర్స్‌ల కోసం వెతుకుతోంది…",
+    "Upload an image": "ఇమేజ్‌ని అప్‌లోడ్ చేయి",
+    "Upload pages": "పేజీలను అప్‌లోడ్ చేయి",
+    "What you added": "మీరు జోడించినవి"
   }
 }

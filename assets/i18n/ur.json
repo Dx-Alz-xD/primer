@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "ایک ٹیسٹ میں 20 ملٹیپل چوائس اور 5 تحریری سوالات ہو سکتے ہیں۔",
     "Set the timer between 5 and 180 minutes, or have no timer.": "ٹائمر کو 5 اور 180 منٹ کے درمیان سیٹ کریں، یا کوئی ٹائمر نہ رکھیں۔",
     "Something went wrong on the server.": "سرور پر کچھ غلط ہو گیا۔",
-    "Free, at any time, in India.": "مفت، کسی بھی وقت، بھارت میں۔"
+    "Free, at any time, in India.": "مفت، کسی بھی وقت، بھارت میں۔",
+    "Knowledge given for this course: {title}": "اس کورس کے لیے دیا گیا علم: {title}",
+    "Textbook pages given for this course: {title}": "اس کورس کے لیے دیے گئے ٹیکسٹ بک کے صفحات: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "یہ سبق AI نے صرف اس مواد سے لکھا ہے جس سے یہ کورس بنایا گیا تھا، بغیر کسی بیرونی سورس کے۔ چیک کریں کہ آیا اس میں وہی کہا گیا ہے جو مطلوب تھا۔",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "یہ سبق AI نے ان سورسز سے لکھا ہے۔ ہر حصے کے ساتھ موجود چھوٹے نمبر یہ دکھاتے ہیں کہ یہ کن سورسز کی پیروی کرتا ہے۔",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "یہ سبق AI نے لکھا ہے؛ بعد میں ان سورسز کا اس کے ساتھ موازنہ کیا گیا۔ ہر حصے کے ساتھ موجود چھوٹے نمبر یہ دکھاتے ہیں کہ کون سے سورسز اس کی تائید کرتے ہیں۔",
+    "The small numbers beside each part show which sources it uses.": "ہر حصے کے ساتھ موجود چھوٹے نمبر یہ دکھاتے ہیں کہ یہ کون سے سورسز استعمال کرتا ہے۔",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "اس سبق کے لیے کوئی بیرونی سورسز نہیں ملے؛ یہ AI نے لکھا ہے — اہم حقائق کو چیک کریں۔",
+    "Looking for sources for this lesson…": "اس سبق کے لیے سورسز تلاش کیے جا رہے ہیں…",
+    "Upload an image": "تصویر اپ لوڈ کریں",
+    "Upload pages": "صفحات اپ لوڈ کریں",
+    "What you added": "جو آپ نے شامل کیا"
   }
 }

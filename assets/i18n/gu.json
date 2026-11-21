@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "એક ટેસ્ટમાં 20 બહુવિકલ્પી અને 5 લેખિત પ્રશ્નો હોઈ શકે છે.",
     "Set the timer between 5 and 180 minutes, or have no timer.": "ટાઈમર 5 થી 180 મિનિટની વચ્ચે સેટ કરો, અથવા કોઈ ટાઈમર ન રાખો.",
     "Something went wrong on the server.": "સર્વર પર કંઈક ખોટું થયું.",
-    "Free, at any time, in India.": "મફત, કોઈપણ સમયે, ભારતમાં."
+    "Free, at any time, in India.": "મફત, કોઈપણ સમયે, ભારતમાં.",
+    "Knowledge given for this course: {title}": "આ કોર્સ માટે આપેલ જ્ઞાન: {title}",
+    "Textbook pages given for this course: {title}": "આ કોર્સ માટે આપેલા ટેક્સ્ટબુક પેજ: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "આ પાઠ AI દ્વારા ફક્ત તે સામગ્રીમાંથી લખવામાં આવ્યો છે જેમાંથી આ કોર્સ બનાવવામાં આવ્યો હતો, જેમાં બહારના કોઈ સ્રોત નથી. તે તપાસો કે તેમાં તે જ કહેવાયું છે જેનો અર્થ હતો.",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "આ પાઠ AI દ્વારા આ સ્રોતોમાંથી લખવામાં આવ્યો છે. દરેક ભાગની બાજુના નાના નંબરો દર્શાવે છે કે તે કયા સ્રોતને અનુસરે છે.",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "આ પાઠ AI દ્વારા લખવામાં આવ્યો હતો; આ સ્રોતોની પછીથી તેની સામે ચકાસણી કરવામાં આવી હતી. દરેક ભાગની બાજુના નાના નંબરો દર્શાવે છે કે કયા સ્રોતો તેને ટેકો આપે છે.",
+    "The small numbers beside each part show which sources it uses.": "દરેક ભાગની બાજુના નાના નંબરો દર્શાવે છે કે તે કયા સ્રોતોનો ઉપયોગ કરે છે.",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "આ પાઠ માટે બહારના કોઈ સ્રોત મળ્યા નથી; તે AI દ્વારા લખવામાં આવ્યો હતો — મહત્વપૂર્ણ તથ્યો તપાસો.",
+    "Looking for sources for this lesson…": "આ પાઠ માટે સ્રોતો શોધી રહ્યા છીએ…",
+    "Upload an image": "છબી અપલોડ કરો",
+    "Upload pages": "પેજ અપલોડ કરો",
+    "What you added": "તમે જે ઉમેર્યું"
   }
 }

@@ -2029,6 +2029,17 @@
     "A test can have up to 20 multiple-choice and 5 written questions.": "ਇੱਕ ਟੈਸਟ ਵਿੱਚ 20 ਬਹੁ-ਵਿਕਲਪੀ ਅਤੇ 5 ਲਿਖਤੀ ਸਵਾਲ ਹੋ ਸਕਦੇ ਹਨ।",
     "Set the timer between 5 and 180 minutes, or have no timer.": "ਟਾਈਮਰ ਨੂੰ 5 ਅਤੇ 180 ਮਿੰਟਾਂ ਦੇ ਵਿਚਕਾਰ ਸੈੱਟ ਕਰੋ, ਜਾਂ ਕੋਈ ਟਾਈਮਰ ਨਾ ਰੱਖੋ।",
     "Something went wrong on the server.": "ਸਰਵਰ 'ਤੇ ਕੁਝ ਗਲਤ ਹੋ ਗਿਆ।",
-    "Free, at any time, in India.": "ਮੁਫ਼ਤ, ਕਿਸੇ ਵੀ ਸਮੇਂ, ਭਾਰਤ ਵਿੱਚ।"
+    "Free, at any time, in India.": "ਮੁਫ਼ਤ, ਕਿਸੇ ਵੀ ਸਮੇਂ, ਭਾਰਤ ਵਿੱਚ।",
+    "Knowledge given for this course: {title}": "ਇਸ ਕੋਰਸ ਲਈ ਦਿੱਤਾ ਗਿਆ ਗਿਆਨ: {title}",
+    "Textbook pages given for this course: {title}": "ਇਸ ਕੋਰਸ ਲਈ ਦਿੱਤੇ ਗਏ ਕਿਤਾਬ ਦੇ ਸਫ਼ੇ: {title}",
+    "This lesson was written by AI only from the material this course was built from, with no outside sources. Check that it says what was meant.": "ਇਹ ਪਾਠ ਸਿਰਫ਼ ਉਸ ਸਮੱਗਰੀ ਤੋਂ AI ਦੁਆਰਾ ਲਿਖਿਆ ਗਿਆ ਸੀ ਜਿਸ ਤੋਂ ਇਹ ਕੋਰਸ ਬਣਾਇਆ ਗਿਆ ਸੀ, ਬਿਨਾਂ ਕਿਸੇ ਬਾਹਰੀ ਸਰੋਤ ਦੇ। ਜਾਂਚ ਕਰੋ ਕਿ ਇਹ ਉਹੀ ਕਹਿੰਦਾ ਹੈ ਜੋ ਮਤਲਬ ਸੀ।",
+    "This lesson was written by AI from these sources. The small numbers beside each part show which sources it follows.": "ਇਹ ਪਾਠ AI ਦੁਆਰਾ ਇਨ੍ਹਾਂ ਸਰੋਤਾਂ ਤੋਂ ਲਿਖਿਆ ਗਿਆ ਸੀ। ਹਰੇਕ ਹਿੱਸੇ ਦੇ ਨਾਲ ਦਿੱਤੇ ਛੋਟੇ ਨੰਬਰ ਦੱਸਦੇ ਹਨ ਕਿ ਇਹ ਕਿਹੜੇ ਸਰੋਤਾਂ ਦੀ ਪਾਲਣਾ ਕਰਦਾ ਹੈ।",
+    "This lesson was written by AI; these sources were checked against it afterwards. The small numbers beside each part show which sources support it.": "ਇਹ ਪਾਠ AI ਦੁਆਰਾ ਲਿਖਿਆ ਗਿਆ ਸੀ; ਬਾਅਦ ਵਿੱਚ ਇਸ ਦੇ ਵਿਰੁੱਧ ਇਨ੍ਹਾਂ ਸਰੋਤਾਂ ਦੀ ਜਾਂਚ ਕੀਤੀ ਗਈ। ਹਰੇਕ ਹਿੱਸੇ ਦੇ ਨਾਲ ਦਿੱਤੇ ਛੋਟੇ ਨੰਬਰ ਦੱਸਦੇ ਹਨ ਕਿ ਕਿਹੜੇ ਸਰੋਤ ਇਸ ਦਾ ਸਮਰਥਨ ਕਰਦੇ ਹਨ।",
+    "The small numbers beside each part show which sources it uses.": "ਹਰੇਕ ਹਿੱਸੇ ਦੇ ਨਾਲ ਦਿੱਤੇ ਛੋਟੇ ਨੰਬਰ ਦੱਸਦੇ ਹਨ ਕਿ ਇਹ ਕਿਹੜੇ ਸਰੋਤਾਂ ਦੀ ਵਰਤੋਂ ਕਰਦਾ ਹੈ।",
+    "No outside sources were found for this lesson; it was written by AI — check important facts.": "ਇਸ ਪਾਠ ਲਈ ਕੋਈ ਬਾਹਰੀ ਸਰੋਤ ਨਹੀਂ ਮਿਲੇ; ਇਹ AI ਦੁਆਰਾ ਲਿਖਿਆ ਗਿਆ ਸੀ — ਮਹੱਤਵਪੂਰਨ ਤੱਥਾਂ ਦੀ ਜਾਂਚ ਕਰੋ।",
+    "Looking for sources for this lesson…": "ਇਸ ਪਾਠ ਲਈ ਸਰੋਤ ਲੱਭੇ ਜਾ ਰਹੇ ਹਨ…",
+    "Upload an image": "ਚਿੱਤਰ ਅੱਪਲੋਡ ਕਰੋ",
+    "Upload pages": "ਸਫ਼ੇ ਅੱਪਲੋਡ ਕਰੋ",
+    "What you added": "ਜੋ ਤੁਸੀਂ ਸ਼ਾਮਲ ਕੀਤਾ"
   }
 }
