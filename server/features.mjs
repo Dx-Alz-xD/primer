@@ -4,5 +4,6 @@
 // Add a line here to plug in a new feature.
 export default [
   () => import('./tutor.mjs'),
-  () => import('./voice.mjs')
+  () => import('./voice.mjs'),
+  () => import('./community.mjs')
 ];

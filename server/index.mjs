@@ -82,7 +82,10 @@ async function servePage(req, res, file, search) {
     return send(res, 302, '', 'text/plain', { Location: '/' + (ok ? next : 'app.html'), 'Cache-Control': 'no-store' });
   }
   let html = process.env.NODE_ENV === 'production' ? htmlCache.get(file) : null;
-  if (!html) { html = await readFile(path.join(ROOT, file), 'utf8'); htmlCache.set(file, html); }
+  if (!html) {
+    try { html = await readFile(path.join(ROOT, file), 'utf8'); } catch { return send(res, 404, 'Not found'); }
+    htmlCache.set(file, html);
+  }
   const nonce = crypto.randomBytes(16).toString('base64');
   const code = auth.inviteCode();
   const boot = scriptJSON(Object.assign({
