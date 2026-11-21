@@ -161,6 +161,6 @@ server.listen(PORT, HOST, () => {
   console.log(`[primer] http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   console.log(cfg.ai
     ? `[primer] AI on: ${cfg.providers.map((p) => `${p.name} (${p.models.join(', ')})`).join(' -> ')}`
-    : '[primer] AI off: add OPENROUTER_API_KEY, GROQ_KEY, GEM_KEY or REQ_KEY to .env');
+    : '[primer] AI off: add GROQ_KEY, ADAP, GEM_KEY, REQ_KEY or OPENROUTER_API_KEY to .env');
   console.log(auth.inviteCode() ? '[primer] Sign-up needs the invite code set in INVITE_CODE (default PRIMER)' : '[primer] Sign-up is open to anyone');
 });

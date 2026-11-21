@@ -56,12 +56,26 @@ export const PROVIDERS = {
     keys: ['OPENROUTER_API_KEY'],
     modelsVar: 'OPENROUTER_MODELS',
     models: ['openrouter/free']
+  },
+  // Adaption (adaptionlabs.ai): paid by credits, large hosted models. It speaks OpenAI's newer
+  // Responses format (api: 'responses'), which callModel translates to and from.
+  adaption: {
+    name: 'Adaption',
+    url: 'https://api.prod.adaptionlabs.ai/api/v1/responses',
+    api: 'responses',
+    keys: ['ADAP', 'ADAPTION_API_KEY'],
+    modelsVar: 'ADAPTION_MODELS',
+    // timed on a real lesson: deepseek-v4-flash ~28s, qwen3.5-397b ~35s, glm-5.2 ~50s (the fullest);
+    // glm-5.3-flash broke its JSON on long lessons, so it only reads photos
+    models: ['deepseek-v4-flash', 'qwen3.5-397b', 'glm-5.2']
   }
 };
 // Groq first: it wrote every test lesson in 3 to 8 seconds and fails fast when busy. Gemini writes
 // fuller lessons but is often "experiencing high demand"; Requesty's free models are slow (about
 // a minute a lesson); OpenRouter's free models allow only 50 requests a day.
-export const DEFAULT_ORDER = ['groq', 'gemini', 'requesty', 'openrouter'];
+// Groq first (a lesson in ~6s, free but with tight rate limits), then Adaption (paid by credit:
+// slower, but it answers when the free ones are busy), then the other free ones.
+export const DEFAULT_ORDER = ['groq', 'adaption', 'gemini', 'requesty', 'openrouter'];
 
 const env = (name) => (process.env[name] || '').trim();
 const csv = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
@@ -543,8 +557,30 @@ async function requestFor(id, model) {
   return out;
 }
 
+// The Responses format (Adaption): system messages become "instructions", the others "input", with
+// image parts as input_image; the reply is the text of its output_text parts.
+function responsesBody(model, messages, maxTokens) {
+  const instructions = messages.filter((m) => m.role === 'system').map((m) => (typeof m.content === 'string' ? m.content : '')).join('\n\n');
+  const input = messages.filter((m) => m.role !== 'system').map((m) => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content : []).map((part) => (
+      part && part.type === 'image_url' ? { type: 'input_image', image_url: (part.image_url && part.image_url.url) || part.image_url }
+        : { type: 'input_text', text: String((part && part.text) || '') }))
+  }));
+  // effort 'none': no hidden thinking first, which otherwise can use up the whole budget (qwen3.5)
+  return { model, ...(instructions ? { instructions } : {}), input, max_output_tokens: maxTokens, temperature: 0.4, reasoning: { effort: 'none' } };
+}
+function responsesReply(data) {
+  const parts = (Array.isArray(data.output) ? data.output : []).filter((o) => o && o.type === 'message')
+    .flatMap((o) => (Array.isArray(o.content) ? o.content : [])).filter((c) => c && c.type === 'output_text');
+  const content = parts.map((c) => c.text || '').join('') || (typeof data.output_text === 'string' ? data.output_text : '');
+  const cut = data.status === 'incomplete' && data.incomplete_details && /token/i.test(String(data.incomplete_details.reason || ''));
+  return { content, finish: cut ? 'length' : data.status || 'completed', tokens: (data.usage && data.usage.output_tokens) || 0 };
+}
+
 async function callModel(id, model, messages, maxTokens, timeoutMs) {
   const p = PROVIDERS[id];
+  if (p.api === 'responses') return callResponses(id, model, messages, maxTokens, timeoutMs);
   const opts = await requestFor(id, model);
   if (opts.missing) return { ok: false, status: 404, message: `${model} isn't in ${p.name}'s model list` };
   const { key } = keyOf(id) || {};
@@ -592,6 +628,39 @@ async function callModel(id, model, messages, maxTokens, timeoutMs) {
       return { ok: false, status: 502, message: `empty reply (finish: ${choice && choice.finish_reason}, ${u.completion_tokens || 0} tokens, ${thought} spent thinking)` };
     }
     return { ok: true, content, finish: choice.finish_reason, model: data.model || model };
+  } catch (err) {
+    const timedOut = err.name === 'AbortError';
+    return { ok: false, status: timedOut ? 504 : 502, message: timedOut ? 'timed out' : hideKeys(err.message) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// The same call for a provider in the Responses format; it answers in the same shape as callModel.
+async function callResponses(id, model, messages, maxTokens, timeoutMs) {
+  const p = PROVIDERS[id];
+  const { key } = keyOf(id) || {};
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(p.url, {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(responsesBody(model, messages, maxTokens))
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = JSON.parse(text); } catch { /* not JSON */ }
+    const error = data && data.error;
+    if (!res.ok || !data || (error && !data.output)) {
+      const status = !res.ok ? res.status : 502;
+      const message = (error && (error.message || (typeof error === 'string' ? error : ''))) || (data && data.message) || text;
+      return { ok: false, status, message: hideKeys(String(message).slice(0, 400)), retryAfter: Number(res.headers.get('retry-after')) || 0 };
+    }
+    const r = responsesReply(data);
+    if (!r.content) return { ok: false, status: 502, message: `empty reply (status: ${data.status}, ${r.tokens} tokens)` };
+    return { ok: true, content: r.content, finish: r.finish, model: data.model || model };
   } catch (err) {
     const timedOut = err.name === 'AbortError';
     return { ok: false, status: timedOut ? 504 : 502, message: timedOut ? 'timed out' : hideKeys(err.message) };
@@ -810,9 +879,10 @@ export const VISION_MODELS = {
   gemini: ['gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest'],
   groq: ['qwen/qwen3.8-27b'],
   openrouter: ['nvidia/nemotron-3.5-super-vl:free', 'google/gemma-4-31b-it:free'],
+  adaption: ['qwen3.5-397b', 'glm-5.3-flash'],
   requesty: []
 };
-const VISION_ORDER = ['gemini', 'groq', 'openrouter', 'requesty'];
+const VISION_ORDER = ['gemini', 'adaption', 'groq', 'openrouter', 'requesty'];
 
 function visionCandidates(cfg) {
   const asked = [...new Set(csv(env('PRIMER_VISION_ORDER').toLowerCase()))].filter((id) => PROVIDERS[id]);
@@ -834,7 +904,7 @@ export const visionReady = () => visionCandidates(config()).length > 0;
 export async function askVision({ system, user, images, maxTokens = 3000, timeoutMs = 60000, deadlineMs = 150000, validate, label }) {
   const cfg = config();
   const list = visionCandidates(cfg);
-  if (!list.length) throw new AIError('Reading photos needs a Gemini, Groq or OpenRouter key in .env.', 503);
+  if (!list.length) throw new AIError('Reading photos needs a Gemini, Adaption, Groq or OpenRouter key in .env.', 503);
   const content = [{ type: 'text', text: user }, ...images.map((url) => ({ type: 'image_url', image_url: { url } }))];
   const failures = [];
   const refused = new Set();

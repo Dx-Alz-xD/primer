@@ -13,7 +13,7 @@ const KEYS = {
   OPENROUTER_API_KEY: 'sk-or-fake-openrouter-0004'
 };
 const VARS = ['GROQ_KEY', 'GROQ_API_KEY', 'GEM_KEY', 'GEMINI_API_KEY', 'REQ_KEY', 'REQUESTY_API_KEY', 'OPENROUTER_API_KEY',
-  'PRIMER_AI_ORDER', 'GROQ_MODELS', 'GEMINI_MODELS', 'REQUESTY_MODELS', 'OPENROUTER_MODELS'];
+  'ADAP', 'ADAPTION_API_KEY', 'PRIMER_AI_ORDER', 'GROQ_MODELS', 'GEMINI_MODELS', 'REQUESTY_MODELS', 'OPENROUTER_MODELS', 'ADAPTION_MODELS'];
 function setEnv(vars) {
   for (const v of VARS) delete process.env[v];
   Object.assign(process.env, vars);
@@ -99,7 +99,7 @@ test('no keys: AI is off and generate says how to add one', async () => {
 });
 
 test('keys under the short and the conventional names, default order, no keys in config()', () => {
-  setEnv({ GROQ_API_KEY: KEYS.GROQ_KEY, GEMINI_API_KEY: KEYS.GEM_KEY, REQUESTY_API_KEY: KEYS.REQ_KEY, OPENROUTER_API_KEY: KEYS.OPENROUTER_API_KEY });
+  setEnv({ GROQ_API_KEY: KEYS.GROQ_KEY, GEMINI_API_KEY: KEYS.GEM_KEY, REQUESTY_API_KEY: KEYS.REQ_KEY, OPENROUTER_API_KEY: KEYS.OPENROUTER_API_KEY, ADAPTION_API_KEY: 'adp_fake_adaption_key_000005' });
   let cfg = ai.config();
   assert.equal(cfg.ai, true);
   assert.deepEqual(cfg.providers.map((p) => p.id), ai.DEFAULT_ORDER);
@@ -283,6 +283,68 @@ test('Groq\'s refused JSON-mode reply is repaired instead of thrown away', async
   const out = await ask();
   assert.equal(out.value, String.raw`<p>The slope is \(\frac{dy}{dx}\)</p>`);
   assert.equal(chats().length, 1);
+});
+
+/* ---------------- Adaption: the Responses format ---------------- */
+
+const ADAPTION_URL = 'https://api.prod.adaptionlabs.ai/api/v1/responses';
+const ADAP = 'adp_fake_adaption_key_000005';
+const responses = (text, model, extra = {}) => respond(200, { id: 'resp_1', model, status: 'completed', output: [
+  { type: 'reasoning', summary: [] },
+  { type: 'message', role: 'assistant', content: [{ type: 'output_text', text }] }
+], usage: { output_tokens: 12 }, ...extra });
+
+test('Adaption is sent instructions and input in the Responses format, and its output_text is read', async () => {
+  setEnv({ ADAP, PRIMER_AI_ORDER: 'adaption', ADAPTION_MODELS: 'qwen3.5-397b' });
+  assert.deepEqual(ai.config().providers.map((p) => p.id), ['adaption']);
+  reply = (c) => responses('{"html": "<p>From Adaption</p>"}', c.body.model);
+  const out = await ask({ maxTokens: 5000 });
+  assert.equal(out.value, '<p>From Adaption</p>');
+  const c = chats()[0];
+  assert.equal(c.url, ADAPTION_URL);
+  assert.equal(c.headers.Authorization, `Bearer ${ADAP}`);
+  assert.equal(c.body.model, 'qwen3.5-397b');
+  assert.equal(c.body.instructions, 'Return JSON.');
+  assert.deepEqual(c.body.input, [{ role: 'user', content: 'Hi' }]);
+  assert.equal(c.body.max_output_tokens, 5000);
+  assert.equal('messages' in c.body, false);
+  assert.equal('response_format' in c.body, false, 'no JSON mode on the Responses API');
+  assert.deepEqual(c.body.reasoning, { effort: 'none' }, 'no hidden thinking before the answer');
+});
+
+test('Adaption: the conventional key name works, and its errors move on to the next provider', async () => {
+  setEnv({ ADAPTION_API_KEY: ADAP, GROQ_KEY: KEYS.GROQ_KEY, PRIMER_AI_ORDER: 'adaption,groq', ADAPTION_MODELS: 'qwen3.5-397b,glm-5.3-flash', GROQ_MODELS: 'openai/gpt-oss-120b' });
+  reply = (c) => (c.url === ADAPTION_URL
+    ? respond(503, { error: { message: 'Inference access is still being provisioned' } })
+    : answer('{"html": "<p>From Groq</p>"}', c.body.model));
+  const out = await ask();
+  assert.equal(out.value, '<p>From Groq</p>');
+  assert.deepEqual(chats().map((c) => c.body.model), ['qwen3.5-397b', 'glm-5.3-flash', 'openai/gpt-oss-120b']);
+});
+
+test('Adaption: a reply cut off by the token limit, or with no text, is not used', async () => {
+  setEnv({ ADAP, PRIMER_AI_ORDER: 'adaption', ADAPTION_MODELS: 'a,b' });
+  reply = (c) => (c.body.model === 'a'
+    ? responses('{"html": "<p>Half', 'a', { status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } })
+    : respond(200, { model: 'b', status: 'completed', output: [{ type: 'reasoning', summary: [] }] }));
+  await assert.rejects(ask());
+  assert.ok(logged.some((l) => /Adaption a gave an unusable reply.*cut off/.test(l)));
+  assert.ok(logged.some((l) => /Adaption b failed \(502\).*empty reply/.test(l)));
+});
+
+test('Adaption reads photos as input_image parts', async () => {
+  setEnv({ ADAP, PRIMER_VISION_ORDER: 'adaption' });
+  reply = (c) => responses('{"text": "a leaf"}', c.body.model);
+  const out = await ai.askVision({ system: 'Describe.', user: 'What is this?', images: ['data:image/png;base64,AAAA'], validate: (raw) => raw.text, label: 'photo' });
+  assert.equal(out.value, 'a leaf');
+  assert.equal(out.provider, 'adaption');
+  const c = chats()[0];
+  assert.equal(c.body.model, ai.VISION_MODELS.adaption[0]);
+  assert.deepEqual(c.body.input[0].content, [
+    { type: 'input_text', text: 'What is this?' },
+    { type: 'input_image', image_url: 'data:image/png;base64,AAAA' }
+  ]);
+  delete process.env.PRIMER_VISION_ORDER;
 });
 
 test('keys never reach the logs, even when a provider echoes one back', async () => {

@@ -61,9 +61,9 @@ Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` 
 
 | Setting | What it does |
 | --- | --- |
-| `GROQ_KEY`, `GEM_KEY`, `REQ_KEY`, `OPENROUTER_API_KEY` | AI keys for Groq, Google Gemini, Requesty and OpenRouter (the usual names like `GROQ_API_KEY` work too). Add at least one; they plan courses, write lessons and run the tutor. |
-| `PRIMER_AI_ORDER` | Which providers to try, in order (default `groq,gemini,requesty,openrouter`). |
-| `GROQ_MODELS`, `GEMINI_MODELS`, `REQUESTY_MODELS`, `OPENROUTER_MODELS` | Optional: each provider’s models, in order. A busy or failing model hands over to the next. |
+| `GROQ_KEY`, `GEM_KEY`, `REQ_KEY`, `OPENROUTER_API_KEY`, `ADAP` | AI keys for Groq, Google Gemini, Requesty, OpenRouter and Adaption (the usual names like `GROQ_API_KEY` or `ADAPTION_API_KEY` work too). Add at least one; they plan courses, write lessons and run the tutor. |
+| `PRIMER_AI_ORDER` | Which providers to try, in order (default `groq,adaption,gemini,requesty,openrouter`). |
+| `GROQ_MODELS`, `GEMINI_MODELS`, `REQUESTY_MODELS`, `OPENROUTER_MODELS`, `ADAPTION_MODELS` | Optional: each provider’s models, in order. A busy or failing model hands over to the next. |
 | `INVITE_CODE` | The code sign-up asks for. Empty means open sign-up. |
 | `ELEVENLABS_API_KEY` (or `EL_LAB_KEY`) | Turns on narration, Primer’s own videos, sound effects and spoken doubts. |
 | `YOUTUBE_API_KEY` (or `GOOG_CLOUD`) | A Google Cloud key with the YouTube Data API enabled, for YouTube videos in Watch mode. |
@@ -82,7 +82,7 @@ Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` 
 - **Front end:** plain HTML, CSS and JavaScript. No framework and no build step. KaTeX for maths, a WebGL2 letter backdrop, canvas whiteboards, and [GSAP](https://gsap.com) for motion (kept in `assets/vendor/gsap` under GSAP’s standard no-charge licence). Every animation has a still version for reduced motion. The landing page's rose-grown type is adapted from [Type Garden](https://type-garden.vercel.app/) by Akshat Agarwal.
 - **Server:** Node.js 24 with `node:http` and **zero npm dependencies**. Each feature is a small module in `server/` that adds its routes.
 - **Data:** one SQLite file (`data/primer.db`) through the built-in `node:sqlite`.
-- **AI:** Groq, Gemini, Requesty and OpenRouter, each with free models, tried in order. Every reply is repaired (LaTeX and JSON escaping), checked against the lesson format, and cached, so the same lesson is never written twice.
+- **AI:** Groq, Gemini, Requesty and OpenRouter (each with free models) and Adaption (paid by credit, through its Responses API), tried in order. Every reply is repaired (LaTeX and JSON escaping), checked against the lesson format, and cached, so the same lesson is never written twice.
 - **Voice and video:** ElevenLabs text to speech (with word timings for captions), sound generation and speech to text, cached in `data/audio`, with the browser’s own voice as a fallback. YouTube videos come from the YouTube Data API and play from youtube-nocookie.com only after a click.
 
 ### Security
