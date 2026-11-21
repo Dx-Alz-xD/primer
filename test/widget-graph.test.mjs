@@ -374,3 +374,16 @@ test('the prompt is short and exact, and its examples pass its own checks', () =
   assert.ok(widgetPrompt(['graph']).includes('Graph ("kind": "graph")'));
   assert.equal(typeof graph.label, 'string');
 });
+
+test('slider, curve and point labels go to the translator and come back into the spec', () => {
+  const spec = { x: [-5, 5], y: [-5, 10], params: [{ name: 'a', min: -3, max: 3, step: 0.5, value: 1, label: 'stretch' }],
+    plots: [{ expr: 'a*x^2', label: 'parabola' }], points: [{ x: 0, y: 0, label: 'vertex' }] };
+  assert.deepEqual(graph.texts(spec), ['stretch', 'parabola', 'vertex']);
+  const hi = graph.withTexts(spec, ['खिंचाव', 'परवलय', 'शीर्ष']);
+  assert.equal(hi.params[0].label, 'खिंचाव');
+  assert.equal(hi.plots[0].label, 'परवलय');
+  assert.equal(hi.points[0].label, 'शीर्ष');
+  assert.equal(hi.plots[0].expr, 'a*x^2', 'the maths is never touched');
+  assert.equal(graph.withTexts(spec, ['one']), null, 'a list of the wrong length keeps the original');
+  assert.deepEqual(graph.texts({ x: [-5, 5], plots: [{ expr: 'x' }] }), []);
+});

@@ -149,3 +149,24 @@ export function task(spec, goal) {
     return null;
   }
 }
+
+/* ---------- words for the translator (server/widgets.mjs widgetTexts) ---------- */
+
+// The labels of sliders, curves, points and lines, in that order (empty ones skipped). A label in
+// LaTeX goes too: the translator keeps maths as it is and translates any words around it.
+const LABELLED = ['params', 'plots', 'points', 'lines'];
+const labelled = (s) => LABELLED.flatMap((k) => (Array.isArray(s[k]) ? s[k] : []).filter((o) => o && o.label));
+export function texts(spec) {
+  try { return labelled(G.cleanSpec(spec)).map((o) => o.label); } catch { return []; }
+}
+export function withTexts(spec, words) {
+  let s;
+  try { s = G.cleanSpec(spec); } catch { return null; }
+  if (!Array.isArray(words) || words.length !== labelled(s).length) return null;
+  let i = 0;
+  const out = { ...s };
+  for (const k of LABELLED) {
+    if (Array.isArray(s[k])) out[k] = s[k].map((o) => (o && o.label ? { ...o, label: String(words[i++] || '').trim() || o.label } : o));
+  }
+  try { return G.cleanSpec(out); } catch { return null; }
+}
