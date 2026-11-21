@@ -51,7 +51,8 @@ const OUTLINE_SYSTEM = String.raw`You plan detailed online courses. Return ONLY 
   ]
 }
 Rules:
-- 20 to 30 lessons in total, grouped into 4 to 6 units, ordered so every lesson builds on the ones before it.
+- As many lessons as the requested range genuinely needs, and no more: usually 12 to 40. A narrow range needs fewer, a whole subject more, and a very large subject can go well beyond 40. Never pad with filler, repeats or vague review lessons to reach a number.
+- Group the lessons into units of about 3 to 8 lessons each, ordered so every lesson builds on the ones before it.
 - Lessons are specific and concrete (never vague titles like "Advanced concepts"); together they cover the requested range thoroughly.
 - Respect the range. If a starting point is given, assume the learner already knows everything before it and open with a short recap lesson of that starting point. If an end point is given, finish exactly there, ending with a capstone lesson on it.
 - tags: "maths" if the lesson uses formulas, "diagram" if a figure helps, "practice" if it is problem-heavy, "written" if it asks for a written explanation. Use only these four tags; an empty list is fine.
@@ -187,6 +188,8 @@ function mathify(s) {
 const mstr = (v, max) => mathify(str(v, max));
 const arr = (v) => (Array.isArray(v) ? v : []);
 const TAGS = new Set(['maths', 'diagram', 'practice', 'written']);
+export const OUTLINE_MIN = 5;
+export const OUTLINE_MAX = 150;
 
 export function normalizeOutline(raw) {
   const units = arr(raw && raw.units)
@@ -203,10 +206,10 @@ export function normalizeOutline(raw) {
     }))
     .filter((u) => u.lessons.length);
 
+  // A course is as long as its range needs. The floor and ceiling only catch broken or runaway replies.
   let total = units.reduce((n, u) => n + u.lessons.length, 0);
-  if (total < 18) throw new Error(`only ${total} lessons`);
-  // trim from the longest units if a model overshoots
-  while (total > 30) {
+  if (total < OUTLINE_MIN) throw new Error(`only ${total} lessons`);
+  while (total > OUTLINE_MAX) {
     const longest = units.reduce((a, b) => (b.lessons.length > a.lessons.length ? b : a));
     longest.lessons.splice(-2, 1);
     total--;
@@ -442,13 +445,13 @@ async function cached(kind, keyObj, produce) {
 /* ------------------------------------------------------------------ */
 
 export function generateOutline(input) {
-  const key = { v: 2, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions) };
+  const key = { v: 3, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions) };
   return cached('outline', key, async () => {
     const { value, model } = await generate({
       system: OUTLINE_SYSTEM,
       user: outlineUser(input),
-      maxTokens: 8000,
-      timeoutMs: 75000,
+      maxTokens: 16000,
+      timeoutMs: 100000,
       deadlineMs: 210000,
       validate: normalizeOutline,
       label: `outline "${input.topic}"`
