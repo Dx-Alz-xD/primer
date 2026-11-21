@@ -220,7 +220,7 @@
         const sample = P.courseGen.build(input);
         sample.source = 'sample';
         sample.aiError = err.message;
-        const res = await P.post('/api/courses', { course: sample });
+        const res = await P.post('/api/courses', { course: sample, folderId: (req.extra && req.extra.folderId) || null });
         return P.courses.put(res.course);
       }
     },

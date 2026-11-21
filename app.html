@@ -16,6 +16,7 @@
 <script defer src="assets/js/backdrop.js"></script>
 <script defer src="assets/js/courses-data.js"></script>
 <script defer src="assets/js/api.js"></script>
+<script defer src="assets/js/folders.js"></script>
 <script defer src="assets/js/app.js"></script>
 </head>
 <body data-backdrop="calm">
@@ -90,6 +91,11 @@
             </div>
           </div>
 
+          <div class="field" id="b-folder-field" hidden>
+            <label class="label" for="b-folder">Folder <small>optional</small></label>
+            <select class="input select" id="b-folder" name="folder"><option value="">Unfiled</option></select>
+          </div>
+
           <div class="builder__foot">
             <button class="btn" type="submit">Build my course</button>
             <p class="help">Your outline will have as many lessons as the range needs (often 12 to 40, more for a big subject), grouped into units.</p>
@@ -108,8 +114,21 @@
         </div>
 
         <section class="library" id="library" aria-labelledby="library-title">
-          <h2 id="library-title">Your courses</h2>
-          <div class="library__grid" id="library-grid"></div>
+          <div class="library__head">
+            <h2 id="library-title">Your courses</h2>
+            <button class="btn btn--ghost btn--small" type="button" id="folder-new-btn" aria-expanded="false" aria-controls="folder-new">New folder</button>
+          </div>
+          <form class="folder-new card card--solid" id="folder-new" hidden novalidate>
+            <label class="label" for="folder-new-name">Folder name</label>
+            <div class="folder-new__row">
+              <input class="input" id="folder-new-name" type="text" maxlength="60" placeholder="e.g. Arts and crafts" autocomplete="off" aria-describedby="folder-new-help folder-new-err">
+              <button class="btn btn--small" type="submit">Make folder</button>
+              <button class="textlink" type="button" data-cancel>Cancel</button>
+            </div>
+            <p class="help" id="folder-new-help">Group courses under a general topic. You can add many topics to a folder at once.</p>
+            <p class="field__error" id="folder-new-err"></p>
+          </form>
+          <div class="shelves" id="shelves"></div>
           <p class="library__empty" id="library-empty" hidden>No courses yet. Build your first one above.</p>
         </section>
       </section>
