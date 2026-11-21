@@ -1,0 +1,26 @@
+/* =====================================================================
+   The frame every interactive part sits in (assets/js/widgets.js); each
+   kind styles its own insides (assets/css/widgets/<kind>.css). Lessons
+   are on parchment, so these use the ink colours of lesson.css.
+   ===================================================================== */
+.wdg-fig{margin:1.6rem 0 1.8rem}
+.wdg-fig > figcaption{margin-top:.65rem;font-style:italic;color:var(--ink-soft);font-size:1.02rem;line-height:1.45;text-align:center}
+.wdg{position:relative;min-height:120px}
+.wdg.is-loading{display:grid;place-items:center;min-height:220px;border:1px dashed rgba(91,71,48,.35);border-radius:6px;background:rgba(201,180,138,.18)}
+.wdg.is-loading::after{content:"";width:28px;height:28px;border-radius:50%;border:3px solid rgba(138,97,40,.25);border-top-color:var(--ink-gold);animation:wdg-spin 1s linear infinite}
+@keyframes wdg-spin{to{transform:rotate(360deg)}}
+.wdg.is-failed{display:grid;place-items:center;min-height:90px;padding:1rem;border:1px dashed rgba(154,51,36,.4);border-radius:6px;color:var(--ink-soft);font-style:italic;text-align:center}
+
+/* a task inside a checkpoint question */
+.q__task{margin:.8rem 0 .2rem;outline:none}
+.q__task:focus-visible{outline:2px solid var(--ink-gold);outline-offset:3px;border-radius:6px}
+.q.is-locked .wdg--task{pointer-events:none}
+.q.is-correct .wdg--task,.q.is-revealed .wdg--task{pointer-events:none}
+.q__note{display:block;margin-top:.3rem;font-style:italic}
+
+/* the still picture in the book, print and EPUB */
+.wdg-still{margin:1.2rem 0;text-align:center}
+.wdg-still svg{max-width:100%;height:auto}
+.wdg-still__note{font-size:.9rem;font-style:italic;color:#6a5640}
+
+@media (prefers-reduced-motion: reduce){ .wdg.is-loading::after{animation:none} }

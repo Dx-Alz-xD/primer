@@ -268,6 +268,8 @@
       case 'figure': return `<figure class="fig" ${id}>${b.svg ? b.svg : `<img src="${esc(b.src)}" alt="${esc(b.alt || '')}" loading="lazy">`}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ''}</figure>`;
       case 'callout': return `<aside class="callout callout--${esc(b.kind || 'note')}" ${id}>${b.title ? `<div class="callout__title">${esc(b.title)}</div>` : ''}<div class="callout__body">${b.html}</div></aside>`;
       case 'photo': return P.photos ? P.photos.html(b, { attr: ` ${id}` }) : '';
+      // an interactive part (assets/js/widgets.js): drawn into the box once its kind has loaded
+      case 'widget': return P.widgets ? `<figure class="wdg-fig" ${id} data-widget="${esc(b.kind)}"><div class="wdg" data-widget-host></div>${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ''}</figure>` : '';
       default: return '';
     }
   }
@@ -295,6 +297,7 @@
     $('#lbody').appendChild(el);
     P.math(el);
     if (P.voice) P.voice.decorate(el, i);
+    if (P.widgets) $$('[data-widget]', el).forEach((fig) => P.widgets.mountBlock($('[data-widget-host]', fig), s.blocks[Number(fig.dataset.block)], { lang: meta.lang || 'en' }));
     return el;
   }
 
@@ -317,6 +320,9 @@
         '</div>';
     } else if (q.type === 'subjective') {
       body += `<textarea class="q__textarea" aria-labelledby="${pid}" maxlength="3000" placeholder="${T('Write your answer in your own words')}"></textarea>`;
+    } else if (q.type === 'task') {
+      // done in an interactive part (a board, a circuit, a graph, a keyboard), checked by it
+      body += `<div class="q__task" data-task-host role="group" aria-labelledby="${pid}"></div>`;
     } else {
       body += `<div class="q__row"><input class="q__input" type="text" inputmode="${q.type === 'numeric' ? 'decimal' : 'text'}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-labelledby="${pid}" placeholder="${T(q.type === 'numeric' ? 'Your answer' : 'Type your answer')}" data-i18n>${q.unit ? `<span class="q__unit">${esc(q.unit)}</span>` : ''}</div>`;
     }
@@ -334,6 +340,17 @@
     });
 
     const done = prog.answered[q.id];
+    if (q.type === 'task') {
+      // the widget loads by itself; an answered task is put in its finished state once it has
+      w._task = null;
+      if (P.widgets) {
+        P.widgets.mountTask($('[data-task-host]', w), q, {
+          lang: meta.lang || 'en',
+          onChange: () => { if (!w.classList.contains('is-locked')) setFeedback(w, '', ''); }
+        }).then((h) => { w._task = h; if (done) restore(q, w, done); });
+      }
+      return w;
+    }
     if (done) restore(q, w, done);
     return w;
   }
@@ -344,6 +361,7 @@
       return r ? r.value : '';
     }
     if (q.type === 'subjective') return w.querySelector('textarea').value.trim();
+    if (q.type === 'task') return w._task ? w._task.value() : null;
     return w.querySelector('.q__input').value.trim();
   }
 
@@ -357,12 +375,14 @@
   function lockQ(w, on) {
     w.classList.toggle('is-locked', on);
     $$('input, textarea, .q__check', w).forEach((el) => { el.disabled = on; });
+    if (w._task && w._task.lock) w._task.lock(on);
   }
 
   const answerText = (q) => {
     if (q.type === 'choice') return q.choices[q.answer];
     if (q.type === 'numeric') return `${q.answer}${q.unit ? ' ' + esc(q.unit) : ''}`;
     if (q.type === 'text') return esc((q.accept || [])[0] || '');
+    if (q.type === 'task') return esc(P.widgets ? P.widgets.answer(q) : '');
     return '';
   };
 
@@ -374,8 +394,8 @@
   async function check(q, w, secIdx, ctx) {
     if (prog.answered[q.id] || w.classList.contains('is-locked')) return;
     const value = readValue(q, w);
-    if (!value) {
-      setFeedback(w, 'warn', T(q.type === 'choice' ? 'Choose an answer first.' : q.type === 'subjective' ? 'Write your answer first.' : 'Enter an answer first.'));
+    if (value == null || value === '') {
+      setFeedback(w, 'warn', T(q.type === 'choice' ? 'Choose an answer first.' : q.type === 'subjective' ? 'Write your answer first.' : q.type === 'task' ? 'Try it first, then press Check.' : 'Enter an answer first.'));
       return;
     }
 
@@ -391,7 +411,7 @@
 
     const res = P.api.checkAnswer(q, value);
     if (res.invalid) {
-      setFeedback(w, 'warn', T('Enter a number, like 7, 2.5 or 3/4.'));
+      setFeedback(w, 'warn', q.type === 'task' ? esc(res.note || T('Try it first, then press Check.')) : T('Enter a number, like 7, 2.5 or 3/4.'));
       return;
     }
     prog.tries[q.id] = (prog.tries[q.id] || 0) + 1;
@@ -405,6 +425,11 @@
       save();
       P.api.recordMistake(course, n, meta.title, q, value);
       await showWrong(q, w, secIdx, value, ctx);
+      // a task's widget can say what went wrong ("that move leaves the king in check")
+      if (q.type === 'task' && res.note) {
+        const f = w.querySelector('.q__feedback');
+        f.insertAdjacentHTML('beforeend', ` <span class="q__note">${esc(res.note)}</span>`);
+      }
     }
   }
 
@@ -453,6 +478,10 @@
       $$('input', w).forEach((r) => { r.checked = false; });
       $$('.q__choice', w).forEach((l) => l.classList.remove('is-checked'));
       w.querySelector('input').focus();
+    } else if (q.type === 'task') {
+      if (w._task && w._task.reset) w._task.reset();
+      const host = w.querySelector('[data-task-host]');
+      if (host) host.focus({ preventScroll: true });
     } else {
       const inp = w.querySelector('.q__input');
       inp.focus();
@@ -483,6 +512,7 @@
       const ans = $$('.q__choice', w)[q.answer];
       if (ans) ans.classList.add('is-answer');
     }
+    if (q.type === 'task' && w._task && w._task.reveal) w._task.reveal(); // the widget shows it done
     setFeedback(w, 'revealed', `<strong data-i18n>${T('Answer:')}</strong> ${answerText(q)}${q.explain ? `<span class="explain">${q.explain}</span>` : ''}`);
   }
 
@@ -505,6 +535,8 @@
       if (r) { r.checked = true; r.closest('.q__choice').classList.add('is-checked'); }
     } else if (q.type === 'subjective') {
       w.querySelector('textarea').value = a.value || '';
+    } else if (q.type === 'task') {
+      if (a.status === 'correct' && w._task && w._task.reveal) w._task.reveal(); // done right before: shown done
     } else if (a.value != null) {
       w.querySelector('.q__input').value = a.value;
     }

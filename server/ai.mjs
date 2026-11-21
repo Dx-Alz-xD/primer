@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { HttpError } from './http.mjs';
 import { promptNote, safetyKey } from './safety.mjs';
 import { lengthRule, lengthKey, enforceLength } from './length.mjs';
+import { widgetKinds, widgetPrompt, normWidgetBlock, normTask } from './widgets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache');
@@ -345,11 +346,14 @@ function shuffleChoices(choices, answer, seed) {
 }
 
 // Exported for exams (server/exams.mjs), whose questions follow the same rules as lessons'.
-export function normQuestion(q) {
+// opts.tasks: a lesson's checkpoint may hold "task" questions done in an interactive part (widgets.mjs);
+// exams and other questions don't take them.
+export function normQuestion(q, opts = {}) {
   if (!q || typeof q !== 'object') return null;
   const type = str(q.type, 20).toLowerCase();
   const base = { prompt: mstr(q.prompt, 1200), hint: mstr(q.hint, 600), explain: mstr(q.explain || q.explanation, 1200) };
   if (!base.prompt) return null;
+  if (type === 'task') return opts.tasks ? normTask(q, base) : null;
   if (type === 'numeric' || type === 'number') {
     const answer = typeof q.answer === 'number' ? q.answer : parseFloat(String(q.answer).replace(/[^0-9eE+\-.]/g, ''));
     if (!Number.isFinite(answer)) return null;
@@ -397,6 +401,7 @@ function normBlock(b) {
     const svg = str(b.svg, 16000);
     return /^<svg[\s>]/i.test(svg) && /<\/svg>\s*$/i.test(svg) ? { t: 'figure', svg, caption: str(b.caption, 400) } : null;
   }
+  if (t === 'widget') return normWidgetBlock(b); // an interactive part, checked by its kind (widgets.mjs)
   if (t === 'photo' || t === 'image' || t === 'picture') {
     // only the request: photos.mjs looks it up on Wikimedia Commons when the lesson is saved
     const query = str(b.query || b.search, 200).replace(/[\p{Cc}[\]{}|<>#_]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
@@ -411,7 +416,7 @@ export function normalizeLesson(raw, lessonTitle = 'this lesson') {
     title: str(s && s.title, 90) || `Part ${i + 1}`,
     blocks: arr(s && s.blocks).map(normBlock).filter(Boolean),
     recap: arr(s && s.recap).map((r) => mstr(r, 400)).filter(Boolean).slice(0, 5),
-    checkpoint: arr(s && s.checkpoint).map(normQuestion).filter(Boolean).slice(0, 3)
+    checkpoint: arr(s && s.checkpoint).map((x) => normQuestion(x, { tasks: true })).filter(Boolean).slice(0, 3)
   })).filter((s) => s.blocks.length || s.checkpoint.length);
 
   if (sections.length < 3) throw new Error(`only ${sections.length} usable sections`);
@@ -754,16 +759,19 @@ export async function generateLesson(input) {
   const ground = lessonHooks.ground && !input.safety && input.ground !== false
     ? await lessonHooks.ground({ title: me.title, desc: me.desc, topic: input.topic, lang: input.lang || 'en' })
     : null;
+  // the interactive parts that suit this lesson (a chess board, a circuit, a graph, a keyboard), if any
+  const kinds = input.safety ? [] : widgetKinds({ topic: input.topic, title: me.title, desc: me.desc, instructions: input.instructions });
   const key = {
     v: 2, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions),
     n: input.n, title: norm(me.title), prev: norm(prev && prev.title), next: norm(next && next.title), ...langKey(input.lang), ...safetyKey(input.safety),
     ...(input.syllabus ? { syllabus: 1 } : {}), // its prompt says the course follows a syllabus
     ...(input.update ? { update: createHash('sha256').update(norm(input.update)).digest('hex').slice(0, 16) } : {}), // revised with new information
-    ...(ground ? { ground: ground.key } : {})    // written from these sources
+    ...(ground ? { ground: ground.key } : {}),   // written from these sources
+    ...(kinds.length ? { w: kinds.join(',') } : {}) // offered these interactive parts
   };
   return cached('lesson', key, async () => {
     const { value, model } = await generate({
-      system: LESSON_SYSTEM,
+      system: LESSON_SYSTEM + widgetPrompt(kinds),
       user: lessonUser(input) + (ground ? '\n\n' + ground.prompt : ''),
       maxTokens: 12000,
       timeoutMs: 110000,
@@ -1006,7 +1014,7 @@ export function pickLibraryCut({ subject, outline, from, to }) {
 
 const TRANSLATE_SYSTEM = String.raw`You translate one lesson of an online course, given as JSON, for a learner who reads another language.
 Return ONLY the same JSON object (no prose, no code fences) with every piece of text a learner reads translated:
-section titles, paragraph "html" (keep every HTML tag exactly), list items, callout titles and "html", figure and photo captions (never change "svg"), recap points, question prompts, choices, hints, explanations and model answers.
+section titles, paragraph "html" (keep every HTML tag exactly), list items, callout titles and "html", figure, photo and widget captions (never change "svg"), recap points, question prompts, choices, hints, explanations and model answers.
 Keep exactly the same structure: the same sections, blocks, questions and choices, in the same order.
 Never change: maths inside \( \) and in "tex", numbers, "answer", "tolerance", "type", "t", "kind", "id", or "unit" symbols.
 For "text" questions, put the translated accepted answers first in "accept" and keep the original ones after them.
@@ -1015,11 +1023,45 @@ Natural, warm, precise wording, the way a good teacher writes in that language. 
 // A lesson's photos go to the translator as their captions alone (so a lesson without photos is
 // sent, and cached, exactly as before); the image and its credit are put back unchanged after.
 const isPhotoBlock = (b) => Boolean(b && typeof b === 'object' && str(b.t || b.type, 20).toLowerCase() === 'photo');
+// Interactive parts likewise: a widget goes as its caption, a task as its wording; the board, circuit, graph or
+// keyboard (spec and goal) never pass through the translator, and are put back by position (widgetsBack).
+const isWidgetBlock = (b) => Boolean(b && typeof b === 'object' && b.t === 'widget');
+const isTask = (x) => Boolean(x && typeof x === 'object' && x.type === 'task');
 const captionsOnly = (lesson) => ({
-  sections: arr(lesson.sections).map((s) => (arr(s.blocks).some(isPhotoBlock)
-    ? { ...s, blocks: s.blocks.map((b) => (isPhotoBlock(b) ? { t: 'photo', caption: str(b.caption, 300) } : b)) }
-    : s))
+  sections: arr(lesson.sections).map((s) => {
+    const photos = arr(s.blocks).some(isPhotoBlock), widgets = arr(s.blocks).some(isWidgetBlock), tasks = arr(s.checkpoint).some(isTask);
+    if (!photos && !widgets && !tasks) return s;
+    return {
+      ...s,
+      blocks: arr(s.blocks).map((b) => (isPhotoBlock(b) ? { t: 'photo', caption: str(b.caption, 300) } : isWidgetBlock(b) ? { t: 'widget', kind: b.kind, caption: str(b.caption, 400) } : b)),
+      ...(tasks ? { checkpoint: s.checkpoint.map((x) => (isTask(x) ? { type: 'task', kind: x.kind, prompt: x.prompt, hint: x.hint, explain: x.explain } : x)) } : {})
+    };
+  })
 });
+function widgetsBack(raw, original) {
+  if (!raw || !Array.isArray(raw.sections)) return raw;
+  return {
+    ...raw,
+    sections: raw.sections.map((s, i) => {
+      const o = arr(original.sections)[i];
+      if (!o || !s || typeof s !== 'object') return s;
+      const mine = arr(o.blocks).filter(isWidgetBlock);
+      let k = 0;
+      return {
+        ...s,
+        blocks: arr(s.blocks).flatMap((b) => {
+          if (!(b && typeof b === 'object' && str(b.t || b.type, 20).toLowerCase() === 'widget')) return [b];
+          const w = mine[k++];
+          return w ? [{ ...w, caption: str(b.caption, 400) || w.caption || '' }] : [];
+        }),
+        checkpoint: arr(s.checkpoint).map((x, j) => {
+          const oq = arr(o.checkpoint)[j];
+          return isTask(oq) && x && typeof x === 'object' ? { ...x, type: 'task', kind: oq.kind, spec: oq.spec, goal: oq.goal } : x;
+        })
+      };
+    })
+  };
+}
 function photosBack(translated, original) {
   return {
     ...translated,
@@ -1050,7 +1092,7 @@ export async function translateLesson({ lesson, lang, title }) {
       timeoutMs: 120000,
       deadlineMs: 300000,
       validate: (raw) => {
-        const out = normalizeLesson(raw, title);
+        const out = normalizeLesson(widgetsBack(raw, lesson), title);
         // the learner's saved answers are keyed by question order, so the shape must not move
         if (out.sections.length !== lesson.sections.length || counts(out) !== want) throw new Error('the translation changed the lesson’s shape');
         // normalizeLesson drops caption-only photos: put the translated captions back where the photos were

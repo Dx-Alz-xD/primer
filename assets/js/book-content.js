@@ -132,6 +132,8 @@
       case 'list': return `<ul${at}>${b.items.map((it) => `<li>${it}</li>`).join('')}</ul>`;
       case 'figure': return b.svg ? `<figure class="fig"${at}>${b.svg}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ''}</figure>` : '';
       case 'photo': return P.photos && b.src ? P.photos.html(b, { attr: at }) : '';
+      // an interactive part: its still picture (its kind is loaded before the book is drawn: book.js)
+      case 'widget': return widgetStill(b.kind, b.spec, null, b.caption, at);
       case 'callout': {
         const kind = str(b.kind || 'note').replace(/[^\w-]/g, '') || 'note';
         return `<aside class="callout callout--${kind}"${at}>${b.title ? `<div class="callout__title">${esc(b.title)}</div>` : ''}<div class="callout__body">${str(b.html)}</div></aside>`;
@@ -188,8 +190,16 @@
     </nav>`;
   }
 
+  // An interactive part on paper: its still picture, its caption, and a note that it moves in the app.
+  function widgetStill(kind, spec, goal, caption, at) {
+    const pic = P.widgets ? P.widgets.stillNow(kind, spec, goal) : '';
+    if (!pic && !caption) return '';
+    return `<figure class="wdg-still"${at || ''}>${pic}${caption ? `<figcaption>${esc(caption)}</figcaption>` : ''}<p class="wdg-still__note">${esc(P.t ? P.t('In the Primer app, you can use this yourself.') : 'In the Primer app, you can use this yourself.')}</p></figure>`;
+  }
+
   function exercise(q, n, k, link) {
     let body = `<div class="bk-ex__prompt">${q.prompt}</div>`;
+    if (q.type === 'task') body += widgetStill(q.kind, q.spec, null, '', '');
     if (q.type === 'choice' && q.choices && q.choices.length) {
       body += `<ol class="bk-ex__choices">${q.choices.map((c, i) => `<li><span class="bk-ex__letter">(${letter(i)})</span> ${c}</li>`).join('')}</ol>`;
     } else if (q.type === 'numeric' && q.unit) {
@@ -207,6 +217,9 @@
       main = q.choices && q.choices[i] != null ? `<strong class="bk-ans__key">(${letter(i)})</strong> ${q.choices[i]}` : '<em>No answer was given for this question.</em>';
     } else if (q.type === 'numeric') {
       main = `<strong class="bk-ans__key">${esc(str(q.answer))}${q.unit ? ' ' + esc(q.unit) : ''}</strong>`;
+    } else if (q.type === 'task') {
+      const said = P.widgets ? P.widgets.answer(q) : '';
+      main = said ? `<strong class="bk-ans__key">${esc(said)}</strong>` : '<em>Done on the interactive part in the lesson.</em>';
     } else if (q.type === 'text') {
       const accept = arr(q.accept).map(str).filter(Boolean);
       main = `<strong class="bk-ans__key">${esc(accept[0] || '')}</strong>${accept.length > 1 ? ` <span class="bk-ans__also">Also accepted: ${accept.slice(1).map(esc).join('; ')}</span>` : ''}`;

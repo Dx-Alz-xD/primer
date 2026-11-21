@@ -13,6 +13,7 @@ import { requireUser, learnerLine } from './auth.mjs';
 import { askJSON, config, mathify } from './ai.mjs';
 import { doubtHooks, ownCourse, flatten } from './data.mjs';
 import { screen, courseSafety, promptNote, REFUSED } from './safety.mjs';
+import { widgetLine } from './widgets.mjs';
 
 // What the tutor says when someone may be struggling and the AI can't be reached.
 const SUPPORT = {
@@ -55,6 +56,7 @@ export function lessonText(courseId, n, sectionTitle, max = 5000) {
     if (b.t === 'math') return `\\[${b.tex}\\]`;
     if (b.items) return b.items.map((i) => '- ' + strip(i)).join('\n');
     if (b.t === 'figure') return b.caption ? `(Figure: ${strip(b.caption)})` : '';
+    if (b.t === 'widget') return widgetLine(b); // "[an interactive chess board: ...]"
     return strip(b.html || b.text || '');
   }).filter(Boolean).join('\n')).join('\n\n').slice(0, max);
 }

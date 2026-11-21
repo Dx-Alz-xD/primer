@@ -53,7 +53,11 @@
     return;
   }
 
-  P.book.load(courseId).then(start).catch((err) => {
+  // the interactive parts' code first, so their still pictures are drawn with the pages (book-content.js)
+  const withWidgets = (b) => (P.widgets
+    ? P.widgets.preload(b.chapters.flatMap((c) => P.widgets.used(c.lesson))).then(() => b)
+    : b);
+  P.book.load(courseId).then(withWidgets).then(start).catch((err) => {
     if (err.status !== 404) console.error(err);
     if (err.status === 404) message('Book not found', 'This course isn’t in your library. It may have been deleted.', '<a class="btn" href="app.html">Go to your courses</a>');
     else message('This book didn’t open', err.message, `<button class="btn" type="button" data-retry>Try again</button><a class="textlink" href="${outlineHref}">Back to the outline</a>`);

@@ -52,7 +52,7 @@ const DAY = 86400_000;
 const EARLY = 8 * 3600_000;
 export const INTERVALS = [1, 3, 7]; // days until the next review, by box
 export const MASTER_STREAK = 2;     // right answers in a row that fix a mistake
-const REVIEWABLE = new Set(['choice', 'numeric', 'text']);
+const REVIEWABLE = new Set(['choice', 'numeric', 'text', 'task']); // task: done in an interactive part (widgets.mjs)
 const QID = /^[A-Za-z0-9_-]{1,40}$/;
 const LIST_MAX = 50;
 

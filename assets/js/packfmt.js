@@ -250,7 +250,19 @@
       return /^<svg[\s>]/i.test(svg) && /<\/svg>$/i.test(svg) ? { t, svg, caption: str(b.caption, 600) } : null;
     }
     if (t === 'photo') return cleanPhoto(b, media);
+    if (t === 'widget') { // an interactive part: plain data, checked again by its kind where it is drawn
+      const kind = str(b.kind, 20), spec = plainData(b.spec, 20000);
+      return WIDGET_KINDS.has(kind) && spec ? { t, kind, spec, caption: str(b.caption, 600) } : null;
+    }
     return null; // a kind of block this version doesn't know
+  }
+
+  // the interactive parts this version knows (assets/js/widgets.js, server/widgets.mjs)
+  const WIDGET_KINDS = new Set(['chess', 'circuit', 'graph', 'music']);
+  // a JSON object of plain data (no functions, nothing cyclic), no bigger than max characters
+  function plainData(v, max) {
+    if (!isObj(v)) return null;
+    try { const s = JSON.stringify(v); return s.length <= max ? JSON.parse(s) : null; } catch (e) { return null; }
   }
 
   function cleanQuestion(x) {
@@ -273,6 +285,10 @@
       return accept.length ? { id, type: 'text', ...base, accept } : null;
     }
     if (x.type === 'subjective') return { id, type: 'subjective', prompt: base.prompt, model: str(x.model, 2000) || null };
+    if (x.type === 'task') { // done in an interactive part: what is set up, and what counts as right
+      const kind = str(x.kind, 20), spec = plainData(x.spec, 20000), goal = plainData(x.goal, 6000);
+      return WIDGET_KINDS.has(kind) && spec && goal ? { id, type: 'task', kind, ...base, spec, goal } : null;
+    }
     return null;
   }
 

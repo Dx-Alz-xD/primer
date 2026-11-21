@@ -292,6 +292,8 @@
         const n = norm(raw);
         return { correct: (q.accept || []).some((a) => norm(a) === n) };
       }
+      // done in an interactive part: its widget knows what counts (assets/js/widgets.js)
+      if (q.type === 'task') return P.widgets ? P.widgets.check(q, raw) : { correct: false, invalid: true };
       return { correct: false };
     },
 
@@ -314,8 +316,9 @@
     // and the question comes back in Review (server/review.mjs), which is why its id is sent.
     recordMistake(course, n, lessonTitle, q, given) {
       const choiceText = (i) => (q.choices && q.choices[i] != null ? plain(q.choices[i]) : '');
-      const correct = q.type === 'choice' ? choiceText(q.answer) : q.type === 'numeric' ? `${q.answer}${q.unit ? ' ' + q.unit : ''}` : (q.accept || [])[0] || '';
-      const givenText = q.type === 'choice' ? choiceText(Number(given)) : String(given);
+      const task = q.type === 'task' && P.widgets; // an interactive part puts the attempt and the answer in words
+      const correct = task ? P.widgets.answer(q) : q.type === 'choice' ? choiceText(q.answer) : q.type === 'numeric' ? `${q.answer}${q.unit ? ' ' + q.unit : ''}` : (q.accept || [])[0] || '';
+      const givenText = task ? P.widgets.describe(q, given) : q.type === 'choice' ? choiceText(Number(given)) : String(given);
       P.post('/api/mistakes', {
         courseId: course.id, lesson: n, lessonTitle, qid: q.id, prompt: plain(q.prompt), given: givenText, correct
       }).catch(() => {});

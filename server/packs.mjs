@@ -31,6 +31,7 @@ import { readFile, writeFile, rename, stat, mkdir, unlink } from 'node:fs/promis
 import zlib from 'node:zlib';
 import path from 'node:path';
 import fmt from '../assets/js/packfmt.js';
+import { normWidgetBlock, normTask } from './widgets.mjs';
 import { q, tx, schema, now, parseJSON, DATA_DIR } from './db.mjs';
 import { HttpError, sendJSON, readRaw, overLimit } from './http.mjs';
 import { requireUser } from './auth.mjs';
@@ -402,6 +403,15 @@ async function importPack({ req, res, url }) {
     }
     const outline = flatten(meta.units).length;
     const lessons = pack.lessons.filter((l) => l.n <= outline);
+    // interactive parts are held to their kind's own checks, as when the AI writes them (widgets.mjs)
+    lessons.forEach(({ lesson }) => lesson.sections.forEach((sec) => {
+      sec.blocks = sec.blocks.map((b) => (b && b.t === 'widget' ? normWidgetBlock(b) : b)).filter(Boolean);
+      sec.checkpoint = (sec.checkpoint || []).map((x) => {
+        if (!x || x.type !== 'task') return x;
+        const t = normTask(x, { prompt: x.prompt, hint: x.hint || '', explain: x.explain || '' });
+        return t ? { ...t, id: x.id } : null;
+      }).filter(Boolean);
+    }));
 
     // photos and recordings, kept under their own hashes
     for (const [name, m] of pack.media) await keep(MEDIA_DIR, name.slice(6), Buffer.from(m.bytes));

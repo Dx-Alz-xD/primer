@@ -19,7 +19,7 @@
   const root = $('#rv-root');
   const courseFilter = P.params.get('course');
   const DAY = 86400000;
-  const REVIEWABLE = new Set(['choice', 'numeric', 'text']);
+  const REVIEWABLE = new Set(['choice', 'numeric', 'text', 'task']); // task: done in an interactive part (widgets.js)
   const UPCOMING_SHOWN = 5;
   const smooth = () => (P.motion.reduce ? 'auto' : 'smooth');
   const CHECK_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.4l2.7 2.7L16.2 9.6"/></svg>';
@@ -126,6 +126,12 @@
       out.answer = a;
       if (q.tolerance != null && Number.isFinite(Number(q.tolerance))) out.tolerance = Number(q.tolerance);
       if (q.unit) out.unit = String(q.unit);
+    } else if (q.type === 'task') {
+      // the board, circuit, graph or keyboard and what counts as right: plain data, checked again by its kind
+      if (!P.widgets || !P.widgets.kinds.includes(q.kind) || !q.spec || typeof q.spec !== 'object' || !q.goal || typeof q.goal !== 'object') return null;
+      out.kind = q.kind;
+      out.spec = q.spec;
+      out.goal = q.goal;
     } else {
       if (!Array.isArray(q.accept) || !q.accept.length) return null;
       out.accept = q.accept.map(String);
@@ -153,6 +159,7 @@
   const answerHTML = (q) => {
     if (q.type === 'choice') return q.choices[q.answer];
     if (q.type === 'numeric') return esc(`${q.answer}${q.unit ? ' ' + q.unit : ''}`);
+    if (q.type === 'task') return esc(P.widgets ? P.widgets.answer(q) : '');
     return esc(q.accept[0]);
   };
 
@@ -277,6 +284,8 @@
       field = `<div class="q__choices" role="radiogroup" aria-labelledby="${pid}">` +
         order.map((ci) => `<label class="q__choice"><input type="radio" name="rv-choice" value="${ci}"><span data-no-i18n>${q.choices[ci]}</span></label>`).join('') +
         '</div>';
+    } else if (q.type === 'task') {
+      field = `<div class="q__task" data-task-host role="group" aria-labelledby="${pid}"></div>`;
     } else {
       field = `<div class="q__row"><input class="q__input" type="text" inputmode="${q.type === 'numeric' ? 'decimal' : 'text'}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-labelledby="${pid}" placeholder="${q.type === 'numeric' ? 'Your answer' : 'Type your answer'}">${q.unit ? `<span class="q__unit">${esc(q.unit)}</span>` : ''}</div>`;
     }
@@ -312,6 +321,10 @@
       math(feedback);
     };
     let answered = false;
+    // a task's interactive part, drawn by its kind once it has loaded
+    let task = null;
+    const taskHost = $('[data-task-host]', form);
+    if (taskHost && P.widgets) P.widgets.mountTask(taskHost, q, { onChange: () => { if (!answered) setFeedback('', ''); } }).then((h) => { task = h; });
 
     form.addEventListener('change', (e) => {
       if (e.target.type === 'radio') $$('.q__choice', form).forEach((l) => l.classList.toggle('is-checked', l.querySelector('input').checked));
@@ -332,16 +345,19 @@
       if (answered) return;
       const raw = q.type === 'choice'
         ? (($('input[type="radio"]:checked', form) || {}).value || '')
-        : $('.q__input', form).value.trim();
-      if (!raw) { setFeedback('warn', q.type === 'choice' ? 'Choose an answer first.' : 'Enter an answer first.'); return; }
+        : q.type === 'task' ? (task ? task.value() : null)
+          : $('.q__input', form).value.trim();
+      if (raw == null || raw === '') { setFeedback('warn', q.type === 'choice' ? 'Choose an answer first.' : q.type === 'task' ? 'Try it first, then press Check.' : 'Enter an answer first.'); return; }
       const res = P.api.checkAnswer(q, raw);
-      if (res.invalid) { setFeedback('warn', 'Enter a number, like 7, 2.5 or 3/4.'); return; }
+      if (res.invalid) { setFeedback('warn', q.type === 'task' ? esc(res.note || 'Try it first, then press Check.') : 'Enter a number, like 7, 2.5 or 3/4.'); return; }
 
       answered = true;
       const right = res.correct;
       if (P.sfx) P.sfx.play(right ? 'correct' : 'wrong');
       form.classList.add('is-locked', right ? 'is-correct' : 'is-wrong');
       $$('input, .q__check', form).forEach((el) => { el.disabled = true; });
+      if (task && task.lock) task.lock(true);
+      if (task && !right && task.reveal) task.reveal(); // shows it done right
       if (!right && q.type === 'choice') {
         const ans = $(`input[value="${q.answer}"]`, form);
         if (ans) ans.closest('.q__choice').classList.add('is-answer');
