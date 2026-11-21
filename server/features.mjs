@@ -18,5 +18,7 @@ export default [
   () => import('./photos.mjs'),
   () => import('./videos.mjs'),
   () => import('./reuse.mjs'),
-  () => import('./exams.mjs')
+  () => import('./exams.mjs'),
+  () => import('./packs.mjs'),
+  () => import('./talk.mjs')
 ];

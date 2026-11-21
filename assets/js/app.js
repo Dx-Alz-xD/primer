@@ -217,6 +217,7 @@
     });
     offerImport();
     if (P.classes) P.classes.mountLibrary();
+    if (P.packs) P.packs.mountLibrary(); // "Open a course file" (assets/js/packs.js)
     if (location.hash === '#library') requestAnimationFrame(() => $('#library').scrollIntoView());
     else topic.focus({ preventScroll: true });
   }
@@ -328,6 +329,7 @@
           <button class="textlink" type="button" data-delete>Delete course</button>
         </div>
         <div data-offline-slot></div>
+        <div data-pack-slot></div>
       </header>
       <ol class="units">${unitsHTML}</ol>`;
 
@@ -391,6 +393,7 @@
 
     // "Download for offline" (assets/js/offline.js)
     if (P.offline) P.offline.mountCourse(view.querySelector('[data-offline-slot]'), course);
+    if (P.packs) P.packs.mountCourse(view.querySelector('[data-pack-slot]'), course); // "Share as a file"
     view.querySelector('[data-epub]').addEventListener('click', (e) => P.epub.download(course.id, e.currentTarget));
     view.querySelector('[data-print]').addEventListener('click', () => window.print());
     view.querySelector('[data-delete]').addEventListener('click', async (e) => {

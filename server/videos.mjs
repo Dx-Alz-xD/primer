@@ -567,7 +567,12 @@ function wordsFrom(al, script) {
   return words.length ? words : null;
 }
 
-async function storedNarration(script) {
+// packs.mjs: stored(courseId, script) -> { url, words } for narration that came with a course file
+export const narrationHooks = { stored: null };
+
+export async function storedNarration(script, courseId) {
+  const own = courseId && narrationHooks.stored ? await narrationHooks.stored(courseId, script) : null;
+  if (own) return own;
   const name = audioName(script);
   if (!(await exists(path.join(AUDIO_DIR, name + '.mp3')))) return null;
   let words = null;
@@ -627,10 +632,10 @@ function translations(courseId, n) {
   try { return q('SELECT lang, data FROM lesson_translations WHERE course_id = ? AND n = ?').all(courseId, n); } catch { return []; }
 }
 
-async function narrationFor(lesson) {
+async function narrationFor(lesson, courseId) {
   return Promise.all(arr(lesson && lesson.sections).map(async (s, i) => {
     const { script, segments } = videoScript(s);
-    const made = script ? await storedNarration(script) : null;
+    const made = script ? await storedNarration(script, courseId) : null;
     return { i, title: oneLine(s.title, 90), script, segments, ...(made || {}) };
   }));
 }
@@ -644,10 +649,10 @@ const youtubeOff = (meta) => {
 async function watchOut(row, meta, n, lesson) {
   const plan = planOf(row.id, n) || {};
   const off = youtubeOff(meta);
-  const narration = { [meta.lang || 'en']: await narrationFor(lesson) };
+  const narration = { [meta.lang || 'en']: await narrationFor(lesson, row.id) };
   for (const t of translations(row.id, n)) {
     const l = parseJSON(t.data, null);
-    if (l && LANG.test(t.lang)) narration[t.lang] = await narrationFor(l);
+    if (l && LANG.test(t.lang)) narration[t.lang] = await narrationFor(l, row.id);
   }
   return {
     youtube: {
@@ -776,9 +781,9 @@ async function postNarration({ req, res, params }) {
   if (!script) throw new HttpError('This part has nothing to narrate.', 400);
   const base = { i: si, lang, title: oneLine(section.title, 90), script, segments };
   const browser = (why) => sendJSON(res, 200, { ok: true, narration: { ...base, provider: 'browser', reason: BROWSER_WHY[why] || BROWSER_WHY.failed } });
-  if (!elKey()) return browser('no-key');
-  const have = await storedNarration(script);
+  const have = await storedNarration(script, row.id);
   if (have) return sendJSON(res, 200, { ok: true, narration: { ...base, provider: 'elevenlabs', ...have } });
+  if (!elKey()) return browser('no-key');
   if (overLimit('voice:' + u.id, 60, 3600_000)) return browser('busy');
   try {
     const made = await makeNarration(script);

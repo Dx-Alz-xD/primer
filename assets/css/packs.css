@@ -1,0 +1,48 @@
+/* =====================================================================
+   Course files (assets/js/packs.js): "Open a course file" in the
+   library, "Share as a file" on a course's page, the dialog that shows
+   what a file holds. The dialog itself is the class dialog (classes.css).
+   ===================================================================== */
+
+/* beside "Join a class" and "New folder" */
+.library__head .pack-open{display:inline-flex;align-items:center;gap:.45rem;margin-left:auto}
+.library__head #class-join-btn:not([hidden]) ~ .pack-open{margin-left:0}
+.pack-open svg{flex:none}
+
+/* "Shared from a file" in the course header: a quiet note, not a warning */
+.course-head__note.pack-from{display:flex;align-items:flex-start;gap:.5rem;border:1px solid var(--leather-soft);border-style:solid;color:var(--cream-dim);font-style:italic}
+.pack-from svg{flex:none;margin-top:.15rem;color:var(--gold)}
+.is-local-pack .offline-dl [data-remove]{display:none}
+
+/* the share panel, under the course's actions */
+.pack:empty{display:none}
+.pack-share{display:grid;gap:.6rem;margin-top:1.3rem;padding-top:1.15rem;border-top:1px solid var(--leather-soft)}
+.pack-share__title{font-size:1.45rem;text-shadow:none}
+.pack-share__lead,.pack-share__note,.pack-share__how{color:var(--cream-dim);font-size:1.05rem;line-height:1.45;max-width:46rem}
+.pack-share__note,.pack-share__how{color:var(--muted);font-style:italic;font-size:1rem}
+.pack-share__have{display:grid;gap:.25rem;margin:0;padding:.7rem .95rem .7rem 2rem;border:1px solid var(--leather-soft);border-radius:4px;background:rgba(14,9,4,.5);max-width:34rem}
+.pack-share__have li::marker{color:var(--gold)}
+.pack-share__opt{display:inline-flex;align-items:center;gap:.55rem;cursor:pointer;font-size:1.05rem;justify-self:start}
+.pack-share__opt input{width:1.1rem;height:1.1rem;accent-color:var(--gold)}
+.pack-share__size{font-family:var(--font-head);font-size:1.2rem;color:var(--gold-hi)}
+.pack-share__warn{padding:.55rem .8rem;border:1px dashed rgba(214,165,84,.55);border-radius:4px;color:var(--cream);font-size:1rem;line-height:1.4;max-width:46rem}
+.pack-share__actions{display:flex;flex-wrap:wrap;align-items:center;gap:.7rem 1.3rem;margin-top:.2rem}
+.pack-share__actions .btn{display:inline-flex;align-items:center;gap:.45rem;text-decoration:none}
+.pack-share__actions svg{flex:none}
+.pack-share__status{color:var(--cream-dim);font-style:italic;font-size:1.02rem;overflow-wrap:anywhere}
+.pack-share__status:empty{display:none}
+.pack-share__status.is-error{color:var(--error-soft);font-style:normal}
+
+/* the "Open a course file" dialog */
+.pkdialog__have{margin:0;padding-left:2rem;list-style:disc}
+.pkdialog__have li::marker{color:var(--gold)}
+.pkdialog__note{color:var(--muted);font-style:italic;font-size:1rem;line-height:1.4}
+.pkdialog__err{color:var(--error-soft);font-size:1.02rem}
+.pkdialog__err:empty{display:none}
+.pkdialog .cdialog__lead strong{overflow-wrap:anywhere}
+
+@media (max-width:560px){
+  .library__head .pack-open{margin-left:0}
+  .pack-share__have{padding-left:1.7rem}
+}
+@media print{ .pack,.pack-open,.pack-from{display:none !important} }

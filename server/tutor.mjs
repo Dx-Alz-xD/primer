@@ -59,7 +59,7 @@ export function lessonText(courseId, n, sectionTitle, max = 5000) {
 }
 
 // What the tutor remembers about this learner.
-function memory(userId) {
+export function memory(userId) {
   const mistakes = q('SELECT lesson_title, prompt, given, correct FROM mistakes WHERE user_id = ? ORDER BY created_at DESC LIMIT 8').all(userId);
   const doubts = q('SELECT lesson_title, question FROM doubts WHERE user_id = ? ORDER BY created_at DESC LIMIT 6').all(userId);
   const parts = [];
@@ -71,7 +71,7 @@ function memory(userId) {
   return parts.join('\n\n');
 }
 
-function courseLine(meta) {
+export function courseLine(meta) {
   return `"${meta.title}" on ${meta.topic}, from ${meta.from || 'the very beginning'} to ${meta.to || 'the end of the subject'}` +
     (meta.instructions ? `. Their teaching instructions: "${meta.instructions}"` : '');
 }
@@ -90,7 +90,7 @@ How to reply:
 - If the learner seems to be struggling or mentions hurting themselves, answer kindly first, encourage them to talk to someone they trust, and give India's Tele-MANAS helpline (14416, free, any time) or a local helpline.
 - Write in ${LANG_NAMES[lang] || 'English'}.`;
 
-function validateReply(raw) {
+export function validateReply(raw) {
   const html = typeof raw.html === 'string' ? raw.html.trim() : typeof raw.answer === 'string' ? raw.answer.trim() : '';
   if (html.length < 8) throw new Error('empty reply');
   const wrapped = /^<(p|ul|ol)\b/i.test(html) ? html : `<p>${html}</p>`;

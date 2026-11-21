@@ -314,6 +314,8 @@
     supported: Boolean(ready),
     mountCourse,
     flush,
-    isOffline
+    isOffline,
+    ask,       // course files (packs.js) talk to the worker too
+    pageFiles
   };
 })();

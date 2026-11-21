@@ -334,8 +334,9 @@ async function sendOne(it, courses) {
 
 // Returns how many saves are still waiting for the signed-in learner.
 async function runReplay() {
-  const all = await qAll();
-  if (!all.length) return 0;
+  let all = await qAll();
+  const packs = self.PrimerPacks ? await self.PrimerPacks.waiting() : 0; // course files opened offline (sw-packs.js)
+  if (!all.length && !packs) return 0;
   let me;
   try {
     const r = await fetch(abs('/api/auth/me'), { credentials: 'same-origin', cache: 'no-store' });
@@ -352,6 +353,11 @@ async function runReplay() {
   await setOwner(uid, me.lang);
   // another learner's saves wait for them, but not forever
   for (const it of all) if (it.user && it.user !== uid && Date.now() - it.at > 30 * 864e5) await qDelete(it.key, it.at);
+  // course files first: saves made since may belong to them
+  if (packs) {
+    if (!(await self.PrimerPacks.upload(uid))) { replayFailedAt = Date.now(); return all.length + packs; }
+    all = await qAll();
+  }
   const mine = all.filter((it) => !it.user || it.user === uid).sort((a, b) => a.at - b.at);
   const courses = new Map();
   let sent = 0;
@@ -722,6 +728,7 @@ async function syncCourses(courseId) {
   // the whole library was just fetched by the page; one course gets a fresh copy
   const list = courseId ? null : await readJSON(u.cache, abs('/api/courses'));
   for (const cid of ids) {
+    if (all[cid].local) continue; // opened from a file offline, not on the server yet (sw-packs.js)
     if (Date.now() - (lastSync.get(cid) || 0) < 10000) continue;
     lastSync.set(cid, Date.now());
     let course = list ? (list.courses || []).find((c) => c.id === cid) : null;
@@ -835,7 +842,7 @@ async function apiGet(event, req, url) {
     return cached;
   }
   // saves still waiting go first, so this answer includes them
-  if (!offlineNow() && (await queuedFor(u.owner)).length) await replay().catch(() => {});
+  if (!offlineNow() && ((await queuedFor(u.owner)).length || (self.PrimerPacks && await self.PrimerPacks.waiting(u.owner)))) await replay().catch(() => {});
   return networkFirst(event, req, cached, {
     keep: (res) => keepJSON(u.owner, key, res),
     fallback: () => offlineJSON(kind === 'lesson' ? MSG.lesson : MSG.offline)
@@ -902,6 +909,7 @@ self.addEventListener('message', (event) => {
       case 'remove': await removeDownload(String(msg.courseId || '')); return status(String(msg.courseId || ''));
       case 'sync': await syncCourses(msg.courseId ? String(msg.courseId) : null); return true;
       case 'clear': await clearAll(); return true;
+      case 'pack': return self.PrimerPacks ? self.PrimerPacks.handle(msg) : null;
       default: return null;
     }
   })();
@@ -912,3 +920,6 @@ self.addEventListener('sync', (event) => {
   if (event.tag !== 'primer-sync') return;
   event.waitUntil(replay(true).then((left) => { if (left > 0) throw new Error('Saves are still waiting.'); }));
 });
+
+// Course files: opening one with no internet (assets/js/sw-packs.js, with the format in packfmt.js).
+try { importScripts('/assets/js/packfmt.js', '/assets/js/sw-packs.js'); } catch (e) { console.warn('[Primer] course files offline are off:', e); }
