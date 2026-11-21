@@ -16,5 +16,6 @@ export default [
   () => import('./marking.mjs'),
   () => import('./offline.mjs'),
   () => import('./photos.mjs'),
-  () => import('./videos.mjs')
+  () => import('./videos.mjs'),
+  () => import('./refs.mjs') // a lesson's sources and the apps to practise it in (with sources.mjs, apps.mjs)
 ];

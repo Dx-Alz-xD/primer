@@ -1,0 +1,111 @@
+/* =====================================================================
+   A lesson's references (assets/js/refs.js): the source numbers beside
+   each part's title, the "Sources" list at the end of the lesson (also
+   in the book), and the "Practise with" strip of apps with their cards.
+   ===================================================================== */
+
+/* ---------- source numbers beside a part's title ---------- */
+.srctags{display:inline-flex;gap:.18em;margin-inline-start:.35em;vertical-align:super;font-size:.5em;line-height:1;font-family:var(--font-body);font-weight:600;letter-spacing:0;font-variant-numeric:lining-nums tabular-nums}
+.srctag{
+  display:inline-block;min-width:1.45em;padding:.16em .3em .12em;border:1px solid rgba(138,97,40,.55);border-radius:3px;
+  color:var(--ink-gold);background:rgba(214,165,84,.12);text-align:center;text-decoration:none;
+}
+.paper .srctag{color:var(--ink-gold)}
+.srctag:empty::before{content:attr(data-n)}
+.srctag:hover{background:rgba(214,165,84,.3);border-color:var(--ink-gold)}
+.srctag:focus-visible{outline:2px solid var(--ink-gold);outline-offset:1px}
+
+/* ---------- the end of the lesson: practise with, then sources ---------- */
+.lrefs{margin-top:2.4rem;padding-top:1.4rem;border-top:3px double rgba(138,97,40,.55)}
+.lrefs > * + *{margin-top:1.9rem}
+
+.srcs__title,.papps__title{font-size:clamp(1.35rem,2.8vw,1.6rem);margin:0 0 .35rem}
+.srcs__note,.papps__note{color:var(--ink-soft);font-style:italic;font-size:1rem;line-height:1.45;margin:0 0 .8rem}
+.srcs.is-none .srcs__note{
+  font-style:normal;color:var(--ink);padding:.75rem .95rem;border:1px dashed var(--ink-gold);border-radius:4px;background:rgba(138,97,40,.08)
+}
+.srcs.is-pending .srcs__note::before{content:"";display:inline-block;width:.55em;height:.55em;margin-inline-end:.5em;border-radius:50%;background:var(--ink-gold);vertical-align:.1em;animation:dot 1s infinite}
+.srcs__list{list-style:none;margin:0;padding:0;counter-reset:none}
+.src{display:flex;gap:.7rem;align-items:baseline;padding:.42rem .5rem;margin:0 -.5rem;border-radius:4px;font-size:1.02rem;line-height:1.45}
+.src + .src{border-top:1px solid rgba(138,97,40,.18)}
+.src__n{
+  flex:none;min-width:1.7em;padding:.1em .3em;border:1px solid rgba(138,97,40,.55);border-radius:3px;
+  font-size:.82em;font-weight:600;color:var(--ink-gold);text-align:center;line-height:1.35;font-variant-numeric:lining-nums tabular-nums
+}
+.src__body{min-width:0;overflow-wrap:anywhere}
+.src__link{text-decoration:none;border-bottom:1px solid rgba(138,97,40,.4)}
+.src__link:hover{border-bottom-color:var(--ink-gold)}
+.src__site,.src__by,.src__doi{color:var(--ink-soft)}
+.src__doi{font-size:.88em;white-space:nowrap}
+.src__own{color:var(--ink)}
+
+/* ---------- practise with ---------- */
+.papps__list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.7rem}
+.papp{position:relative}
+.papp__btn{
+  display:flex;align-items:center;gap:.6rem;min-height:56px;padding:.5rem .95rem .5rem .55rem;
+  font:inherit;font-size:1.05rem;color:var(--ink);cursor:pointer;
+  background:var(--parchment-2, #efe3c6);border:1px solid var(--parchment-edge, #c9b48a);border-radius:999px;
+  box-shadow:0 1px 0 rgba(255,250,235,.7) inset, 0 6px 14px -10px rgba(43,29,17,.7);
+  transition:border-color .15s, background-color .15s, transform .15s;
+}
+.papp__btn:hover,.papp.is-open .papp__btn{border-color:var(--ink-gold);background:#f6ebd1}
+.papp__btn:focus-visible{outline:2px solid var(--ink-gold);outline-offset:2px}
+.papp__icon{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:10px;overflow:hidden;background:#fffaf0;box-shadow:0 0 0 1px rgba(43,29,17,.16)}
+.papp__icon img{display:block;width:100%;height:100%;object-fit:contain}
+.papp__letter{font-family:var(--font-head);font-size:1.35rem;color:var(--ink-gold)}
+.papp__name{font-family:var(--font-head);white-space:nowrap}
+
+.papp__card{
+  position:absolute;z-index:40;top:calc(100% + 8px);inset-inline-start:0;
+  width:min(23rem, calc(100vw - 24px));padding:.95rem 1.05rem 1rem;
+  color:var(--ink);background:#fbf4e2;border:1px solid var(--ink-gold);border-radius:6px;
+  box-shadow:0 22px 40px -18px rgba(43,29,17,.85), 0 0 0 4px rgba(214,165,84,.14);
+  font-size:1rem;line-height:1.45;text-align:start;
+  animation:papp-in .16s var(--ease-out, ease-out);
+}
+.papp__card[hidden]{display:none}
+.papp__card.is-above{top:auto;bottom:calc(100% + 8px)}
+.papp__card.is-above::before{top:auto;bottom:-7px;transform:rotate(225deg)}
+.papp__card::before{content:"";position:absolute;top:-7px;inset-inline-start:24px;width:12px;height:12px;background:#fbf4e2;border-top:1px solid var(--ink-gold);border-inline-start:1px solid var(--ink-gold);transform:rotate(45deg)}
+[dir="rtl"] .papp__card::before{transform:rotate(-45deg)}
+[dir="rtl"] .papp__card.is-above::before{transform:rotate(135deg)}
+@keyframes papp-in{from{opacity:0;translate:0 -4px}to{opacity:1;translate:0 0}}
+.papp__head{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin:0 0 .35rem;font-family:var(--font-head);font-size:1.15rem}
+.papp__head strong{font-weight:400}
+.papp__badge{font-family:var(--font-body);font-size:.78rem;font-weight:600;letter-spacing:.02em;padding:.1rem .5rem;border-radius:999px;color:#2f5a22;background:rgba(61,106,44,.12);border:1px solid rgba(61,106,44,.4)}
+.papp__what{margin:0 0 .5rem}
+.papp__on{margin:0 0 .55rem;color:var(--ink-soft);font-size:.95rem}
+.papp__label{font-weight:600;color:var(--ink)}
+.papp__label--how{margin:0 0 .25rem;font-size:.95rem}
+.papp__steps{margin:0 0 .7rem;padding-inline-start:1.3em}
+.papp__steps li{margin:.2em 0}
+.papp__open{display:inline-block;font-style:italic;color:var(--ink-gold);text-decoration:none;border-bottom:1px solid rgba(138,97,40,.45)}
+.papp__open:hover{border-bottom-color:var(--ink-gold)}
+
+@media (max-width:560px){
+  .papps__list{gap:.5rem}
+  .papp__btn{min-height:52px;padding:.4rem .8rem .4rem .45rem;font-size:1rem}
+  .papp__icon{width:36px;height:36px}
+  /* on a phone the card opens under the whole strip, full width */
+  .papp{position:static}
+  .papps__list{position:relative}
+  .papp__card{inset-inline-start:0;width:auto;inset-inline-end:0}
+  .papp__card::before{display:none}
+}
+@media (prefers-reduced-motion:reduce){.papp__card{animation:none}.papp__btn{transition:none}}
+
+/* ---------- the book (book.html, and Save as PDF) ---------- */
+.flow .bk-src{margin-top:1.6em;padding-top:.8em;border-top:1px solid #c9b48a;break-inside:auto}
+.flow .bk-src .srcs__title{font-size:1.25em;margin:0 0 .3em}
+.flow .bk-src .srcs__note{font-size:.9em;margin:0 0 .5em}
+.flow .bk-src .src{font-size:.92em;padding:.2em 0;margin:0;break-inside:avoid}
+.flow .bk-src .src + .src{border-top:0}
+.flow .srctags{font-size:.55em}
+
+@media print{
+  .lrefs .papps{display:none}
+  .papp__card{display:none}
+  .src__link{border-bottom:0}
+  .src__link::after{content:" (" attr(href) ")";font-size:.8em;color:#5d4a2f;overflow-wrap:anywhere}
+}

@@ -191,6 +191,8 @@
     renderParts();
     save();
     if (allComplete()) finish();
+    // the lesson's sources and the apps to practise it in, at the end of the lesson (assets/js/refs.js)
+    if (P.refs) P.refs.start({ course, n, lesson });
 
     let notebook = null;
     const board = P.initDoubts({
@@ -274,7 +276,8 @@
     el.id = `sec-${i}`;
     el.dataset.sec = String(i);
     el.setAttribute('aria-labelledby', `sec-${i}-title`);
-    el.innerHTML = `<h2 class="lsec__title" id="sec-${i}-title">${esc(s.title)}</h2>
+    // P.refs (assets/js/refs.js): the numbers of the sources this part follows
+    el.innerHTML = `<h2 class="lsec__title" id="sec-${i}-title">${esc(s.title)}${P.refs ? P.refs.tags(lesson, i) : ''}</h2>
       <div class="lsec__content" data-doubtable>${s.blocks.map(blockHTML).join('')}</div>`;
     if (s.checkpoint && s.checkpoint.length) {
       const cp = document.createElement('div');

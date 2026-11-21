@@ -722,24 +722,37 @@ export function generateOutline(input) {
   });
 }
 
-export function generateLesson(input) {
+// Set by server/sources.mjs: ground({ title, desc, topic, lang }) -> { key, prompt, apply(lesson, raw) } | null.
+// Real sources looked up before a lesson is written: their extracts join the prompt, and apply() keeps the
+// model's per-section source numbers (checked against the list) and the list itself (lesson.grounding).
+// Never throws; null when nothing was found in time. Safely framed courses are never grounded.
+export const lessonHooks = { ground: null };
+
+export async function generateLesson(input) {
   const me = input.outline.find((l) => l.n === input.n);
   const prev = input.outline.find((l) => l.n === input.n - 1);
   const next = input.outline.find((l) => l.n === input.n + 1);
+  const ground = lessonHooks.ground && !input.safety && input.ground !== false
+    ? await lessonHooks.ground({ title: me.title, desc: me.desc, topic: input.topic, lang: input.lang || 'en' })
+    : null;
   const key = {
     v: 2, topic: norm(input.topic), from: norm(input.from), to: norm(input.to), instructions: norm(input.instructions),
     n: input.n, title: norm(me.title), prev: norm(prev && prev.title), next: norm(next && next.title), ...langKey(input.lang), ...safetyKey(input.safety),
-    ...(input.syllabus ? { syllabus: 1 } : {}) // its prompt says the course follows a syllabus
+    ...(input.syllabus ? { syllabus: 1 } : {}), // its prompt says the course follows a syllabus
+    ...(ground ? { ground: ground.key } : {})    // written from these sources
   };
   return cached('lesson', key, async () => {
     const { value, model } = await generate({
       system: LESSON_SYSTEM,
-      user: lessonUser(input),
+      user: lessonUser(input) + (ground ? '\n\n' + ground.prompt : ''),
       maxTokens: 12000,
       timeoutMs: 110000,
       deadlineMs: 300000,
       // photoCheck: this lesson chose its own photos, so none is guessed for it later (photos.mjs)
-      validate: (raw) => Object.assign(normalizeLesson(raw, me.title), { photoCheck: 'ai' }),
+      validate: (raw) => {
+        const lesson = Object.assign(normalizeLesson(raw, me.title), { photoCheck: 'ai' });
+        return ground ? ground.apply(lesson, raw) : lesson;
+      },
       label: `lesson ${input.n} "${me.title}"`
     });
     return { lesson: value, model };
