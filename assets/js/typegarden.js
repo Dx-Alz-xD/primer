@@ -12,7 +12,7 @@
    (no framework), in Primer's gold and crimson on a clear canvas, sized
    to its box, without the poster, export and multiplayer parts.
 
-     const tg = P.typeGarden(canvas, { colors, font, maxChars })
+     const tg = P.typeGarden(canvas, { colors, font, maxChars, density, align: 'left' | 'center' })
      tg.typeTo('Black holes')   types it out, letter by letter (after
                                 withering what is there that differs)
      tg.mirror(text)            follows a text field: new letters grow,
@@ -165,7 +165,8 @@
       }
       const n = lines.length, lh = LH * S;
       lines.forEach((li, k) => {
-        let x = W / 2 - lineW(li, S) / 2;
+        // centred, or (align: 'left') from the left edge of the text's room, as in a text box
+        let x = o.align === 'left' ? (W - maxW) / 2 : W / 2 - lineW(li, S) / 2;
         const y = H / 2 + (k - (n - 1) / 2) * lh + 0.33 * S;
         li.forEach((i) => { const l = A[i], w = ws[i] * S; l.tx = x + w / 2; l.ty = y; l.tw = w; x += w; });
       });

@@ -31,10 +31,47 @@
 /* letter-spacing tears the joined strokes of Indic and Arabic scripts: only Latin and Cyrillic get it */
 html:not([lang="en"]):not([lang="es"]):not([lang="fr"]):not([lang="pt"]):not([lang="ru"]) .eyebrow__text{letter-spacing:.02em;text-transform:none}
 
-.hero__garden{grid-area:garden;position:relative;align-self:center;height:clamp(320px,62svh,620px);min-width:0}
-/* a pool of shadow, so the gold reads before the shelves behind it */
-.hero__garden::before{content:"";position:absolute;inset:-6% -10%;background:radial-gradient(ellipse 50% 46% at 50% 50%, rgba(10,6,3,.86), rgba(10,6,3,.55) 55%, transparent 78%);pointer-events:none}
-.hero__garden canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+/* the builder at work: Primer's own text box, the topic growing roses in it, and its button */
+.hero__demo{grid-area:garden;position:relative;align-self:center;min-width:0}
+.demo{
+  position:relative;padding:clamp(16px,2.2vw,26px);
+  background:linear-gradient(180deg, rgba(34,22,12,.94), rgba(20,13,7,.96));
+  border:1px solid var(--leather);border-radius:8px;box-shadow:var(--shadow-card), 0 0 80px -20px rgba(214,165,84,.18);
+}
+.demo::before{content:"";position:absolute;inset:6px;border:3px double var(--hairline);border-radius:5px;pointer-events:none}
+.demo__label{position:relative;font-family:var(--font-head);font-size:clamp(1.15rem,1.6vw,1.4rem);color:var(--cream)}
+.demo__field{
+  position:relative;margin-top:.75rem;height:clamp(210px,36svh,340px);
+  background:radial-gradient(ellipse at 50% 40%, rgba(26,16,8,.96), rgba(9,5,2,.98));
+  border:1px solid rgba(214,165,84,.45);border-radius:var(--btn-radius);
+  box-shadow:inset 0 0 0 3px rgba(14,9,4,.5), inset 0 0 0 4px rgba(214,165,84,.1), inset 0 14px 40px rgba(0,0,0,.65);
+}
+.demo__field canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+.demo__row{position:relative;display:flex;justify-content:flex-end;margin-top:clamp(.8rem,1.6vw,1.1rem)}
+.demo__btn{cursor:pointer;transition:transform .2s var(--ease-out), filter .2s, box-shadow .25s}
+.demo__btn.is-hover{transform:translateY(-2px);filter:brightness(1.1);box-shadow:inset 0 1px 0 rgba(255,246,220,.65), 0 0 0 3px rgba(241,205,132,.22), 0 14px 26px -10px rgba(0,0,0,.9)}
+.demo__btn.is-press{transform:translateY(1px) scale(.97);filter:brightness(.95)}
+
+/* the pointer, and the question marks drifting off it while it can't decide */
+.demo__cursor{position:absolute;left:0;top:0;z-index:3;width:26px;height:30px;pointer-events:none;will-change:transform;transform:translate(70%, 88%)}
+.demo__arrow{position:relative;display:block;filter:drop-shadow(0 3px 4px rgba(0,0,0,.65))}
+.demo__q{
+  position:absolute;left:6px;top:-6px;font-family:"Playfair Display", var(--font-head), serif;font-weight:700;line-height:1;
+  color:var(--gold-hi);text-shadow:0 2px 8px rgba(0,0,0,.8);opacity:0;pointer-events:none
+}
+.demo__q:nth-child(1){font-size:40px}
+.demo__q:nth-child(2){font-size:27px;color:#d9506a}
+.demo__q:nth-child(3){font-size:33px;color:var(--cream)}
+.demo__q:nth-child(4){font-size:22px}
+.demo__q:nth-child(5){font-size:36px;color:#e7bc63}
+.demo__q:nth-child(6){font-size:25px;color:#d9506a}
+.demo__q:nth-child(7){font-size:30px;color:var(--cream)}
+/* still (no GSAP, or reduced motion): the pointer rests by the button with its questions around it */
+.hero__demo.is-still .demo__q{opacity:.85}
+.hero__demo.is-still .demo__q:nth-child(1){transform:translate(-30px,-34px) rotate(-14deg)}
+.hero__demo.is-still .demo__q:nth-child(2){transform:translate(18px,-42px) rotate(12deg)}
+.hero__demo.is-still .demo__q:nth-child(3){transform:translate(-8px,-62px) rotate(-6deg)}
+.hero__demo.is-still .demo__q:nth-child(5){transform:translate(30px,-16px) rotate(20deg)}
 
 .lead{max-width:32em;margin:clamp(.9rem,2vh,1.3rem) 0 0;font-size:clamp(1.14rem,1.7vw,1.3rem);line-height:1.5;color:var(--cream-dim);text-shadow:var(--shadow-text)}
 .ask{display:flex;gap:10px;width:100%;max-width:600px;margin:clamp(1.1rem,2.6vh,1.8rem) 0 0}
@@ -56,7 +93,8 @@ html:not([lang="en"]):not([lang="es"]):not([lang="fr"]):not([lang="pt"]):not([la
 
 @media (max-width:899px){
   .hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "garden" "body";align-content:start;padding-top:clamp(12px,3vh,28px)}
-  .hero__garden{height:clamp(220px,34svh,330px);margin-top:.4rem}
+  .hero__demo{margin-top:1rem}
+  .demo__field{height:clamp(160px,26svh,240px)}
 }
 @media (max-width:560px){
   .eyebrow{align-items:flex-start;font-size:.92rem}

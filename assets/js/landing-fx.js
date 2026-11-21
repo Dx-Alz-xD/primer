@@ -45,7 +45,7 @@
 
   /* ---------- the hero ---------- */
   const h1 = $('[data-split]');
-  const rest = $$('.hero__garden, .hero .lead, .hero .ask, .chips--hero, .hero__note');
+  const rest = $$('.hero__demo, .hero .lead, .hero .ask, .chips--hero, .hero__note');
   const brow = $('.eyebrow');
   const browText = $('.eyebrow__text');
   // Latin and Cyrillic can be taken apart letter by letter; other scripts can't (vowel signs, joined letters)
@@ -79,27 +79,126 @@
   }
 
   /* ---------- the type garden ---------- */
-  // The subject of each hint in landing.js, in the same order: as a hint finishes, its subject is typed
-  // out in gold and grows roses. Whatever the visitor types is followed letter by letter (typegarden.js).
+  // The builder at work, in a loop: a topic is typed into Primer's text box in gold and grows roses
+  // (typegarden.js), while a pointer wanders by the button with question marks drifting off it (so
+  // much to learn, which first?). Once the roses are out, the questions go, the pointer settles on
+  // "Build my course" and clicks, and the next topic is typed. Whatever the visitor types in the real
+  // box is followed letter by letter instead, with the pointer waiting on the button.
   const SUBJECTS = ['Black holes', 'Calculus', 'Stoicism', 'Organic chemistry', 'Personal finance'];
+  const demo = $('.hero__demo');
   const tgCanvas = $('#type-garden');
-  const garden = tgCanvas && P.typeGarden ? P.typeGarden(tgCanvas, { density: 0.78 }) : null; // a little sparer than Type Garden's, so the topic stays readable
+  // a little sparer than Type Garden's, so the topic stays readable; set from the left, as in a text box
+  const garden = tgCanvas && P.typeGarden ? P.typeGarden(tgCanvas, { density: 0.78, align: 'left' }) : null;
   P.heroGarden = garden; // for checking the page by hand
-  if (garden) {
+  if (garden && demo) {
     const input = $('#topic');
     const typed = () => (input ? input.value.trim() : '');
-    let hint = 0, timer = 0;
-    ready.then(() => setTimeout(() => { if (!typed()) garden.typeTo(t(SUBJECTS[0])); }, live() ? 700 : 0));
-    document.addEventListener('primer:hint', (e) => {
-      hint = e.detail.index % SUBJECTS.length;
-      if (!typed() && document.activeElement !== input) garden.typeTo(t(SUBJECTS[hint]));
-    });
-    if (input) {
-      input.addEventListener('input', () => {
-        clearTimeout(timer);
-        if (typed()) garden.mirror(input.value);
-        else timer = setTimeout(() => garden.typeTo(t(SUBJECTS[hint])), 600);
+    const cursor = $('.demo__cursor', demo), arrow = $('.demo__arrow', demo), btn = $('.demo__btn', demo);
+    const qs = $$('.demo__q', demo);
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    // a point on an element, in the scene's own pixels
+    const spot = (el, fx, fy) => {
+      const a = demo.getBoundingClientRect(), b = el.getBoundingClientRect();
+      return { x: b.left - a.left + b.width * fx, y: b.top - a.top + b.height * fy };
+    };
+    const onButton = () => spot(btn, 0.62, 0.55);
+    // a tap on the scene's button takes its topic to the real box (the scene itself is hidden from
+    // screen readers and keyboards, which have the real form beside it)
+    let aim = ''; // the topic the scene is typing (a tap mid-way takes the whole of it)
+    if (btn && input) {
+      btn.addEventListener('click', () => {
+        const word = (typed() ? garden.text : aim || garden.text).trim();
+        if (!word) return;
+        input.value = word;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus({ preventScroll: true });
       });
+    }
+
+    if (!live()) {
+      // still: the pointer rests by the button with its questions round it, and the topic is there, grown
+      demo.classList.add('is-still');
+      const place = () => { const p = onButton(); cursor.style.transform = `translate(${p.x}px, ${p.y}px)`; };
+      ready.then(() => { aim = t(SUBJECTS[0]); garden.typeTo(aim); place(); });
+      window.addEventListener('resize', place);
+      if (input) input.addEventListener('input', () => { garden.mirror(typed() || t(SUBJECTS[0])); });
+    } else {
+      // the question marks: each rises off the pointer, turns a little and fades, again and again
+      let wonders = [];
+      const wonder = (on) => {
+        wonders.forEach((tl) => tl.kill());
+        wonders = [];
+        if (!on) { g.to(qs, { autoAlpha: 0, scale: 0.3, duration: 0.3, ease: 'power2.in', overwrite: true }); return; }
+        qs.forEach((q, i) => {
+          const tl = g.timeline({ repeat: -1, repeatRefresh: true, delay: i * 0.27 });
+          tl.fromTo(q, { x: () => rnd(-38, 26), y: () => rnd(-6, 12), scale: 0.45, rotation: () => rnd(-30, 30), autoAlpha: 0 },
+            { x: () => '+=' + rnd(-26, 26), y: () => '-=' + rnd(44, 78), scale: () => rnd(0.9, 1.3), rotation: () => rnd(-28, 28), duration: 1.9, ease: 'sine.out' }, 0)
+            .to(q, { autoAlpha: 0.95, duration: 0.35, ease: 'power1.out' }, 0)
+            .to(q, { autoAlpha: 0, duration: 0.55, ease: 'power1.in' }, 1.35);
+          wonders.push(tl);
+        });
+      };
+      // wandering: short drifts around the button, never quite onto it
+      let wandering = false;
+      const wander = () => {
+        if (!wandering) return;
+        const b = onButton(), box = demo.getBoundingClientRect();
+        const x = Math.max(16, Math.min(box.width - 34, b.x + rnd(-200, 30)));
+        const y = Math.max(16, Math.min(box.height - 30, b.y + rnd(-150, 20)));
+        g.to(cursor, { x, y, duration: rnd(0.9, 1.5), ease: 'sine.inOut', overwrite: true, onComplete: () => g.delayedCall(rnd(0.05, 0.45), wander) });
+      };
+      const startWander = () => { if (!wandering) { wandering = true; wander(); } };
+      const stopWander = () => { wandering = false; };
+      const toButton = (dur) => new Promise((resolve) => {
+        const b = onButton();
+        g.to(cursor, { x: b.x, y: b.y, duration: dur, ease: 'power2.inOut', overwrite: true, onComplete: resolve });
+      });
+      const click = async () => {
+        btn.classList.add('is-press');
+        g.fromTo(arrow, { scale: 1 }, { scale: 0.86, duration: 0.09, yoyo: true, repeat: 1, transformOrigin: '20% 10%' });
+        await sleep(170);
+        btn.classList.remove('is-press');
+      };
+      const grown = async (word) => { for (let i = 0; i < 90 && garden.text !== word; i++) await sleep(120); };
+
+      // the visitor typing takes over: the box follows them, and the pointer waits on the button
+      let visitor = false;
+      if (input) {
+        input.addEventListener('input', async () => {
+          const v = typed();
+          if (v) {
+            garden.mirror(input.value);
+            if (!visitor) { visitor = true; stopWander(); wonder(false); await toButton(0.6); btn.classList.add('is-hover'); }
+          } else visitor = false;
+        });
+      }
+
+      g.set(cursor, { x: 40, y: 60 });
+      const play = async () => {
+        let i = 0;
+        for (;;) {
+          if (visitor || document.hidden) { await sleep(500); continue; }
+          const word = t(SUBJECTS[i % SUBJECTS.length]);
+          aim = word;
+          i++;
+          btn.classList.remove('is-hover');
+          startWander();
+          wonder(true);
+          garden.typeTo(word);
+          await grown(word);
+          await sleep(1700); // the roses open
+          if (visitor) continue;
+          stopWander();
+          wonder(false);
+          await toButton(0.85);
+          btn.classList.add('is-hover');
+          await sleep(450);
+          await click();
+          await sleep(1500);
+        }
+      };
+      ready.then(() => setTimeout(play, 600));
     }
   }
 

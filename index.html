@@ -64,8 +64,19 @@
           <p class="eyebrow"><svg class="eyebrow__mark" viewBox="0 0 28 28" width="28" height="28" aria-hidden="true"><path d="M14 26.5C14 21 13.2 17.5 14 13.5" fill="none" stroke="#b98a3e" stroke-width="1.4" stroke-linecap="round"/><path d="M13.9 21.6C10 21.6 7.4 19.6 6.3 16.6c3.3 0 6.3 1.8 7.6 5z" fill="#c99543"/><path d="M14.1 19.2c3.6-.5 6.1-2.6 7.2-5.3-3.2 0-6.3 1.7-7.2 5.3z" fill="#c99543"/><ellipse cx="14" cy="8.6" rx="6.3" ry="5.7" fill="#7f1729"/><ellipse cx="10.8" cy="10.3" rx="4.2" ry="3.7" fill="#a9142e"/><ellipse cx="17.2" cy="10.3" rx="4.2" ry="3.7" fill="#a9142e"/><path d="M14 6.6c-1.9 0-2.8 1.5-1.9 2.7.9 1.1 3.1.9 3.4-.7.3-1.5-1.4-2.3-2.4-1.6" fill="none" stroke="#f6d690" stroke-width=".9" stroke-linecap="round"/></svg><span class="eyebrow__text">AI course builder · private beta</span></p>
           <h1 id="hero-title" data-split><span class="h1-line">Type a topic.</span> <span class="h1-line">Get a whole course.</span></h1>
         </div>
-        <!-- the topic in gold type, roses growing from its letters (assets/js/typegarden.js, after Type Garden) -->
-        <div class="hero__garden" aria-hidden="true"><canvas id="type-garden"></canvas></div>
+        <!-- the builder at work: a topic typed in gold, roses growing from its letters (assets/js/typegarden.js,
+             after Type Garden), and a pointer that can't decide what to learn until it clicks (landing-fx.js) -->
+        <div class="hero__demo" aria-hidden="true">
+          <div class="demo">
+            <p class="demo__label">What do you want to learn?</p>
+            <div class="demo__field"><canvas id="type-garden"></canvas></div>
+            <div class="demo__row"><span class="btn demo__btn">Build my course</span></div>
+          </div>
+          <div class="demo__cursor">
+            <span class="demo__q">?</span><span class="demo__q">?</span><span class="demo__q">?</span><span class="demo__q">?</span><span class="demo__q">?</span><span class="demo__q">?</span><span class="demo__q">?</span>
+            <svg class="demo__arrow" viewBox="0 0 24 28" width="26" height="30"><path d="M3 2.5v20.2l5.3-5.1 3.4 7.9 3.7-1.6-3.3-7.7h7.2z" fill="#fffaf0" stroke="#160c05" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
         <div class="hero__body">
         <p class="lead">Primer breaks any subject into lessons, writes each one, and curates them into a single credible course you can learn from, practice, and download as a PDF.</p>
 
