@@ -281,6 +281,7 @@
           <div class="bar" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="${stats.total}" aria-valuenow="${stats.done}"><span style="width:${stats.pct}%"></span></div>
           <p>${stats.done} of ${stats.total} lessons complete</p>
         </div>
+        <div data-review-slot></div>
         <div class="course-head__actions">
           <a class="btn" href="${lessonHref(course.id, resume)}">${cta}</a>
           <a class="textlink" href="book.html?course=${encodeURIComponent(course.id)}">Read as a book</a>
@@ -291,6 +292,8 @@
         </div>
       </header>
       <ol class="units">${unitsHTML}</ol>`;
+
+    if (P.review) P.review.courseCard(view.querySelector('[data-review-slot]'), course.id); // "2 to review · 1 of 3 mistakes fixed"
 
     // The quiet note when the AI thinks this topic doesn't belong in its folder.
     const fitSlot = view.querySelector('[data-fit-slot]');
