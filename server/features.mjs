@@ -11,5 +11,7 @@ export default [
   () => import('./translate.mjs'),
   () => import('./classes.mjs'),
   () => import('./ebook.mjs'),
-  () => import('./review.mjs')
+  () => import('./review.mjs'),
+  () => import('./placement.mjs'),
+  () => import('./marking.mjs')
 ];

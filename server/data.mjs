@@ -60,6 +60,8 @@ export function cleanMeta(c) {
     model: text(c.model, 120) || null,
     units
   };
+  const syllabus = longText(c.syllabus, 4000); // the syllabus an AI course was planned to follow
+  if (syllabus) meta.syllabus = syllabus;
   const aiError = text(c.aiError, 300);
   if (aiError) meta.aiError = aiError;
   if (c.library && typeof c.library === 'object') meta.library = c.library;
@@ -138,6 +140,7 @@ async function createCourse({ req, res }) {
   const meta = cleanMeta(body.course);
   if (meta.source === 'ai' || meta.source === 'library') meta.source = 'sample'; // AI courses are only made by /api/outline
   delete meta.library;
+  delete meta.syllabus; // a sample outline doesn't follow one
   // a sample course on a risky topic is renamed to its safe framing, like an AI one
   const s = screen(meta.topic, meta.title, meta.from, meta.to, meta.instructions);
   if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);
@@ -173,7 +176,22 @@ async function deleteCourse({ req, res, params }) {
 export function courseInput(body) {
   const topic = text(body.topic, 120);
   if (!topic) throw new HttpError('Name a topic first.', 400);
-  return { topic, from: text(body.from, 80), to: text(body.to, 80), instructions: text(body.instructions, 600) };
+  return {
+    topic, from: text(body.from, 80), to: text(body.to, 80), instructions: text(body.instructions, 600),
+    syllabus: longText(body.syllabus, 4000) // optional: a syllabus or chapter list the course must follow
+  };
+}
+
+// A syllabus lists many things, so each line is checked on its own (with the topic): only a
+// line that itself leans towards harm changes how the course is taught.
+function screenSyllabus(topic, syllabus) {
+  let found = null;
+  for (const line of String(syllabus || '').split(/[\n;•]+/)) {
+    const s = line.trim() ? screen(topic, line) : null;
+    if (s && s.kind === 'refuse') return s;
+    found = found || s;
+  }
+  return found;
 }
 
 // Hooks other modules can set (the shared library plans courses its own way;
@@ -190,10 +208,10 @@ function folderFor(user, body) {
 
 async function outline({ req, res }) {
   const u = requireUser(req);
-  const body = await readBody(req, 8_000);
+  const body = await readBody(req, 24_000); // room for a 4,000-character syllabus in any script
   const input = { ...courseInput(body), lang: u.lang || 'en' }; // courses are written in the learner's language
   // risky topics aren't turned away: the AI is told to teach their safe, public side
-  const s = screen(input.topic, input.from, input.to, input.instructions);
+  const s = screen(input.topic, input.from, input.to, input.instructions) || screenSyllabus(input.topic, input.syllabus);
   if (s && s.kind === 'refuse') throw new HttpError(REFUSED, 400);
   if (s) input.safety = s;
   const style = Array.isArray(body.style) ? body.style : [];
@@ -233,7 +251,7 @@ async function lesson({ req, res }) {
     if (hooks.writeLesson && !safety) out = await hooks.writeLesson(u, row, meta, n);
     if (!out) {
       out = await generateLesson({
-        topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions, safety,
+        topic: meta.topic, from: meta.from, to: meta.to, instructions: meta.instructions, safety, syllabus: Boolean(meta.syllabus),
         courseTitle: meta.title || meta.topic, n, lang: meta.lang || 'en',
         outline: flat.map((l) => ({ n: l.n, unit: l.unit, title: l.title, desc: l.desc }))
       });
