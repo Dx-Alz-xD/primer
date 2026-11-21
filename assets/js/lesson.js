@@ -426,7 +426,7 @@
       ${tries >= 2 && q.hint ? `<p class="q__hint"><strong>${T('Hint:')}</strong> ${q.hint}</p>` : ''}
       <div class="q__revise-actions">
         <button class="btn btn--small" type="button" data-retry>${T('I’ve revised, try again')}</button>
-        <button class="textlink" type="button" data-reread>${ctx && ctx.rereadLabel ? esc(T(ctx.rereadLabel)) : T('Re-read the section')}</button>
+        <button class="textlink" type="button" data-reread>${ctx && ctx.rereadLabel ? T(ctx.rereadLabel) : T('Re-read the section')}</button>
         ${tries >= 3 ? `<button class="textlink" type="button" data-reveal>${T('Show the answer')}</button>` : ''}
       </div>`;
     panel.hidden = false;
