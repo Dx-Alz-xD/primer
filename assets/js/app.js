@@ -162,7 +162,8 @@
 
       try {
         const course = await P.api.generateCourse({
-          topic: t, from: from.value, to: to.value, instructions: instr.value, extra: folderId ? { folderId } : undefined
+          topic: t, from: from.value, to: to.value, instructions: instr.value,
+          extra: { folderId, syllabus: P.syllabus ? P.syllabus.value() : '' }
         });
         clearInterval(tick);
         steps.forEach((li) => { li.className = 'is-done'; });
@@ -268,6 +269,7 @@
         <h1>${esc(course.title)}</h1>
         <p class="course-head__meta">${flat.length} lessons in ${course.units.length} units, about ${duration}</p>
         ${lib ? `<p class="course-head__lib"><span>${libText}</span> <span data-lib-more></span></p>` : ''}
+        ${course.syllabus ? `<details class="course-head__syl"><summary>Follows your syllabus</summary><p class="course-head__syltext ugc">${esc(course.syllabus)}</p></details>` : ''}
         ${course.source === 'sample' && course.aiError ? `<p class="course-head__note">This is a sample outline, because the AI couldn’t be reached: ${esc(course.aiError)}</p>` : ''}
         ${course.safety && SAFETY_NOTES[course.safety.kind] ? `<p class="course-head__note">${SAFETY_NOTES[course.safety.kind]}</p>` : ''}
         <div data-fit-slot></div>

@@ -182,6 +182,7 @@ function sliceUnits(outline, start, end) {
 
 async function planCourse(user, input, style) {
   if (input.instructions) return null;
+  if (input.syllabus) return null; // a course that follows the learner's own syllabus is planned for them alone
   if (input.safety) return null; // risky topics get their own safely framed course, never a shared one
   if (input.lang && input.lang !== 'en') return null; // shared lessons are written in English
   const hasRange = Boolean(input.from || input.to);

@@ -1,0 +1,32 @@
+/* =====================================================================
+   Marks for answers written in your own words (lesson page)
+   ===================================================================== */
+.qmark{margin-top:.75rem;padding:.75rem .95rem .8rem;border:1px solid rgba(138,97,40,.4);border-left-width:3px;border-radius:0 4px 4px 0;background:#f2e8d0;font-size:1.08rem;line-height:1.5;animation:ink .45s var(--ease-out)}
+.qmark:empty{display:none}
+.qmark.is-pending,.qmark.is-unmarked,.qmark.is-sample{background:rgba(138,97,40,.06);border-style:dashed;border-left-style:solid}
+.qmark.is-failed{border-color:rgba(154,51,36,.4);background:rgba(154,51,36,.05)}
+.qmark.is-good{border-color:rgba(61,106,44,.55);background:#e7eed8}
+.qmark.is-partly{border-color:var(--ink-gold);background:#efe2bf}
+.qmark.is-notyet{border-color:rgba(154,51,36,.55);background:#f3dfd3}
+.qmark__verdict strong{font-family:var(--font-head);font-weight:400;font-size:1.22rem}
+.qmark.is-good .qmark__verdict{color:var(--ink-green)}
+.qmark.is-partly .qmark__verdict{color:var(--ink-gold)}
+.qmark.is-notyet .qmark__verdict{color:var(--ink-red)}
+.qmark__feedback{margin-top:.15rem;color:var(--ink)}
+.qmark__missing-title{margin-top:.55rem;font-family:var(--font-head);font-size:1.05rem;color:var(--ink)}
+.qmark__missing{margin:.2rem 0 0;padding-left:1.2rem}
+.qmark__missing li{margin:.2rem 0;color:var(--ink)}
+.qmark__by{margin-top:.55rem;font-style:italic;font-size:.95rem;color:var(--ink-soft)}
+.qmark__wait,.qmark__note{color:var(--ink-soft);font-style:italic}
+.qmark__dots{display:inline-block;margin-right:.55rem;vertical-align:middle}
+.qmark__dots i{display:inline-block;width:6px;height:6px;margin-right:4px;border-radius:50%;background:var(--ink-gold);opacity:.25;animation:qmark-dot 1s infinite}
+.qmark__dots i:nth-child(2){animation-delay:.15s}
+.qmark__dots i:nth-child(3){animation-delay:.3s}
+@keyframes qmark-dot{0%,100%{opacity:.2}40%{opacity:1}}
+.qmark__fail{color:var(--ink)}
+.qmark__why{margin-top:.2rem;font-size:.98rem;color:var(--ink-red)}
+.qmark .textlink{margin-top:.45rem;font-size:1.02rem}
+.qmark__support p{margin:.3rem 0 0;color:var(--ink)}
+.qmark__support p:first-child{margin-top:0}
+@media (prefers-reduced-motion: reduce){ .qmark{animation:none} }
+@media print{ .qmark .textlink{display:none} }

@@ -8,7 +8,8 @@
      section appears; "try again" re-opens it. After 2 misses a hint
      shows, after 3 the learner can reveal the answer.
    - Written (subjective) answers are recorded and unlock the next part;
-     how they get marked is still to be decided (P.api.submitSubjective).
+     then the AI marks them and the feedback appears under the answer
+     (assets/js/marking.js).
    ===================================================================== */
 (function () {
   'use strict';
@@ -344,7 +345,7 @@
       setFeedback(w, 'warn', 'Saving your answer…');
       await P.api.submitSubjective(course, n, q, value);
       record(q, { status: 'submitted', value });
-      showSubmitted(q, w);
+      showSubmitted(q, w, true);
       afterAnswer(secIdx);
       return;
     }
@@ -446,9 +447,9 @@
     setFeedback(w, 'revealed', `<strong>Answer:</strong> ${answerText(q)}${q.explain ? `<span class="explain">${q.explain}</span>` : ''}`);
   }
 
-  function showSubmitted(q, w) {
+  function showSubmitted(q, w, fresh) {
     lockQ(w, true);
-    setFeedback(w, 'submitted', '<strong>Answer saved.</strong> Written answers will be marked once marking is connected.');
+    setFeedback(w, 'submitted', '<strong>Answer saved.</strong>');
     if (q.model && !w.querySelector('.model')) {
       const d = document.createElement('details');
       d.className = 'model';
@@ -456,6 +457,7 @@
       w.appendChild(d);
       P.math(d);
     }
+    if (P.marking) P.marking.show({ course, n, q, w, value: readValue(q, w), fresh: Boolean(fresh) });
   }
 
   function restore(q, w, a) {

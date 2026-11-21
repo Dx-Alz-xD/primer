@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/tutor.css">
+<link rel="stylesheet" href="assets/css/builder-extras.css">
 <script defer src="assets/js/core.js"></script>
 <script defer src="assets/js/i18n.js"></script>
 <script defer src="assets/js/backdrop.js"></script>
@@ -20,6 +21,8 @@
 <script defer src="assets/js/api.js"></script>
 <script defer src="assets/js/folders.js"></script>
 <script defer src="assets/js/epub.js"></script>
+<script defer src="assets/js/syllabus.js"></script>
+<script defer src="assets/js/placement.js"></script>
 <script defer src="assets/js/app.js"></script>
 <script defer src="assets/js/tutor.js"></script>
 </head>
@@ -82,7 +85,22 @@
               </div>
             </div>
             <p class="help" style="margin-top:.5rem">Leave both empty to cover the whole subject. For example, from “limits” to “the chain rule”.</p>
+            <p class="lvl-line"><span>Not sure where to start?</span> <button class="textlink" type="button" id="b-level" aria-haspopup="dialog">Take a 2-minute level check.</button></p>
+            <p class="lvl-result" id="b-level-result" role="status" hidden></p>
           </fieldset>
+
+          <div class="field syl">
+            <p class="syl__open" id="b-syl-open-row"><button class="textlink" type="button" id="b-syl-open" aria-expanded="false" aria-controls="b-syl-field">Paste a syllabus</button> <small class="help">optional</small></p>
+            <div class="syl__field" id="b-syl-field" hidden>
+              <label class="label" for="b-syl">Syllabus <small>optional</small></label>
+              <textarea class="textarea syl__text" id="b-syl" name="syllabus" maxlength="4000" rows="7" aria-describedby="b-syl-help" placeholder="e.g. Unit 1: Sets&#10;Unit 2: Relations and functions&#10;Unit 3: Trigonometric functions"></textarea>
+              <div class="syl__foot">
+                <p class="help" id="b-syl-help">Paste a syllabus or chapter list (for example from NCERT or your university), and the course will follow it.</p>
+                <span class="help syl__count" id="b-syl-count"></span>
+              </div>
+              <p><button class="textlink" type="button" id="b-syl-remove">Don’t use a syllabus</button></p>
+            </div>
+          </div>
 
           <div class="field">
             <label class="label" for="b-instr">Teaching instructions <small>optional</small></label>
