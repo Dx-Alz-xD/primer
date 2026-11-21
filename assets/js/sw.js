@@ -25,6 +25,10 @@
      it, in the learner's cache; they are served from there first (the
      files never change). Removing a download drops the photos no other
      downloaded course uses.
+   - Watch mode (server/videos.mjs): a downloaded lesson's videos answer
+     is kept like its other data, and the Primer-made narration it lists
+     (/audio/, already made) is kept like its photos, so those videos
+     play offline.
    - Saves made offline (lesson progress, notes, wrong answers) wait in
      IndexedDB and are sent when the connection is back: on the next page
      load, on the 'online' event, or by Background Sync. They're applied
@@ -51,9 +55,10 @@ const RE = {
   book: /^\/api\/courses\/([A-Za-z0-9_-]{4,64})\/book$/,
   notes: /^\/api\/notes\/([A-Za-z0-9_-]{4,64})\/(\d+)$/,
   progress: /^\/api\/courses\/([A-Za-z0-9_-]{4,64})\/progress\/(\d+)$/,
+  videos: /^\/api\/courses\/([A-Za-z0-9_-]{4,64})\/lessons\/(\d+)\/videos$/,
   boot: /window\.__PRIMER__=(.*?);<\/script>/,
-  media: /\/media\/[a-f0-9]{32}\.(?:jpg|png|webp|gif)/g,
-  withMedia: /^\/api\/courses\/[A-Za-z0-9_-]{4,64}(?:\/lessons\/\d+|\/book)?$/
+  media: /\/(?:media\/[a-f0-9]{32}\.(?:jpg|png|webp|gif)|audio\/[0-9a-f]{32}\.mp3)/g,
+  withMedia: /^\/api\/courses\/[A-Za-z0-9_-]{4,64}(?:\/lessons\/\d+(?:\/videos)?|\/book)?$/
 };
 
 // Shown in the page when something needs the internet (the page translates them).
@@ -280,7 +285,7 @@ async function keepMedia(owner, paths) {
     const cache = await caches.open(USER + owner);
     if (await cache.match(key)) continue;
     const res = await fetch(key, { credentials: 'same-origin' }).catch(() => null);
-    if (!res || !res.ok || !/^image\//.test(res.headers.get('Content-Type') || '')) continue;
+    if (!res || !res.ok || !/^(?:image|audio)\//.test(res.headers.get('Content-Type') || '')) continue;
     await serial(async () => { if ((await getOwner()) === owner) await cache.put(key, res); });
   }
 }
@@ -603,7 +608,7 @@ function courseData(course, lessons) {
   const id = encodeURIComponent(course.id);
   const out = [];
   lessons.forEach((n) => {
-    if (course.source !== 'sample') out.push(`/api/courses/${id}/lessons/${n}`);
+    if (course.source !== 'sample') out.push(`/api/courses/${id}/lessons/${n}`, `/api/courses/${id}/lessons/${n}/videos`);
     out.push(`/api/notes/${id}/${n}`, `/api/doubts?course=${id}&lesson=${n}`);
   });
   return out;
@@ -694,7 +699,7 @@ async function removeDownload(courseId) {
     }
     for (const k of keys) {
       const path = new URL(k.url).pathname;
-      if (path.startsWith('/media/') && !used.has(path)) await cache.delete(k);
+      if ((path.startsWith('/media/') || path.startsWith('/audio/')) && !used.has(path)) await cache.delete(k);
     }
   });
 }
@@ -790,7 +795,7 @@ self.addEventListener('fetch', (event) => {
     if (p.startsWith('/api/')) event.respondWith(safe(apiGet(event, req, url), req));
     else if (isPage(p)) event.respondWith(safe(page(event, req, url), req));
     else if (p.startsWith('/assets/') || p === '/manifest.webmanifest') event.respondWith(safe(siteFile(event, req), req));
-    else if (p.startsWith('/media/')) event.respondWith(safe(mediaFile(req, url), req));
+    else if (p.startsWith('/media/') || /^\/audio\/[0-9a-f]{32}\.mp3$/.test(p)) event.respondWith(safe(mediaFile(req, url), req));
     return;
   }
   if (p.startsWith('/api/')) {
@@ -804,7 +809,7 @@ function classify(url) {
   let m;
   if (p === '/api/courses' || p === '/api/folders') return { kind: 'list' };
   if ((m = RE.lesson.exec(p))) return { kind: 'lesson', course: m[1] };
-  if ((m = RE.course.exec(p) || RE.courseNotes.exec(p) || RE.book.exec(p) || RE.notes.exec(p))) return { kind: 'course', course: m[1] };
+  if ((m = RE.course.exec(p) || RE.courseNotes.exec(p) || RE.book.exec(p) || RE.notes.exec(p) || RE.videos.exec(p))) return { kind: 'course', course: m[1] };
   if (p === '/api/doubts' && url.searchParams.get('course') && url.searchParams.get('lesson')) return { kind: 'course', course: url.searchParams.get('course') };
   return { kind: 'live' };
 }

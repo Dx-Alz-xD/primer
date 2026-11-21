@@ -178,14 +178,7 @@
 
     renderHead();
     if (P.voice) P.voice.init({ course, n, sections, sectionEl: (i) => $(`#sec-${i}`), unlocked: () => unlocked });
-    renderSection(0, false);
-    unlocked = 0;
-    while (unlocked < sections.length - 1 && sectionComplete(unlocked)) {
-      unlocked++;
-      renderSection(unlocked, false);
-    }
-    updateLock();
-    updateSegs();
+    renderParts();
     save();
     if (allComplete()) finish();
 
@@ -203,6 +196,27 @@
       onSketchChange: (strokes) => { if (notebook) notebook.onPageSketch(strokes); }
     });
     notebook = P.initNotebook({ course, n, lessonTitle: meta.title, toggle: $('#nb-toggle'), board, paper });
+
+    // Watch mode (assets/js/video.js) follows the same lesson as videos, with the same questions and progress.
+    if (P.watch) {
+      P.watch.start({
+        course: () => course, n, meta, flat, lesson, sections, prog: () => prog,
+        question: renderQuestion, sectionComplete, finish, rerender: renderParts, lessonHref, outlineHref
+      });
+    }
+  }
+
+  // The parts written so far, up to the first unanswered checkpoint (again after Watch mode).
+  function renderParts() {
+    $('#lbody').innerHTML = '';
+    renderSection(0, false);
+    unlocked = 0;
+    while (unlocked < sections.length - 1 && sectionComplete(unlocked)) {
+      unlocked++;
+      renderSection(unlocked, false);
+    }
+    updateLock();
+    updateSegs();
   }
 
   function renderHead() {
@@ -271,7 +285,10 @@
   /* ------------------------------------------------------------------
      Questions
   ------------------------------------------------------------------ */
-  function renderQuestion(q, secIdx) {
+  // ctx (optional, Watch mode): { section: what to revise after a wrong answer, reread() and
+  // rereadLabel: going back to the video, onAnswered(q): called once the question is answered }.
+  // A question that isn't one of the lesson's own checkpoints is rendered with secIdx null.
+  function renderQuestion(q, secIdx, ctx) {
     const w = document.createElement('form');
     w.className = 'q';
     w.noValidate = true;
@@ -297,7 +314,7 @@
     });
     w.addEventListener('submit', (e) => {
       e.preventDefault();
-      check(q, w, secIdx);
+      check(q, w, secIdx, ctx);
     });
 
     const done = prog.answered[q.id];
@@ -333,7 +350,12 @@
     return '';
   };
 
-  async function check(q, w, secIdx) {
+  function answered(secIdx, ctx, q) {
+    if (secIdx != null) afterAnswer(secIdx);
+    if (ctx && ctx.onAnswered) ctx.onAnswered(q);
+  }
+
+  async function check(q, w, secIdx, ctx) {
     if (prog.answered[q.id] || w.classList.contains('is-locked')) return;
     const value = readValue(q, w);
     if (!value) {
@@ -347,7 +369,7 @@
       await P.api.submitSubjective(course, n, q, value);
       record(q, { status: 'submitted', value });
       showSubmitted(q, w, true);
-      afterAnswer(secIdx);
+      answered(secIdx, ctx, q);
       return;
     }
 
@@ -361,12 +383,12 @@
       if (P.sfx) P.sfx.play('correct');
       record(q, { status: 'correct', value, tries: prog.tries[q.id] });
       showCorrect(q, w);
-      afterAnswer(secIdx);
+      answered(secIdx, ctx, q);
     } else {
       if (P.sfx) P.sfx.play('wrong');
       save();
       P.api.recordMistake(course, n, meta.title, q, value);
-      await showWrong(q, w, secIdx, value);
+      await showWrong(q, w, secIdx, value, ctx);
     }
   }
 
@@ -378,9 +400,9 @@
     setFeedback(w, 'correct', `<strong>Correct.</strong>${q.explain ? `<span class="explain">${q.explain}</span>` : ''}`);
   }
 
-  async function showWrong(q, w, secIdx, value) {
+  async function showWrong(q, w, secIdx, value, ctx) {
     const tries = prog.tries[q.id];
-    const section = sections[secIdx];
+    const section = (ctx && ctx.section) || sections[secIdx];
     w.classList.add('is-wrong');
     lockQ(w, true);
     setFeedback(w, 'wrong', '<strong>Not quite.</strong> Revise this part of the lesson, then try again.');
@@ -394,15 +416,15 @@
       ${tries >= 2 && q.hint ? `<p class="q__hint"><strong>Hint:</strong> ${q.hint}</p>` : ''}
       <div class="q__revise-actions">
         <button class="btn btn--small" type="button" data-retry>I’ve revised, try again</button>
-        <button class="textlink" type="button" data-reread>Re-read the section</button>
+        <button class="textlink" type="button" data-reread>${ctx && ctx.rereadLabel ? esc(ctx.rereadLabel) : 'Re-read the section'}</button>
         ${tries >= 3 ? '<button class="textlink" type="button" data-reveal>Show the answer</button>' : ''}
       </div>`;
     panel.hidden = false;
     P.math(panel);
     panel.querySelector('[data-retry]').addEventListener('click', () => retry(q, w));
-    panel.querySelector('[data-reread]').addEventListener('click', () => reread(secIdx));
+    panel.querySelector('[data-reread]').addEventListener('click', () => (ctx && ctx.reread ? ctx.reread() : reread(secIdx)));
     const rv = panel.querySelector('[data-reveal]');
-    if (rv) rv.addEventListener('click', () => reveal(q, w, secIdx));
+    if (rv) rv.addEventListener('click', () => reveal(q, w, secIdx, ctx));
     panel.querySelector('[data-retry]').focus({ preventScroll: true });
   }
 
@@ -430,10 +452,10 @@
     content.classList.add('is-flash');
   }
 
-  function reveal(q, w, secIdx) {
+  function reveal(q, w, secIdx, ctx) {
     record(q, { status: 'revealed', tries: prog.tries[q.id] });
     showRevealed(q, w);
-    afterAnswer(secIdx);
+    answered(secIdx, ctx, q);
   }
 
   function showRevealed(q, w) {
@@ -533,14 +555,15 @@
     $('#segs').setAttribute('aria-label', `Lesson progress: ${done} of ${sections.length} parts done`);
   }
 
-  function finish() {
+  // asked: the questions the learner answered, when they weren't the lesson's checkpoints (Watch mode's quizzes)
+  function finish(asked) {
     if (!prog.done) {
       if (P.sfx) setTimeout(() => P.sfx.play('complete'), 500);
       prog.done = true;
       prog.doneAt = Date.now();
       save();
     }
-    const qs = sections.flatMap((s) => s.checkpoint || []).filter((q) => q.type !== 'subjective');
+    const qs = (Array.isArray(asked) ? asked : sections.flatMap((s) => s.checkpoint || [])).filter((q) => q.type !== 'subjective');
     const firstTry = qs.filter((q) => { const a = prog.answered[q.id]; return a && a.status === 'correct' && (a.tries || 1) === 1; }).length;
     const revealed = qs.filter((q) => { const a = prog.answered[q.id]; return a && a.status === 'revealed'; }).length;
     const next = flat[n];

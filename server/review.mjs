@@ -67,6 +67,12 @@ function findQuestion(lesson, qid) {
   return null;
 }
 
+// Questions asked beside a lesson rather than in it: the quizzes after its videos (videos.mjs).
+// extraQuestion(courseId, n, qid) -> { q, section: { title } } | null
+export const reviewHooks = { extraQuestion: null };
+const findAny = (lesson, courseId, n, qid) => findQuestion(lesson, qid)
+  || (lesson && reviewHooks.extraQuestion ? reviewHooks.extraQuestion(courseId, n, qid) : null);
+
 // Only what the browser needs to ask the question again and check the answer.
 const KEYS = ['id', 'type', 'prompt', 'choices', 'answer', 'tolerance', 'unit', 'accept', 'hint', 'explain'];
 function questionOut(qq) {
@@ -91,7 +97,7 @@ function schedule(user, courseId, body) {
   // checked here; every other lesson is saved before it's shown, so the question must be in it.
   if (meta.source !== 'sample') {
     const stored = q('SELECT data FROM lessons WHERE course_id = ? AND n = ?').get(courseId, n);
-    const found = stored && findQuestion(parseJSON(stored.data, null), qid);
+    const found = stored && findAny(parseJSON(stored.data, null), courseId, n, qid);
     if (!found || !REVIEWABLE.has(found.q.type)) return;
   }
   const t = now();
@@ -182,7 +188,7 @@ function resolver(user) {
     }
     const lesson = lessonOf(r.course_id, r.lesson_n);
     if (lesson) {
-      const f = findQuestion(lesson, r.qid);
+      const f = findAny(lesson, r.course_id, r.lesson_n, r.qid);
       if (!f || !REVIEWABLE.has(f.q.type)) return null;
       item.question = questionOut(f.q);
       item.section = typeof f.section.title === 'string' ? f.section.title : null;
