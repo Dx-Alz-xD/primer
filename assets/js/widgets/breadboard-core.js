@@ -366,7 +366,10 @@
     const H = at.map((h) => HOLES.get(h));
     if (H.length === 3) {
       const d1 = [H[1].x - H[0].x, H[1].y - H[0].y], d2 = [H[2].x - H[1].x, H[2].y - H[1].y];
-      if (d1[0] !== d2[0] || d1[1] !== d2[1]) fail(`${id}'s three legs (${at.join(', ')}) must be in a straight row, evenly spaced, like ["a5", "a6", "a7"]`);
+      if (d1[0] !== d2[0] || d1[1] !== d2[1]) {
+        if (H[0].col === H[1].col && H[1].col === H[2].col) fail(`${id}'s three legs (${at.join(', ')}) go down one column, so two share a strip; a ${type}'s legs sit side by side in one row, each in its own column, like ["${H[2].row}${H[0].col}", "${H[2].row}${H[0].col + 1}", "${H[2].row}${H[0].col + 2}"]`);
+        fail(`${id}'s three legs (${at.join(', ')}) must be in a straight row, evenly spaced, like ["a5", "a6", "a7"]`);
+      }
     }
     for (let i = 1; i < H.length; i++) {
       const d = DIST(H[i - 1], H[i]);
@@ -431,15 +434,55 @@
     else if (isObj(w)) { a = pick(w, ['from', 'a', 'start']); b = pick(w, ['to', 'b', 'end']); color = pick(w, ['color', 'colour']); }
     else fail('a wire is not an object');
     const what = `wire ${k + 1}`;
-    const from = wireEnd(a, b, ctx, what);
-    if (HOLES.has(from)) { if (ctx.used.has(from)) fail(`${what} goes to hole ${from}, which ${ctx.used.get(from)} already uses: a hole holds one leg or wire end`); ctx.used.set(from, what); }
-    const to = wireEnd(b, a, ctx, what);
-    if (HOLES.has(to)) { if (ctx.used.has(to)) fail(`${what} goes to hole ${to}, which ${ctx.used.get(to)} already uses: a hole holds one leg or wire end`); ctx.used.set(to, what); }
+    // a wire written into the hole a leg already uses means "join it to that leg": on the bench, it goes in
+    // the nearest free hole of the same strip (the learner's own build gets no such help)
+    const settle = (h) => {
+      if (!HOLES.has(h) || !ctx.used.has(h)) return h;
+      const alt = ctx.learner ? null : freeInStrip(HOLES.get(h).strip, HOLES.get(h), ctx.used);
+      if (!alt) fail(`${what} goes to hole ${h}, which ${ctx.used.get(h)} already uses: a hole holds one leg or wire end, so use another hole in the same strip`);
+      return alt;
+    };
+    const from = settle(wireEnd(a, b, ctx, what));
+    if (HOLES.has(from)) ctx.used.set(from, what);
+    const to = settle(wireEnd(b, a, ctx, what));
+    if (HOLES.has(to)) ctx.used.set(to, what);
     if (from === to) fail(`${what} joins ${from} to itself`);
     if (!ctx.learner && HOLES.has(from) && HOLES.has(to) && HOLES.get(from).strip === HOLES.get(to).strip) fail(`${what} joins ${from} and ${to}, which are in one strip already`);
     let c = typeof color === 'string' ? color.trim().toLowerCase() : '';
     if (!WIRE_COLORS.includes(c)) c = autoColor(from, to, k);
     return { from, to, color: c };
+  }
+  // the free hole of a strip nearest a hole
+  function freeInStrip(strip, near, used) {
+    let best = null, bd = Infinity;
+    for (const h of HOLES.values()) {
+      if (h.strip !== strip || used.has(h.name)) continue;
+      const d = DIST(h, near);
+      if (d < bd) { bd = d; best = h.name; }
+    }
+    return best;
+  }
+  // A wire end alone in its strip, with a leg straight across the centre gap, was meant for that leg's strip
+  // (e5 and f5 look joined, and aren't): move it there. Only for benches the AI writes.
+  function bridgeGap(spec, used) {
+    const count = new Map();
+    const bump = (h) => { if (HOLES.has(h)) { const s = HOLES.get(h).strip; count.set(s, (count.get(s) || 0) + 1); } };
+    spec.parts.forEach((p) => p.at.forEach(bump));
+    spec.wires.forEach((w) => { bump(w.from); bump(w.to); });
+    spec.wires.forEach((w) => ['from', 'to'].forEach((end) => {
+      const h = HOLES.get(w[end]);
+      if (!h || !/^[UD]/.test(h.strip) || count.get(h.strip) !== 1) return;
+      const other = (h.strip[0] === 'U' ? 'D' : 'U') + h.col;
+      const across = spec.parts.some((p) => p.at.some((x) => HOLES.get(x).strip === other));
+      if (!across) return;
+      const alt = freeInStrip(other, h, used);
+      if (!alt) return;
+      used.delete(h.name);
+      used.set(alt, 'a wire');
+      w[end] = alt;
+      count.set(h.strip, 0);
+      count.set(other, (count.get(other) || 0) + 1);
+    }));
   }
   function autoColor(a, b, k) {
     const plus = (x) => /^(\+[TB]|BAT\+|5V|3V3|VIN)/.test(x);
@@ -456,11 +499,27 @@
     if (!isObj(raw)) fail('the spec is not an object');
     const src = isObj(raw.bench) ? raw.bench : raw;
     const spec = { battery: null, arduino: false, motor: false, bin: [], parts: [], wires: [], code: '', hide_values: false };
-    const bat = batteryOf(pick(src, ['battery', 'power', 'cell']));
-    if (bat === undefined) fail('"battery" is "9V" or "3V" (two AA cells)');
+    const batRaw = pick(src, ['battery', 'power', 'cell']);
+    // "5V" or "USB" power is the Arduino's own
+    const usb = typeof batRaw === 'string' && /^\s*(5\s*v|usb|arduino|uno)\s*$/i.test(batRaw);
+    const bat = usb ? null : batteryOf(batRaw);
+    if (bat === undefined) fail('"battery" is "9V" or "3V" (two AA cells); for 5 V, use the Arduino ("arduino": true) and its "5V" and "GND" pins');
     spec.battery = bat;
-    spec.arduino = parseBool(pick(src, ['arduino', 'uno', 'microcontroller']), false);
+    spec.arduino = usb || parseBool(pick(src, ['arduino', 'uno', 'microcontroller']), false);
     spec.motor = parseBool(src.motor, false);
+    // what the wires and code use says what's on the bench: the Arduino's pins, the battery's clips
+    const rawWires0 = Array.isArray(src.wires) ? src.wires : [];
+    rawWires0.forEach((w) => {
+      const ends = Array.isArray(w) ? w.slice(0, 2) : isObj(w) ? [pick(w, ['from', 'a', 'start']), pick(w, ['to', 'b', 'end'])] : [];
+      ends.forEach((e) => {
+        const q = parsePoint(e, true);
+        if (!q || !q.term) return;
+        if (BAT.includes(q.term)) { if (!spec.battery) spec.battery = '9V'; }
+        else if (MOTOR.includes(q.term)) spec.motor = true;
+        else if (typeof e === 'string' && !/^\d+$/.test(e.trim())) spec.arduino = true;
+      });
+    });
+    if (cleanCode(pick(src, ['code', 'sketch', 'starter_code', 'program'])).trim()) spec.arduino = true;
     // fixtures written as parts or bin entries
     const rawParts = Array.isArray(src.parts) ? src.parts : Array.isArray(src.components) ? src.components : [];
     const binRaw = pick(src, ['bin', 'parts_bin', 'available', 'inventory']);
@@ -478,12 +537,12 @@
     const placed = rawParts.filter((p) => isObj(p) && TYPES[typeOf(pick(p, ['type', 'kind', 'part']))] !== undefined || !isObj(p));
     if (placed.length > LIMIT.parts) fail(`more than ${LIMIT.parts} parts placed`);
     spec.parts = placed.map((p, i) => normPart(p, ctx, i));
-    const rawWires = Array.isArray(src.wires) ? src.wires : [];
+    const rawWires = rawWires0;
     if (rawWires.length > LIMIT.wires) fail(`more than ${LIMIT.wires} wires`);
     spec.wires = rawWires.map((w, k) => normWire(w, ctx, k));
+    if (!opts.learner) bridgeGap(spec, ctx.used);
     spec.code = cleanCode(pick(src, ['code', 'sketch', 'starter_code', 'program']));
     if (spec.code.length > LIMIT.code) fail(`the code is longer than ${LIMIT.code} characters`);
-    if (spec.code.trim() && !spec.arduino) fail('there is "code" but no Arduino: add "arduino": true');
     if (!spec.battery && !spec.arduino) {
       if (spec.parts.length || spec.bin.length) fail('there is nothing to power the parts: add "battery": "9V" (or "3V"), or "arduino": true');
     }
@@ -2040,9 +2099,8 @@
       const text = String(pick(raw, ['text', 'prints', 'message', 'output']) || '').replace(/[\u0000-\u001f\u007f"\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
       if (!text) fail('a serial goal needs "text": what the serial monitor should show');
       g.text = text;
-    } else if (pinRaw != null || ledRaw != null) {
+    } else if ((pinRaw != null || ledRaw != null) && spec.arduino) { // (on a bench with no Arduino, pins mean nothing: the goal is done in wiring)
       if (!['light', 'button', 'switch', 'dimmer'].includes(type)) fail(`a ${type} goal doesn't take an Arduino pin`);
-      need(spec.arduino, 'the goal names an Arduino pin but there is no Arduino ("arduino": true)');
       if (g.part === 'motor') fail('an Arduino pin can\'t drive the motor: it needs far more current than a pin gives. Power the motor from the battery instead');
       if (type === 'light') {
         const p = digitalPin(pinRaw != null ? pinRaw : ledRaw);
@@ -2389,6 +2447,8 @@
     serial: (text) => `void setup() {\n  Serial.begin(9600);\n  Serial.println("${text.replace(/["\\]/g, ' ')}");\n}\n\nvoid loop() {\n}\n`
   };
 
+  const SKELETON = 'void setup() {\n  \n}\n\nvoid loop() {\n  \n}\n';
+
   // candidate builds for a goal, best first: functions of a resistor value -> { build, info }
   function candidates(spec, goal) {
     const out = [];
@@ -2561,6 +2621,9 @@
   function normTask(rawSpec, rawGoal) {
     const spec = normSpec(rawSpec);
     const goal = normGoal(rawGoal, spec);
+    // a goal worked through code, with no starter sketch: lighting from a pin comes with the sketch that turns
+    // the pin on (the build is the task); the others start from an empty setup() and loop()
+    if (needsCode(goal) && !spec.code.trim()) spec.code = goal.type === 'light' && goal.pin != null ? SK.on(goal.pin) : SKELETON;
     const ref = reference(spec, goal);
     if (!ref.build) fail('no build from the bench\'s parts meets the goal: ' + ref.reason);
     if (evaluate(spec, goal, startBuild(spec)).ok) fail('the bench already meets the goal as it starts: leave something for the learner to build or write');
@@ -2592,7 +2655,23 @@
       }
       if (!works) {
         const d = diagnose(B, session(B), outs);
+        const pinWire = spec.wires.map((w) => [w.from, w.to].find((e) => PINS.includes(e))).find(Boolean);
+        if (!B.program && pinWire && d.code === 'dark') fail(`the parts are wired to the Arduino's pin ${pinLabel(pinNo(pinWire))}, but there is no "code" to turn that pin on: add a sketch with pinMode(${pinLabel(pinNo(pinWire))}, OUTPUT); and digitalWrite(${pinLabel(pinNo(pinWire))}, HIGH);`);
         fail(blockWhy(d, B));
+      }
+    }
+    // a sketch that works output pins none of which is wired does nothing to see
+    if (B.program) {
+      const S = session(B, { run: false });
+      S.record = [];
+      S.start();
+      S.run(2500, 2e6);
+      const outPins = new Set();
+      S.record.forEach((r) => r.pins.forEach((ps, p) => { if (ps.mode === OUTPUT) outPins.add(p); }));
+      const wired = (p) => (B.attach.get(B.pts.get(pinName(p))) || 0) > 0;
+      if (outPins.size && ![...outPins].some(wired)) {
+        const p = [...outPins][0];
+        fail(`the sketch works pin ${pinLabel(p)}, but nothing on the bench is wired to it: wire the LED's resistor to "${pinName(p)}" (not to "5V")`);
       }
     }
     return specOut(spec);
@@ -2601,7 +2680,14 @@
     const where = (id) => { const p = B.parts.get(id); return p ? `${id} (${p.at.join(', ')})` : id; };
     switch (d.code) {
       case 'samestrip': return `${where(d.name)} has two legs in one strip, so no current goes through it: put its legs in different columns`;
-      case 'alone': return `${d.name}'s leg in ${d.hole} is in a strip with nothing else in it, so the circuit is broken there: join that strip to the next part (same column and half) or with a wire`;
+      case 'alone': {
+        // what sits straight across the centre gap, which does not join
+        const h = HOLES.get(d.hole);
+        const other = /^[UD]/.test(h.strip) ? (h.strip[0] === 'U' ? 'D' : 'U') + h.col : null;
+        const p2 = other && [...B.parts.values()].find((p) => p.id !== d.name && p.at.some((x) => HOLES.get(x).strip === other));
+        if (p2) return `${d.name}'s leg in ${d.hole} and ${p2.id}'s leg in ${p2.at.find((x) => HOLES.get(x).strip === other)} are on opposite sides of the centre gap, which does not join them: put both in rows a-e, or both in f-j, of column ${h.col}`;
+        return `${d.name}'s leg in ${d.hole} is in a strip with nothing else in it, so the circuit is broken there: join that strip to the next part (same column and half) or with a wire`;
+      }
       case 'wirealone': return `a wire ends in ${d.hole}, a strip with nothing else in it: move that end next to the part it should reach`;
       case 'reversed': return `${where(d.name)} is the wrong way round: "at" lists the anode (+) first, and the anode must face the + side`;
       case 'nopower': return 'nothing is wired to the battery\'s BAT+ and BAT- (or the Arduino\'s pins): add wires from them to the rails or holes';

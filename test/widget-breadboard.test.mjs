@@ -257,7 +257,7 @@ test('server: blocks and tasks are checked; why() says what to repair', () => {
   assert.ok(normWidgetBlock(blk), 'the block example');
   const tk = JSON.parse(bb.prompt.match(/Task example: (\{.*\})$/)[1]);
   assert.ok(normTask(tk, { prompt: tk.prompt, hint: '', explain: '' }), 'the task example');
-  assert.ok(bb.prompt.length <= 3300, `the prompt is short (${bb.prompt.length})`);
+  assert.ok(bb.prompt.length <= 3250, `the prompt is short (${bb.prompt.length})`);
   assert.match(widgetPrompt(['breadboard']), /Breadboard \("kind": "breadboard"\)/);
   // a block that can never work is left out, with a reason the AI can act on
   const dead = { battery: '9V', parts: [{ id: 'R1', type: 'resistor', ohms: 470, at: ['h3', 'h7'] }, { id: 'L1', type: 'led', at: ['g8', 'g9'] }], wires: [{ from: 'BAT+', to: 'j3' }, { from: 'j9', to: 'BAT-' }] };
@@ -265,7 +265,22 @@ test('server: blocks and tasks are checked; why() says what to repair', () => {
   assert.match(bb.why(dead), /strip with nothing else/);
   assert.match(bb.why({ battery: '9V', parts: [{ id: 'L1', type: 'led', at: ['a5', 'b5'] }] }), /two legs in one strip/);
   assert.match(bb.why({ battery: '9V', parts: [{ id: 'L1', type: 'led', at: ['a5', 'a9'] }] }), /1 to 3 apart/);
-  assert.match(bb.why({ battery: '9V', bin: { led: 1 }, wires: [{ from: 'D13', to: 'a1' }] }), /no Arduino/);
+  // what the AI means is read kindly: "5V" power is the Arduino's, and wires to its pins bring it
+  const usb = B.normSpec({ battery: '5V', bin: { led: 1 }, wires: [{ from: 'D13', to: 'a1' }] });
+  assert.equal(usb.arduino, true); assert.equal(usb.battery, null);
+  assert.equal(B.normSpec({ bin: { led: 1 }, wires: [{ from: 'BAT+', to: 'a1' }] }).battery, '9V');
+  // but an LED across the centre gap from its resistor, or a sketch working a pin nothing is wired to, is named
+  const gap = { battery: '5V', parts: [{ id: 'R1', type: 'resistor', ohms: 220, at: ['e3', 'e7'] }, { id: 'L1', type: 'led', at: ['f7', 'f8'] }], wires: [{ from: '5V', to: 'a3' }, { from: 'j8', to: 'GND' }] };
+  assert.match(bb.why(gap), /L1's leg in f7 and R1's leg in e7 are on opposite sides of the centre gap/);
+  // a wire end written into a leg's hole, or across the gap from the leg it is meant for, is moved where it belongs
+  const fixed = B.normSpec({ battery: '9V', parts: [{ id: 'R1', type: 'resistor', ohms: 470, at: ['a1', 'a5'] }, { id: 'L1', type: 'led', at: ['b5', 'b6'] }], wires: [{ from: 'BAT+', to: 'a1' }, { from: 'f6', to: 'BAT-' }] });
+  assert.equal(B.HOLES.get(fixed.wires[0].to).strip, 'U1', 'into another hole of the strip');
+  assert.equal(B.HOLES.get(fixed.wires[1].from).strip, 'U6', 'onto the LED\'s side of the gap');
+  assert.ok(B.session(B.bench(fixed, B.startBuild(fixed))).view().parts.L1.lit);
+  // a block wired to a pin, with no sketch: the reason says what to add
+  assert.match(bb.why({ arduino: true, parts: [{ id: 'R1', type: 'resistor', ohms: 220, at: ['h4', 'h8'] }, { id: 'L1', type: 'led', at: ['g8', 'g9'] }], wires: [{ from: 'D13', to: 'j4' }, { from: 'j9', to: 'GND' }] }), /no "code" to turn that pin on/);
+  const idle = { arduino: true, parts: [{ id: 'R1', type: 'resistor', ohms: 220, at: ['e3', 'e7'] }, { id: 'L1', type: 'led', at: ['d7', 'd8'] }], wires: [{ from: '5V', to: 'a3' }, { from: 'a8', to: 'GND' }], code: 'void setup() { pinMode(13, OUTPUT); }\nvoid loop() { digitalWrite(13, HIGH); delay(500); digitalWrite(13, LOW); delay(500); }' };
+  assert.match(bb.why(idle), /the sketch works pin 13, but nothing on the bench is wired to it/);
   assert.match(bb.why({ battery: '9V', bin: { led: ['red'], resistor: [470] } }, { type: 'button' }), /needs a push button but the parts bin has none/);
   assert.match(bb.why({ battery: '9V', bin: { led: ['red'] } }, { type: 'light' }), /no resistor/);
   assert.match(bb.why({ battery: '3V', bin: { led: ['red', 'red'], resistor: [100] } }, { type: 'series', count: 2 }), /too weak/);

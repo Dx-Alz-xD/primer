@@ -119,7 +119,11 @@
       if (!name) return '';
       if (C.HOLES.has(name)) {
         const h = C.HOLES.get(name);
-        if (/^[+-]/.test(h.row)) return fill(h.row[0] === '+' ? (h.row[1] === 'T' ? 'Top + rail, column {col}' : 'Bottom + rail, column {col}') : (h.row[1] === 'T' ? 'Top − rail, column {col}' : 'Bottom − rail, column {col}'), { col: h.col });
+        const col = { col: h.col };
+        if (h.row === '+T') return fill('Top + rail, column {col}', col);
+        if (h.row === '-T') return fill('Top − rail, column {col}', col);
+        if (h.row === '+B') return fill('Bottom + rail, column {col}', col);
+        if (h.row === '-B') return fill('Bottom − rail, column {col}', col);
         return fill('Hole {hole}', { hole: name });
       }
       if (name === 'BAT+') return t('Battery +');
@@ -408,7 +412,7 @@
           el('path', { d: `M${cx} ${cy}L${cx - 6} ${cy - 30}Q${cx} ${cy - 36} ${cx + 6} ${cy - 30}Z M${cx} ${cy}L${cx + 6} ${cy + 30}Q${cx} ${cy + 36} ${cx - 6} ${cy + 30}Z`, fill: '#e2553a', stroke: '#9b2f1d' }),
           el('circle', { cx, cy, r: 4, fill: '#333' })
         ], 'prop'),
-        el('text', { x: cx, y: m.y + m.h + 4, 'text-anchor': 'middle', 'font-size': 10, fill: SOFT, 'font-family': 'Arial, Helvetica, sans-serif' }, ['DC motor']),
+        el('text', { x: cx, y: m.y + m.h + 4, 'text-anchor': 'middle', 'font-size': 10, fill: SOFT, 'font-family': 'Arial, Helvetica, sans-serif' }, [T('DC motor')]),
         el('text', { x: cx, y: cy - 40, 'text-anchor': 'middle', 'font-size': 14, fill: GOLD, opacity: look && look.spin ? 1 : 0 }, ['↻'], 'spinMark')
       ];
       L.terms.get('M+').concat(L.terms.get('M-')).forEach(([x, y], i) => {
@@ -536,6 +540,29 @@
       ])));
     }
 
+    // a part in the bin, small, centred on 0 (about 40 by 28)
+    function binIcon(it) {
+      if (it.type === 'led') { const c = it.color === 'any' ? 'red' : it.color; return el('g', {}, [el('line', { x1: -4, y1: 4, x2: -4, y2: 13, stroke: LEG, 'stroke-width': 2 }), el('line', { x1: 4, y1: 4, x2: 4, y2: 11, stroke: LEG, 'stroke-width': 2 }), el('path', { d: 'M -8 6 V -3 A 8 8 0 0 1 8 -3 V 6 Z', fill: LED_ON[c], stroke: '#00000055' })]); }
+      if (it.type === 'resistor') { const b = C.bands(it.ohms || 220); return el('g', {}, [el('line', { x1: -19, y1: 0, x2: 19, y2: 0, stroke: LEG, 'stroke-width': 2 }), el('rect', { x: -12, y: -5, width: 24, height: 10, rx: 5, fill: '#e3c995', stroke: '#9c7a43' }), el('rect', { x: -8, y: -5, width: 2.5, height: 10, fill: BAND[b[0]] }), el('rect', { x: -4, y: -5, width: 2.5, height: 10, fill: BAND[b[1]] }), el('rect', { x: 0, y: -5, width: 2.5, height: 10, fill: BAND[b[2]] }), el('rect', { x: 6, y: -5, width: 2.5, height: 10, fill: BAND[b[3]] })]); }
+      if (it.type === 'button') return el('g', {}, [el('rect', { x: -9, y: -9, width: 18, height: 18, rx: 2, fill: '#3b3d40' }), el('circle', { r: 5.5, fill: '#d9453a' })]);
+      if (it.type === 'switch') return el('g', {}, [el('rect', { x: -15, y: -6, width: 30, height: 12, rx: 2, fill: '#3b3f45' }), el('rect', { x: -12, y: -4, width: 9, height: 8, rx: 1.5, fill: '#ececec' })]);
+      if (it.type === 'pot') return el('g', {}, [el('rect', { x: -11, y: -11, width: 22, height: 22, rx: 2, fill: '#2f63b3' }), el('circle', { r: 7.5, fill: '#ece8de' }), el('line', { x1: 0, y1: 0, x2: -4, y2: -5, stroke: '#222', 'stroke-width': 2 })]);
+      if (it.type === 'ldr') return el('g', {}, [el('circle', { r: 8, fill: '#e4b14d', stroke: '#9b6a1d' }), el('path', { d: 'M -4.5 -3.5 H 4.5 V -1.2 H -4.5 V 1.2 H 4.5 V 3.5 H -4.5', fill: 'none', stroke: '#7a4a1a', 'stroke-width': 1 })]);
+      if (it.type === 'buzzer') return el('g', {}, [el('circle', { r: 10, fill: '#1f1f1f' }), el('circle', { r: 2.5, fill: '#555' })]);
+      return el('g');
+    }
+    // the bin's parts, grouped: [{ type, color, ohms, n }]
+    function binGroups(items) {
+      const m = new Map();
+      items.forEach((x) => { const k = x.type + ':' + (x.color || x.ohms || ''); if (!m.has(k)) m.set(k, Object.assign({ n: 0 }, x)); m.get(k).n++; });
+      return [...m.values()];
+    }
+    function binLabel(it, spec, t, fill) {
+      if (it.type === 'led') return it.color === 'any' ? partName('led', t) : fill('{color} LED', { color: colorName(it.color, t) });
+      if (it.type === 'resistor') return it.ohms && !spec.hide_values ? fill('Resistor {ohms}', { ohms: C.fmtOhms(it.ohms) }) : partName('resistor', t);
+      return partName(it.type, t);
+    }
+
     // what a solved state does to each part
     function looks(build, v, extra) {
       const out = {};
@@ -560,7 +587,25 @@
       if (L.mot) kids.push(motorTree(L, {}));
       kids.push(el('g', {}, build.parts.map((p) => partTree(p, lk[p.id], { gid }))));
       kids.push(el('g', {}, build.wires.map((w, i) => wireTree(L, w, i))));
-      return toStr(el('svg', { xmlns: SVGNS, viewBox: L.vb.join(' '), width: L.vb[2], height: L.vb[3], role: 'img', 'aria-label': T('A breadboard bench'), 'font-family': 'Georgia, \'Times New Roman\', serif' }, kids));
+      // the parts still to place, in a row underneath
+      const vb = L.vb.slice();
+      const groups = binGroups(spec.bin);
+      if (groups.length) {
+        const y = vb[1] + vb[3] + 4;
+        const row = [el('text', { x: 4, y: y + 16, 'font-size': 14, fill: SOFT, 'font-style': 'italic' }, [T('Parts to place:')])];
+        let x = 150, line = 0;
+        groups.forEach((g) => {
+          const label = binLabel(g, spec, T, F) + (g.n > 1 ? ' ×' + g.n : '');
+          const w = 34 + label.length * 7.2;
+          if (x + w > vb[2] - 8) { x = 150; line++; }
+          const yy = y + 14 + line * 30;
+          row.push(el('g', { transform: `translate(${x + 14} ${yy}) scale(0.8)` }, [binIcon(g)]), el('text', { x: x + 32, y: yy, dy: '0.35em', 'font-size': 13, fill: INK }, [label]));
+          x += w + 12;
+        });
+        kids.push(el('g', {}, row));
+        vb[3] += 30 + line * 30 + 8;
+      }
+      return toStr(el('svg', { xmlns: SVGNS, viewBox: vb.join(' '), width: vb[2], height: vb[3], role: 'img', 'aria-label': T('A breadboard bench'), 'font-family': 'Georgia, \'Times New Roman\', serif' }, kids));
     }
 
     /* ---------------- checked once, kept ---------------- */
@@ -698,7 +743,9 @@
       const zOut = button('bb-zbtn', '−', () => zoomBy(1 / 1.5), { 'aria-label': t('Zoom out') });
       const zFit = button('bb-zbtn', '⤢', () => fit(), { 'aria-label': t('Show the whole bench') });
       zoomBox.append(zIn, zOut, zFit);
-      stage.appendChild(zoomBox);
+      zoomBox.setAttribute('role', 'group');
+      zoomBox.setAttribute('aria-label', t('Zoom'));
+      bar.insertBefore(zoomBox, swatches); // in the toolbar, so it never covers a hole or a pin
       root.appendChild(stage);
 
       const status = hostEl('p', 'bb-status', { role: 'status' });
@@ -747,11 +794,20 @@
         ser.append(sbar, serialOut);
         panel.append(cbar, edit, codeErr, ser);
         root.appendChild(panel);
+        let shownLines = 0;
         const syncNums = () => {
           const n = Math.max(1, codeIn.value.split('\n').length);
           let s = '';
           for (let i = 1; i <= n; i++) s += i + '\n';
           nums.textContent = s;
+          // as tall as the sketch (6 to 18 lines), growing as it does
+          const want = clamp(n + 1, 6, 18);
+          if (want > shownLines) {
+            shownLines = want;
+            const h = `calc(${want} * 1.5 * 13.5px + 1.1rem)`;
+            codeIn.style.height = h;
+            nums.style.height = h;
+          }
           nums.scrollTop = codeIn.scrollTop;
         };
         syncNums();
@@ -1171,6 +1227,7 @@
         }
         if (act && act.k === 'place') { if (C.HOLES.has(name)) placeAt(name); else setHint(t('Parts go in breadboard holes; join them to the pins with wires.')); return; }
         if (act && act.k === 'wire') {
+          rubber = null;
           if (name === act.from) { act = null; setHint(''); drawOverlay(); return; }
           const from = act.from;
           act = null;
@@ -1200,8 +1257,8 @@
           redrawPart(p, looks(build, S.view(), { burnt: S.burnt, press: S.inputs.press })[p.id]);
           paintLive();
           const ctl = ctlRefs[id];
-          if (ctl) { ctl.textContent = fill(p.on ? 'Switch {id}: on' : 'Switch {id}: off', { id }); ctl.setAttribute('aria-pressed', p.on ? 'true' : 'false'); }
-          announce(fill(p.on ? 'Switch {id}: on' : 'Switch {id}: off', { id }));
+          if (ctl) { ctl.textContent = switchWords(p); ctl.setAttribute('aria-pressed', p.on ? 'true' : 'false'); }
+          announce(switchWords(p));
         }
         sel = { k: 'part', id };
         drawBuild();
@@ -1238,9 +1295,12 @@
         const near = pointNear(sx, sy);
         const onTerm = near && !C.HOLES.has(near);
         const onHole = near && C.HOLES.has(near) && Math.hypot(holeXY(near)[0] - sx, holeXY(near)[1] - sy) <= PITCH * 0.4;
-        const partEl = !onTerm && e.target.closest && e.target.closest('[data-part]');
-        const wireEl = !onTerm && !onHole && e.target.closest && e.target.closest('[data-wire]');
-        const termEl = e.target.closest && e.target.closest('[data-term]');
+        // and a part under a wire wins over the wire: look through everything under the pointer
+        const stack = document.elementsFromPoint ? document.elementsFromPoint(e.clientX, e.clientY) : [e.target];
+        const findIn = (sel) => { for (const x of stack) { const m = x.closest && x.closest(sel); if (m && svg.contains(m)) return m; } return null; };
+        const partEl = !onTerm && findIn('[data-part]');
+        const wireEl = !onTerm && !onHole && !partEl && findIn('[data-wire]');
+        const termEl = findIn('[data-term]');
         const g = { k: 'tap', x0: e.clientX, y0: e.clientY, sx, sy, moved: false };
         if (onTerm) g.point = near;
         else if (partEl && !(act && (act.k === 'place'))) {
@@ -1442,12 +1502,11 @@
         const had = document.activeElement && binList.contains(document.activeElement) ? document.activeElement.getAttribute('data-key') : null;
         binList.textContent = '';
         const left = binLeft();
-        if (!left.length) { binList.appendChild(hostEl('p', 'bb-bin__empty', null, isTask || C.inventory(spec).length ? t('Everything is on the board. Delete a part to put it back.') : t('Wires only: tap a hole or pin, then another.'))); }
+        // an empty bin isn't shown (a part taken off the board comes back to it)
+        binWrap.hidden = !left.length;
         left.forEach((it) => {
           const row = hostEl('div', 'bb-item', { role: 'listitem' });
-          const label = it.type === 'led' ? (it.color === 'any' ? partName('led', t) : fill('{color} LED', { color: colorName(it.color, t) }))
-            : it.type === 'resistor' ? (it.ohms ? (spec.hide_values ? partName('resistor', t) : fill('Resistor {ohms}', { ohms: C.fmtOhms(it.ohms) })) : partName('resistor', t))
-              : partName(it.type, t);
+          const label = binLabel(it, spec, t, fill);
           const b = hostEl('button', 'bb-item__btn' + (act && act.k === 'place' && act.item.key === it.key ? ' is-on' : ''), { type: 'button', 'data-key': it.key, 'aria-pressed': act && act.k === 'place' && act.item.key === it.key ? 'true' : 'false' });
           const icon = document.createElementNS(SVGNS, 'svg');
           icon.setAttribute('viewBox', '-20 -14 40 28');
@@ -1473,16 +1532,6 @@
         });
         if (had) { const again = binList.querySelector(`[data-key="${CSS.escape(had)}"]`); if (again) again.focus({ preventScroll: true }); }
         if (locked) binList.querySelectorAll('button, select').forEach((b) => { b.disabled = true; });
-      }
-      function binIcon(it) {
-        if (it.type === 'led') { const c = it.color === 'any' ? 'red' : it.color; return el('g', {}, [el('line', { x1: -4, y1: 4, x2: -4, y2: 13, stroke: LEG, 'stroke-width': 2 }), el('line', { x1: 4, y1: 4, x2: 4, y2: 11, stroke: LEG, 'stroke-width': 2 }), el('path', { d: 'M -8 6 V -3 A 8 8 0 0 1 8 -3 V 6 Z', fill: LED_ON[c], stroke: '#00000055' })]); }
-        if (it.type === 'resistor') { const b = C.bands(it.ohms || 220); return el('g', {}, [el('line', { x1: -19, y1: 0, x2: 19, y2: 0, stroke: LEG, 'stroke-width': 2 }), el('rect', { x: -12, y: -5, width: 24, height: 10, rx: 5, fill: '#e3c995', stroke: '#9c7a43' }), el('rect', { x: -8, y: -5, width: 2.5, height: 10, fill: BAND[b[0]] }), el('rect', { x: -4, y: -5, width: 2.5, height: 10, fill: BAND[b[1]] }), el('rect', { x: 0, y: -5, width: 2.5, height: 10, fill: BAND[b[2]] }), el('rect', { x: 6, y: -5, width: 2.5, height: 10, fill: BAND[b[3]] })]); }
-        if (it.type === 'button') return el('g', {}, [el('rect', { x: -9, y: -9, width: 18, height: 18, rx: 2, fill: '#3b3d40' }), el('circle', { r: 5.5, fill: '#d9453a' })]);
-        if (it.type === 'switch') return el('g', {}, [el('rect', { x: -15, y: -6, width: 30, height: 12, rx: 2, fill: '#3b3f45' }), el('rect', { x: -12, y: -4, width: 9, height: 8, rx: 1.5, fill: '#ececec' })]);
-        if (it.type === 'pot') return el('g', {}, [el('rect', { x: -11, y: -11, width: 22, height: 22, rx: 2, fill: '#2f63b3' }), el('circle', { r: 7.5, fill: '#ece8de' }), el('line', { x1: 0, y1: 0, x2: -4, y2: -5, stroke: '#222', 'stroke-width': 2 })]);
-        if (it.type === 'ldr') return el('g', {}, [el('circle', { r: 8, fill: '#e4b14d', stroke: '#9b6a1d' }), el('path', { d: 'M -4.5 -3.5 H 4.5 V -1.2 H -4.5 V 1.2 H 4.5 V 3.5 H -4.5', fill: 'none', stroke: '#7a4a1a', 'stroke-width': 1 })]);
-        if (it.type === 'buzzer') return el('g', {}, [el('circle', { r: 10, fill: '#1f1f1f' }), el('circle', { r: 2.5, fill: '#555' })]);
-        return el('g');
       }
       function choose(it) {
         if (locked) return;
@@ -1532,6 +1581,7 @@
 
       /* the controls row: what the learner can press, flip and turn */
       const ctlRefs = {};
+      const switchWords = (p) => (p.on ? fill('Switch {id}: on', { id: p.id }) : fill('Switch {id}: off', { id: p.id }));
       function drawControls() {
         const had = document.activeElement && controls.contains(document.activeElement) ? document.activeElement.getAttribute('data-ctl') : null;
         controls.textContent = '';
@@ -1549,7 +1599,7 @@
             b.addEventListener('blur', upF);
             controls.appendChild(b);
           } else if (p.type === 'switch') {
-            const b = button('bb-ctl', fill(p.on ? 'Switch {id}: on' : 'Switch {id}: off', { id: p.id }), () => tapPart(p.id), { 'aria-pressed': p.on ? 'true' : 'false', 'data-ctl': p.id });
+            const b = button('bb-ctl', switchWords(p), () => tapPart(p.id), { 'aria-pressed': p.on ? 'true' : 'false', 'data-ctl': p.id });
             ctlRefs[p.id] = b;
             controls.appendChild(b);
           } else if (p.type === 'pot' || p.type === 'ldr') {
@@ -1732,10 +1782,10 @@
     // the words for a build: "a red LED, a 220 Ω resistor and 3 wires; a 9-line sketch"
     function buildWords(b, spec) {
       const bits = b.parts.map((p) => (p.type === 'led' ? F('a {color} LED', { color: colorName(p.color, T) }) : p.type === 'resistor' ? F('a {ohms} resistor', { ohms: C.fmtOhms(p.ohms) }) : partName(p.type, T)));
-      if (b.wires.length) bits.push(F(b.wires.length === 1 ? '{n} wire' : '{n} wires', { n: b.wires.length }));
+      if (b.wires.length) bits.push(b.wires.length === 1 ? T('1 wire') : F('{n} wires', { n: b.wires.length }));
       let s = bits.length ? andList(bits) : T('Nothing built');
       const lines = (b.code || '').trim() ? b.code.trim().split('\n').length : 0;
-      if (spec.arduino && lines) s += '; ' + F(lines === 1 ? 'a sketch of {n} line' : 'a sketch of {n} lines', { n: lines });
+      if (spec.arduino && lines) s += '; ' + F('a sketch of {n} lines', { n: lines });
       return s;
     }
 
