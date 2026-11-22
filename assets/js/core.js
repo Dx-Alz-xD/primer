@@ -78,6 +78,28 @@
 
   P.params = new URLSearchParams(location.search);
 
+  /* ---------- debug: "Unlock all", for testing ---------- */
+  // The button shows on this computer's own address, or anywhere after a page is opened with ?debug=1
+  // (?debug=0 hides it again). While it's on, every part of every lesson is open at once and no unit
+  // waits for its exam (assets/js/lesson.js, assets/js/exams.js). It only changes what this browser shows.
+  if (P.params.has('debug')) P.store.set('primer.debug', P.params.get('debug') !== '0');
+  P.debug = P.store.get('primer.debug', /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) === true;
+  P.unlockAll = P.debug && P.store.get('primer.unlockAll', false) === true;
+  function debugButton() {
+    // only where something is locked: a lesson, or a course's outline
+    if (!P.debug || !(/lesson\.html$/.test(location.pathname) || (/app\.html$/.test(location.pathname) && P.params.get('course')))) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'dbg-unlock' + (P.unlockAll ? ' is-on' : '');
+    b.setAttribute('data-no-i18n', '');
+    b.title = 'Testing only: opens every part of every lesson and every unit, in this browser';
+    b.textContent = P.unlockAll ? 'Unlocked: lock again' : 'Unlock all';
+    b.addEventListener('click', () => { P.store.set('primer.unlockAll', !P.unlockAll); location.reload(); });
+    document.body.appendChild(b);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', debugButton, { once: true });
+  else debugButton();
+
   // only allow redirects back into our own pages
   P.safeNext = (raw, fallback = 'app.html') => {
     if (!raw) return fallback;

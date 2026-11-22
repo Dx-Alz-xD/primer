@@ -226,7 +226,8 @@
     $('#lbody').innerHTML = '';
     renderSection(0, false);
     unlocked = 0;
-    while (unlocked < sections.length - 1 && sectionComplete(unlocked)) {
+    // P.unlockAll (debug, assets/js/core.js): every part at once, its questions still to answer
+    while (unlocked < sections.length - 1 && (P.unlockAll || sectionComplete(unlocked))) {
       unlocked++;
       renderSection(unlocked, false);
     }

@@ -296,3 +296,12 @@ a.card:hover,.card--link:hover{transform:translateY(-2px);border-color:var(--gol
 .listen.is-on svg{animation:listen-pulse 1s ease-in-out infinite}
 @keyframes listen-pulse{50%{transform:scale(1.15)}}
 
+
+/* debug: "Unlock all" (assets/js/core.js), on this computer or after ?debug=1 */
+.dbg-unlock{
+  position:fixed;z-index:58;right:max(12px, env(safe-area-inset-right, 0px));bottom:calc(12px + env(safe-area-inset-bottom, 0px));
+  padding:.3rem .7rem;border:1px dashed rgba(214,165,84,.7);border-radius:999px;cursor:pointer;
+  background:rgba(20,12,5,.78);color:var(--gold);font:600 .8rem/1.2 system-ui, sans-serif;letter-spacing:.02em;opacity:.75;
+}
+.dbg-unlock:hover,.dbg-unlock:focus-visible{opacity:1}
+.dbg-unlock.is-on{border-style:solid;background:var(--gold);color:var(--gold-ink);opacity:.9}

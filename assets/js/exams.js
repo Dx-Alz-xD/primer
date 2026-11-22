@@ -100,6 +100,8 @@
         if (kept && kept.d && err.status !== 404 && err.status !== 401) return Object.assign({}, kept.d, { stale: true });
         throw err;
       })
+      // P.unlockAll (debug, assets/js/core.js): every unit open, whatever the exams say
+      .then((d) => (P.unlockAll && d && Array.isArray(d.units) ? Object.assign({}, d, { units: d.units.map((u) => Object.assign({}, u, { open: true })) }) : d))
       .then((d) => noteLocks(courseId, d));
     known.set(courseId, job);
     return job;
