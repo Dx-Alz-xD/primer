@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { HttpError } from './http.mjs';
 import { promptNote, safetyKey } from './safety.mjs';
 import { lengthRule, lengthKey, enforceLength } from './length.mjs';
-import { widgetKinds, widgetPrompt, normWidgetBlock, normTask, widgetTexts, widgetWithTexts } from './widgets.mjs';
+import { widgetKinds, widgetPrompt, normWidgetBlock, normTask, widgetTexts, widgetWithTexts, widgetWhy } from './widgets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache');
@@ -424,14 +424,32 @@ function normBlock(b) {
   return null;
 }
 
-export function normalizeLesson(raw, lessonTitle = 'this lesson') {
-  const sections = arr(raw && raw.sections).slice(0, 7).map((s, i) => ({
-    id: `s${i + 1}`,
-    title: str(s && s.title, 90) || `Part ${i + 1}`,
-    blocks: arr(s && s.blocks).map(normBlock).filter(Boolean),
-    recap: arr(s && s.recap).map((r) => mstr(r, 400)).filter(Boolean).slice(0, 5),
-    checkpoint: arr(s && s.checkpoint).map((x) => normQuestion(x, { tasks: true })).filter(Boolean).slice(0, 3)
-  })).filter((s) => s.blocks.length || s.checkpoint.length);
+// failed (optional): an array that gets the interactive parts that failed their checks, each with its
+// section and the item it came after, so they can be sent back to be fixed (repairWidgets).
+const isTaskRaw = (x) => Boolean(x && typeof x === 'object' && str(x.type, 20).toLowerCase() === 'task');
+const isWidgetRaw = (b) => Boolean(b && typeof b === 'object' && str(b.t || b.type, 20).toLowerCase() === 'widget');
+export function normalizeLesson(raw, lessonTitle = 'this lesson', failed = null) {
+  const sections = arr(raw && raw.sections).slice(0, 7).map((s, i) => {
+    const out = {
+      id: `s${i + 1}`,
+      title: str(s && s.title, 90) || `Part ${i + 1}`,
+      blocks: [],
+      recap: arr(s && s.recap).map((r) => mstr(r, 400)).filter(Boolean).slice(0, 5),
+      checkpoint: []
+    };
+    for (const b of arr(s && s.blocks)) {
+      const nb = normBlock(b);
+      if (nb) out.blocks.push(nb);
+      else if (failed && isWidgetRaw(b)) failed.push({ section: out, where: 'block', after: out.blocks[out.blocks.length - 1] || null, raw: b });
+    }
+    for (const x of arr(s && s.checkpoint)) {
+      const q = normQuestion(x, { tasks: true });
+      if (q) out.checkpoint.push(q);
+      else if (failed && isTaskRaw(x)) failed.push({ section: out, where: 'task', after: out.checkpoint[out.checkpoint.length - 1] || null, raw: x });
+    }
+    out.checkpoint = out.checkpoint.slice(0, 3);
+    return out;
+  }).filter((s) => s.blocks.length || s.checkpoint.length);
 
   if (sections.length < 3) throw new Error(`only ${sections.length} usable sections`);
   if (!sections.some((s) => s.checkpoint.length)) throw new Error('no usable questions');
@@ -440,7 +458,7 @@ export function normalizeLesson(raw, lessonTitle = 'this lesson') {
     + arr(s && s.blocks).filter((b) => b && typeof b === 'object' && str(b.t || b.type, 20).toLowerCase() === 'widget').length
     + arr(s && s.checkpoint).slice(0, 3).filter((x) => x && typeof x === 'object' && x.type === 'task').length, 0);
   const kept = sections.reduce((n, s) => n + s.blocks.filter((b) => b.t === 'widget').length + s.checkpoint.filter((x) => x.type === 'task').length, 0);
-  if (asked > kept) console.log(`[widgets] "${lessonTitle}": ${asked - kept} of ${asked} interactive parts left out (they failed their checks)`);
+  if (asked > kept) console.log(`[widgets] "${lessonTitle}": ${asked - kept} of ${asked} interactive parts left out (they failed their checks)${failed ? '; sending them back to be fixed' : ''}`);
   // an interactive part shown twice with the same contents (a block and a task alike) is kept once: as the task
   const tasked = new Set(sections.flatMap((s) => s.checkpoint.filter((x) => x.type === 'task').map((x) => x.kind + JSON.stringify(x.spec))));
   const shown = new Set();
@@ -458,9 +476,59 @@ export function normalizeLesson(raw, lessonTitle = 'this lesson') {
     const target = [...sections].reverse().find((s) => s.checkpoint.length) || sections[sections.length - 2];
     target.checkpoint.push({ type: 'subjective', prompt: `In two or three sentences, explain the main idea of “${lessonTitle}” in your own words.`, model: null });
   }
+  numberQuestions(sections);
+  return { sections };
+}
+function numberQuestions(sections) {
   let q = 0;
   sections.forEach((s) => s.checkpoint.forEach((x) => { x.id = `q${++q}`; }));
-  return { sections };
+}
+
+// Interactive parts that failed their checks go back to the model once, each with the reason its kind
+// gives (widgetWhy), to be fixed. What comes back is checked again and put where the part was; anything
+// still wrong stays out. Returns how many were put back. Never throws: the lesson is fine without them.
+async function repairWidgets(lesson, failed, { kinds, lessonTitle }) {
+  const todo = failed.filter((f) => lesson.sections.includes(f.section)).slice(0, 6);
+  if (!todo.length) return 0;
+  const items = todo.map((f, i) => {
+    const r = f.raw;
+    const kind = str(r.kind || r.widget, 20).toLowerCase();
+    const goal = f.where === 'task' ? (r.goal == null ? {} : r.goal) : undefined;
+    const problem = (f.where === 'task' && !mstr(r.prompt, 1200) ? 'the task has no "prompt" (what the learner should do)' : widgetWhy(kind, r.spec, goal))
+      || `it failed the app's checks: check every detail against the rules for "${kind}" above`;
+    return { n: i + 1, where: f.where, kind, problem, part: r };
+  });
+  const offered = [...new Set(items.map((x) => x.kind).filter((k) => kinds.includes(k)))];
+  const system = 'You fix the interactive parts of a lesson that failed the app\'s checks.\n'
+    + widgetPrompt(offered.length ? offered : kinds)
+    + '\n\nReturn ONLY a JSON object: {"parts": [...]}, one entry for each part you are given, in the same order: the corrected part in exactly the same form (a block stays {"t": "widget", ...}, a task stays {"type": "task", ...}), or null if it can\'t be made right. Each part failed, so never return one unchanged: fix the problem named (rebuild the piece it names from scratch, in the simplest correct way) and anything else that is wrong; keep the part\'s idea and its kind, check every detail against the rules above, and keep every text in the language it is written in.';
+  const user = `The lesson: "${lessonTitle}"\n\n` + items.map((x) => `Part ${x.n}: a ${x.where === 'task' ? 'task question' : 'block'} of kind "${x.kind}"\nProblem: ${x.problem}\n${JSON.stringify(x.part)}`).join('\n\n');
+  let fixed = 0;
+  try {
+    const { value } = await generate({
+      system, user, maxTokens: 6000, timeoutMs: 60000, deadlineMs: 100000,
+      label: `fixing ${items.length} interactive part${items.length > 1 ? 's' : ''} of "${lessonTitle}"`,
+      validate: (raw) => { const list = arr(raw && raw.parts); if (!list.length) throw new Error('no parts'); return list; }
+    });
+    // last first, so parts that came after the same item go back in their own order
+    for (let i = todo.length - 1; i >= 0; i--) {
+      const f = todo[i], r = value[i];
+      if (!r || typeof r !== 'object') continue;
+      const list = f.where === 'block' ? f.section.blocks : f.section.checkpoint;
+      const item = f.where === 'block' ? normWidgetBlock({ ...r, t: 'widget' }) : list.length < 3 ? normQuestion({ ...r, type: 'task' }, { tasks: true }) : null;
+      if (!item) { console.log(`[widgets] still left out after fixing: ${items[i].kind} ${f.where} (${items[i].problem.slice(0, 120)})`); continue; }
+      const at = f.after ? list.indexOf(f.after) : -1;
+      list.splice(f.after ? (at >= 0 ? at + 1 : list.length) : 0, 0, item);
+      fixed++;
+    }
+  } catch (err) {
+    console.log(`[widgets] "${lessonTitle}": the parts couldn't be fixed (${short(err.message)})`);
+  }
+  if (fixed) {
+    numberQuestions(lesson.sections);
+    console.log(`[widgets] "${lessonTitle}": ${fixed} of ${todo.length} interactive parts fixed and put back`);
+  }
+  return fixed;
 }
 
 /* ------------------------------------------------------------------ */
@@ -857,6 +925,7 @@ export async function generateLesson(input) {
     ...(kinds.length ? { w: kinds.join(',') } : {}) // offered these interactive parts
   };
   return cached('lesson', key, async () => {
+    const failed = []; // interactive parts that failed their checks, from the reply that was used
     const { value, model } = await generate({
       system: LESSON_SYSTEM + widgetPrompt(kinds),
       user: lessonUser(input) + (ground ? '\n\n' + ground.prompt : ''),
@@ -865,11 +934,13 @@ export async function generateLesson(input) {
       deadlineMs: 300000,
       // photoCheck: this lesson chose its own photos, so none is guessed for it later (photos.mjs)
       validate: (raw) => {
-        const lesson = Object.assign(normalizeLesson(raw, me.title), { photoCheck: 'ai' });
+        failed.length = 0;
+        const lesson = Object.assign(normalizeLesson(raw, me.title, failed), { photoCheck: 'ai' });
         return ground ? ground.apply(lesson, raw) : lesson;
       },
       label: `lesson ${input.n} "${me.title}"`
     });
+    if (failed.length) await repairWidgets(value, failed, { kinds, lessonTitle: me.title });
     return { lesson: value, model };
   });
 }

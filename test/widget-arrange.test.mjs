@@ -48,9 +48,44 @@ test('it is offered to every lesson, and the prompt asks for it only where it fi
   assert.ok(widgets.available().includes('arrange'));
   assert.ok(widgets.widgetKinds({ topic: 'The French Revolution', title: 'Causes' }).includes('arrange'));
   const alone = widgets.widgetPrompt(['arrange']);
-  assert.match(alone, /Use none if nothing in this lesson suits it/);
-  assert.doesNotMatch(alone, /at least one interactive block/);
+  assert.match(alone, /Leave it out only if nothing in this lesson can be put in order/);
+  assert.doesNotMatch(alone, /hands-on lesson/);
   assert.match(alone, /Kind "arrange"/);
+});
+
+test('why a spec is left out, in words the AI can fix it from', () => {
+  assert.equal(arrange.why(ORDER), '');
+  assert.match(arrange.why({ mode: 'order', items: ['One', 'Two'] }), /3 to 7 items; this has 2/);
+  assert.match(arrange.why({ mode: 'order', items: ['One', 'Two', 'one'] }), /appears twice/);
+  assert.match(arrange.why({ mode: 'match', pairs: [['a', '1'], ['b', '2']] }), /3 to 6 pairs/);
+  assert.match(arrange.why({ mode: 'order', items: ['One', 'Two', 'x'.repeat(120)] }), /longer than 90 characters/);
+  assert.match(arrange.why({ cards: [] }), /"mode" must be/);
+  // through the registry, as the lesson writer asks
+  assert.match(widgets.widgetWhy('arrange', { mode: 'group', groups: [{ name: 'A', items: ['x'] }] }, {}), /2 to 4 groups/);
+  assert.match(widgets.widgetWhy('nope', {}), /no interactive part called "nope"/);
+});
+
+test('a lesson keeps the parts that failed, with where they were, so they can be sent back to be fixed', () => {
+  const bad = { t: 'widget', kind: 'arrange', spec: { mode: 'order', items: ['One'] } };
+  const badTask = { type: 'task', kind: 'arrange', prompt: 'Order them.', spec: { mode: 'match', pairs: [] }, goal: {} };
+  const raw = {
+    sections: [
+      { title: 'One', blocks: [{ t: 'p', html: 'First.' }, bad, { t: 'p', html: 'After.' }], checkpoint: [{ type: 'numeric', prompt: '2 + 2?', answer: 4 }, badTask] },
+      { title: 'Two', blocks: [bad], checkpoint: [{ type: 'choice', prompt: 'Pick', choices: ['a', 'b'], answer: 0 }] },
+      { title: 'Three', blocks: [{ t: 'p', html: 'Last.' }], checkpoint: [] }
+    ]
+  };
+  const failed = [];
+  const lesson = ai.normalizeLesson(raw, 'Test', failed);
+  assert.equal(failed.length, 3);
+  assert.deepEqual(failed.map((f) => f.where), ['block', 'task', 'block']);
+  assert.equal(failed[0].section, lesson.sections[0]);
+  assert.equal(failed[0].after, lesson.sections[0].blocks[0]); // it came after "First."
+  assert.equal(failed[1].after, lesson.sections[0].checkpoint[0]);
+  assert.equal(failed[2].after, null); // first in its section
+  assert.equal(failed[0].raw, bad);
+  // without the array, nothing changes
+  assert.equal(ai.normalizeLesson(raw, 'Test').sections.length, 3);
 });
 
 test('a task with no goal is kept: its answer is the spec', () => {

@@ -65,7 +65,7 @@ export const prompt = String.raw`
 Chess board ("kind": "chess"). The app draws the board, plays the moves and lets the learner move pieces.
 Spec, for a block or a task:
   "setup": the moves that reach the position from the usual start (all 32 pieces), as one numbered string in SAN: "1. e4 e5 2. Nf3 Nc6 3. Bc4". Prefer this to a FEN, with moves you know exactly (a real opening or a famous game).
-  "fen": a starting position instead, for one no short game reaches (an endgame, a mate with few pieces); "setup" then plays on from it. Never list where pieces stand as setup moves: that needs a FEN.
+  "pieces": a starting position instead, for one no short game reaches (an endgame, a mate with few pieces), listed piece by piece: {"white": ["Kg1", "Rd1", "f2", "g2", "h2"], "black": ["Kg8", "f7", "g7", "h7"]}, with "turn": "white" or "black" (who moves first). Capital letters K Q R B N for the pieces, a pawn as just its square. Each side has exactly one king, and the side NOT to move must not be in check. "setup" then plays on from it. Never list where pieces stand as setup moves.
   "moves" (blocks only): the line to show after the setup, numbered on from it ("3... Nf6 4. Ng5"). The learner steps through it with Play and Step, then can try their own moves.
   "arrows": [["g1","f3"], ["d8","h4","red"]] (green, red, gold, blue) and "highlight": ["e5"], drawn on the position after setup.
   "orientation": "white" or "black" (default: White below for blocks, the side to move for tasks).
@@ -75,14 +75,13 @@ In a task the learner plays the side to move after the setup. Goals:
   {"type": "mate", "n": 1}: mate in 1 or 2 ("n": 2); any move that forces it is right.
   {"type": "square", "from": "g1"}: tap every square the piece on g1 can move to; or {"type": "square", "squares": ["d5","e4"]} for squares you name.
 Use blocks for openings, plans, tactics and mates played out; use tasks to find a move, finish a mate, or say where a piece can go. Say in the task's "prompt" whose move it is.
-Accuracy: the app replays every move and leaves out any board with an illegal one. Moves alternate White, Black, White...; before writing each, check on the board in your head: the piece is on that square, its path is clear, the square isn't held by its own side, and its king isn't left in check. A FEN needs both kings and 8 squares on every rank. Chess moves and squares are not maths: in every text and caption write them plainly (Nf3, the e4 square), never inside \( \).
+Accuracy: the app replays every move and leaves out any board with an illegal one. Moves alternate White, Black, White...; before writing each, check on the board in your head: the piece is on that square, its path is clear, the square isn't held by its own side, and its king isn't left in check. Chess moves and squares are not maths: in every text and caption write them plainly (Nf3, the e4 square), never inside \( \).
 Known to be right, to use as they are:
   Scholar's mate: setup "1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6", then 4. Qxf7#. Fool's mate: setup "1. f3 e5 2. g4", then 2... Qh4#.
   Legal's mate: setup "1. e4 e5 2. Nf3 d6 3. Bc4 Bg4 4. Nc3 g6", then 5. Nxe5 Bxd1 6. Bxf7+ Ke7 7. Nd5#.
   Fried Liver fork: setup "1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 Nxd5", then 6. Nxf7 forks queen and rook.
-  Back-rank mate: fen "6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1", then Rd8#. Smothered mate: fen "6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1", then Nf7#.
-  Queen and king: fen "7k/8/5K2/8/8/8/8/6Q1 w - - 0 1", then Qg7#. Two rooks: fen "7k/8/R7/1R6/8/8/8/3K4 w - - 0 1", mate in 2: 1. Ra7 Kg8 2. Rb8#.
-Example block: {"t": "widget", "kind": "chess", "spec": {"setup": "1. e4 e5 2. Nf3 Nc6", "moves": "3. Bb5 a6 4. Ba4 Nf6 5. O-O", "arrows": [["f3","e5","red"], ["c6","e5"]]}, "caption": "The Ruy Lopez: the bishop goes after the knight that guards e5."}
+  Back-rank mate: pieces {"white": ["Kg1", "Rd1", "f2", "g2", "h2"], "black": ["Kg8", "f7", "g7", "h7"]}, then Rd8#. Smothered mate: pieces {"white": ["Kg1", "Ng5"], "black": ["Kh8", "Rg8", "g7", "h7"]}, then Nf7#.
+  Queen and king: pieces {"white": ["Kf6", "Qg1"], "black": ["Kh8"]}, then Qg7#. Two rooks: pieces {"white": ["Kd1", "Ra6", "Rb5"], "black": ["Kh8"]}, mate in 2: 1. Ra7 Kg8 2. Rb8#.Example block: {"t": "widget", "kind": "chess", "spec": {"setup": "1. e4 e5 2. Nf3 Nc6", "moves": "3. Bb5 a6 4. Ba4 Nf6 5. O-O", "arrows": [["f3","e5","red"], ["c6","e5"]]}, "caption": "The Ruy Lopez: the bishop goes after the knight that guards e5."}
 Example task: {"type": "task", "kind": "chess", "prompt": "White to move: mate in one.", "spec": {"setup": "1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6"}, "goal": {"type": "mate", "n": 1}, "hint": "Only the king guards f7.", "explain": "Qxf7#: the bishop on c4 guards the queen, and the king has no square to go to."}`.trim();
 
 // The positions the prompt calls right (for the tests): [what, spec, the moves that follow]
@@ -91,10 +90,10 @@ export const KNOWN = [
   ['Fool’s mate', { setup: '1. f3 e5 2. g4' }, '2... Qh4#'],
   ['Legal’s mate', { setup: '1. e4 e5 2. Nf3 d6 3. Bc4 Bg4 4. Nc3 g6' }, '5. Nxe5 Bxd1 6. Bxf7+ Ke7 7. Nd5#'],
   ['Fried Liver fork', { setup: '1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 Nxd5' }, '6. Nxf7'],
-  ['Back-rank mate', { fen: '6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1' }, 'Rd8#'],
-  ['Smothered mate', { fen: '6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1' }, 'Nf7#'],
-  ['Queen and king', { fen: '7k/8/5K2/8/8/8/8/6Q1 w - - 0 1' }, 'Qg7#'],
-  ['Two rooks', { fen: '7k/8/R7/1R6/8/8/8/3K4 w - - 0 1' }, '1. Ra7 Kg8 2. Rb8#']
+  ['Back-rank mate', { pieces: { white: ['Kg1', 'Rd1', 'f2', 'g2', 'h2'], black: ['Kg8', 'f7', 'g7', 'h7'] } }, 'Rd8#'],
+  ['Smothered mate', { pieces: { white: ['Kg1', 'Ng5'], black: ['Kh8', 'Rg8', 'g7', 'h7'] } }, 'Nf7#'],
+  ['Queen and king', { pieces: { white: ['Kf6', 'Qg1'], black: ['Kh8'] } }, 'Qg7#'],
+  ['Two rooks', { pieces: { white: ['Kd1', 'Ra6', 'Rb5'], black: ['Kh8'] } }, '1. Ra7 Kg8 2. Rb8#']
 ];
 
 // A reason for the server log when the AI's board is left out.

@@ -16,7 +16,7 @@ export const prompt = `Kind "arrange": cards the learner taps into place. It sui
 - "order": steps, stages or events to put in sequence. spec {"mode": "order", "items": ["Seed", "Sprout", "Young plant", "Flowering plant"]}: 3 to 7 items, written in the RIGHT order (the app shuffles them).
 - "match": things to join to their partner. spec {"mode": "match", "pairs": [["Lungs", "Breathing"], ["Heart", "Pumping blood"], ["Stomach", "Digesting food"]]}: 3 to 6 pairs of [left, right]; every left and every right different.
 - "group": things to sort. spec {"mode": "group", "groups": [{"name": "Living", "items": ["Tree", "Cat"]}, {"name": "Non-living", "items": ["Stone", "Water"]}]}: 2 to 4 groups, 4 to 12 items in all, each item in exactly one group, no item repeated.
-Each card is short plain text: at most 8 words, no HTML, no LaTeX. The right answer must be beyond doubt from what the lesson teaches: in "order", steps that must come in that order or events clearly apart in time (never two that happened within days of each other); in "match" and "group", nothing that could fairly go in two places. As a task, give "goal": {} (the spec is the answer). Prefer a task to a block. Use "arrange" at most twice in the whole lesson (blocks and tasks together), never with the same cards twice, and only where ordering, matching or sorting really tests understanding (the stages of a process, events in time, causes and effects, words and meanings, examples and their kind); not for trivia, and not when the lesson already has a better interactive part.`;
+Each card is short plain text: at most 8 words, no HTML, no LaTeX. The right answer must be beyond doubt from what the lesson teaches: in "order", steps that must come in that order or events clearly apart in time (never two that happened within days of each other); in "match" and "group", nothing that could fairly go in two places. As a task, give "goal": {} (the spec is the answer). Prefer a task to a block. Use "arrange" once or twice in the lesson (blocks and tasks together), never with the same cards twice, where ordering, matching or sorting tests understanding (the stages of a process, events in time, causes and effects, words and meanings, examples and their kind); not for trivia. When another interactive part suits the same idea better, use that one for it, and "arrange" for another idea.`;
 
 const MODES = ['order', 'match', 'group'];
 const isObj = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
@@ -60,6 +60,38 @@ function clean(spec) {
 }
 
 export function block(spec) { return clean(spec); }
+
+// Why a spec would be left out ('' when it is fine), in words the AI can fix it from.
+export function why(spec) {
+  if (clean(spec)) return '';
+  if (!isObj(spec)) return 'the spec must be an object like {"mode": "order", "items": [...]}';
+  const mode = MODES.includes(spec.mode) ? spec.mode
+    : Array.isArray(spec.pairs) ? 'match' : Array.isArray(spec.groups) ? 'group' : Array.isArray(spec.items) ? 'order' : '';
+  if (!mode) return '"mode" must be "order" (with "items"), "match" (with "pairs") or "group" (with "groups")';
+  const bad = (list) => list.find((v) => !card(v));
+  const twice = (list) => list.find((v, i) => list.findIndex((w) => key(w) === key(v)) !== i);
+  const cards = (list) => {
+    const b = bad(list);
+    if (b !== undefined) return `the card "${String(b).slice(0, 50)}" is empty or longer than 90 characters (keep cards to 8 words, plain text)`;
+    const d = twice(list.map(card));
+    return d ? `"${d}" appears twice; every card must be different` : '';
+  };
+  if (mode === 'order') {
+    if (!Array.isArray(spec.items)) return '"order" needs "items": a list of 3 to 7 cards in the right order';
+    return spec.items.length < 3 || spec.items.length > 7 ? `"order" needs 3 to 7 items; this has ${spec.items.length}` : cards(spec.items) || 'the items break a rule above';
+  }
+  if (mode === 'match') {
+    if (!Array.isArray(spec.pairs)) return '"match" needs "pairs": a list of 3 to 6 [left, right] pairs';
+    if (spec.pairs.length < 3 || spec.pairs.length > 6) return `"match" needs 3 to 6 pairs; this has ${spec.pairs.length}`;
+    const pairs = spec.pairs.map((p) => (Array.isArray(p) ? p : isObj(p) ? [p.left, p.right] : ['', '']));
+    return cards(pairs.map((p) => p[0])) || cards(pairs.map((p) => p[1])) || 'each pair must be [left, right], two short texts';
+  }
+  if (!Array.isArray(spec.groups)) return '"group" needs "groups": 2 to 4 {"name", "items"}';
+  if (spec.groups.length < 2 || spec.groups.length > 4) return `"group" needs 2 to 4 groups; this has ${spec.groups.length}`;
+  const items = spec.groups.flatMap((g) => (isObj(g) && Array.isArray(g.items) ? g.items : []));
+  if (items.length < 4 || items.length > 12) return `"group" needs 4 to 12 items in all; this has ${items.length}`;
+  return cards(spec.groups.map((g) => (isObj(g) ? g.name : ''))) || cards(items) || 'every group needs a "name" and at least one item';
+}
 
 export function task(spec) {
   const s = clean(spec);

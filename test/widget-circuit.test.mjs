@@ -374,15 +374,24 @@ test('the prompt\'s own examples pass the checks', () => {
   assert.ok(circuit.prompt.length < 6000, 'short enough');
 });
 
-test('a block with nothing to try (no switch, no slider) is left out; a task may still use it', async () => {
+test('a block with nothing to try gets a slider on a value; one with no value to change is left out', async () => {
   const circuit = await import('../server/widgets/circuit.mjs');
   const still = { nodes: { a: [0, 0], b: [4, 0], c: [4, 3], d: [0, 3] }, parts: [
     { id: 'B1', type: 'cell', from: 'd', to: 'a', value: 3 },
     { id: 'L1', type: 'bulb', from: 'a', to: 'b', value: 10 },
     { id: 'L2', type: 'bulb', from: 'b', to: 'c', value: 10 },
     { type: 'wire', from: 'c', to: 'd' }] };
-  assert.equal(circuit.block(still), null);
+  // no switch and no controls: the first bulb gets a slider, around the value it was written with
+  const b = circuit.block(still);
+  assert.deepEqual(b.controls, [{ part: 'L1', min: 2.5, max: 30, step: 2.5 }]);
+  assert.equal(b.parts.find((p) => p.id === 'L1').value, 10);
+  // a resistor is preferred; a circuit of a cell and an LED gets one on the cell
+  const withR = { ...still, parts: [...still.parts.slice(0, 2), { id: 'R1', type: 'resistor', from: 'b', to: 'c', value: 200 }, still.parts[3]] };
+  assert.deepEqual(circuit.block(withR).controls, [{ part: 'R1', min: 50, max: 600, step: 50 }]);
+  const led = { nodes: still.nodes, parts: [still.parts[0], { id: 'D1', type: 'led', from: 'a', to: 'b' }, { type: 'wire', from: 'b', to: 'c' }, still.parts[3]] };
+  assert.equal(circuit.block(led).controls[0].part, 'B1');
+  // a switch, even with "controls" left out, is something to try
   const withSwitch = { ...still, parts: [...still.parts.slice(0, 3), { id: 'S1', type: 'switch', from: 'c', to: 'd', closed: true }] };
-  assert.ok(circuit.block(withSwitch), 'a switch, even with "controls" left out, is something to try');
-  assert.equal(circuit.block({ ...withSwitch, controls: [] }), null, 'controls: [] takes it away again');
+  assert.deepEqual(circuit.block(withSwitch).controls, [{ part: 'S1' }]);
+  assert.equal(circuit.why(still), '', 'why() agrees with block()');
 });

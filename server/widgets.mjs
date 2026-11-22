@@ -65,9 +65,10 @@ export function widgetPrompt(kinds) {
   const parts = (kinds || []).map((k) => mods.get(k)).filter(Boolean);
   if (!parts.length) return '';
   // only optional kinds (the card activity): use one where it fits, or none
+  // learners asked for lessons they can play with, so the parts are wanted, not just allowed
   const use = parts.some((m) => !m.optional)
-    ? 'Use them where doing or watching teaches better than reading: at least one interactive block in the lesson, and one or two "task" questions where acting is the natural test.'
-    : 'Most lessons have something it suits (stages, events in time, causes and effects, words and meanings, examples and their kind): then use it, usually as one "task" question, two at most. Use none if nothing in this lesson suits it.';
+    ? 'This is a hands-on lesson: learners learn by doing. Put an interactive block in most sections (at least two in the lesson, each set up for this section\'s own idea), and make at least two of the checkpoint questions "task" questions done in an interactive part, wherever acting is a fair test.'
+    : 'Almost every lesson has something it suits (stages, events in time, causes and effects, words and meanings, examples and their kind): use it at least once, as a "task" question (two at most). Leave it out only if nothing in this lesson can be put in order, matched or sorted.';
   return [
     '',
     'Interactive parts. This lesson can use the interactive parts below, which the app draws and the learner can use.',
@@ -102,6 +103,25 @@ export function normTask(q, base) {
   try { out = m.task(q.spec, goal); } catch { out = null; }
   if (!out || !isObj(out.spec) || !isObj(out.goal) || !small(out.spec) || !small(out.goal, 6000)) return null;
   return { type: 'task', kind, ...base, spec: out.spec, goal: out.goal };
+}
+
+// Why the AI's block (goal undefined) or task was left out, in a line the AI can act on: each kind's
+// why(spec, goal) (or explain), '' when it holds together. Used to send a failed part back to be fixed.
+export function widgetWhy(kind, spec, goal) {
+  const k = String(kind || '').toLowerCase();
+  const m = mods.get(k);
+  if (!m) return `there is no interactive part called "${str(kind, 20)}"; use one of ${[...mods.keys()].join(', ')}`;
+  if (!isObj(spec)) return '"spec" must be a JSON object';
+  if (goal !== undefined && !isObj(goal)) return '"goal" must be a JSON object';
+  if (!small(spec)) return 'the spec is far too long';
+  const fn = typeof m.why === 'function' ? m.why : typeof m.explain === 'function' ? m.explain : null;
+  if (fn) {
+    try { return String(fn(spec, goal) || '').replace(/\s+/g, ' ').slice(0, 300); } catch (err) { return String((err && err.message) || err).replace(/\s+/g, ' ').slice(0, 300); }
+  }
+  // a kind with no reasons of its own: whether its own check passes
+  let ok = null;
+  try { ok = goal === undefined ? m.block(spec) : m.task(spec, goal); } catch { ok = null; }
+  return ok ? '' : `it breaks one of the rules for "${k}" given above`;
 }
 
 // For the tutor and anything else that reads a lesson as text: what a widget is, in a line.

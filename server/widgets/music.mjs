@@ -114,3 +114,47 @@ A task tests what its section taught: its prompt names what to play and the lear
 /* ---------------- the checks ---------------- */
 export const block = (spec) => core.block(spec);
 export const task = (spec, goal) => core.task(spec, goal);
+
+// Why a spec (and goal) would be left out ('' when it is fine): the commonest slips, named so the AI can
+// fix them. The core only says yes or no, so this tries the spec without each optional piece.
+export function why(spec, goal) {
+  if (goal === undefined ? core.block(spec) : core.task(spec, goal)) return '';
+  if (!spec || typeof spec !== 'object') return 'the spec must be an object with "instrument": "piano" or "drums"';
+  const without = (k) => { const s = { ...spec }; delete s[k]; return s; };
+  const notes = (list) => (Array.isArray(list) ? list : [list]).filter((n) => typeof n === 'string' && !core.parseNote(n));
+  const drums = String(spec.instrument || '').toLowerCase() === 'drums' || spec.pads != null || spec.pattern != null;
+  const shown = core.block(spec, { keepEmpty: true });
+  if (!shown) {
+    if (spec.demo != null && core.block(without('demo'))) {
+      const steps = spec.demo && Array.isArray(spec.demo.steps) ? spec.demo.steps : [];
+      if (!steps.length || steps.length > 64) return `the demo needs 1 to 64 steps; it has ${steps.length}`;
+      const odd = steps.flatMap((st) => notes(st && st.notes)).slice(0, 3);
+      if (odd.length) return `the demo has notes that can't be read: ${odd.join(', ')} (write them like "C4", "F#3", "Bb4")`;
+      return 'the demo can\'t be played: each step is {"notes": [...], "beats": n} with 0.25 to 8 beats, and all its notes fit within two octaves of the keyboard';
+    }
+    if (spec.highlight != null && core.block(without('highlight'))) return `a highlighted note can't be read: ${notes(spec.highlight).join(', ') || spec.highlight} (write "C4", or "C" for every C)`;
+    if (drums) {
+      const p = spec.pattern;
+      const steps = p && Number(p.steps);
+      const off = p && p.tracks && typeof p.tracks === 'object' ? Object.entries(p.tracks).find(([, t]) => typeof t !== 'string' || t.length !== steps) : null;
+      if (off) return `the "${off[0]}" track has ${typeof off[1] === 'string' ? off[1].length : 0} characters but "steps" is ${steps}; every track is exactly "steps" characters of x and .`;
+      return `the drums need "pads" from: ${Array.isArray(core.DRUMS) ? core.DRUMS.join(', ') : 'kick, snare, hihat, openhat, clap, tom_low, tom_high'} (or tabla bols), and a pattern of 4 to 32 steps`;
+    }
+    return 'the keyboard can\'t be drawn: "from" and "to" are notes like "C4", at most two octaves apart';
+  }
+  if (goal === undefined) return 'it breaks one of the rules for "music" given above';
+  if (!goal || typeof goal !== 'object') return '"goal" must be an object';
+  const odd = notes(goal.notes || []);
+  if (odd.length) return `the goal has notes that can't be read: ${odd.join(', ')} (write them like "E4")`;
+  if (Array.isArray(goal.notes) && shown.from) {
+    const lo = core.toMidi(shown.from), hi = core.toMidi(shown.to);
+    const out = goal.notes.filter((n) => { const m = core.toMidi(n); return m != null && (m < lo || m > hi); });
+    if (out.length && !goal.any_octave) return `the goal's notes ${out.join(', ')} aren't on the keyboard, which runs from ${shown.from} to ${shown.to}`;
+  }
+  if (goal.tracks && typeof goal.tracks === 'object' && spec.pattern) {
+    const steps = Number(spec.pattern.steps);
+    const off = Object.entries(goal.tracks).find(([, t]) => typeof t !== 'string' || t.length !== steps);
+    if (off) return `the goal's "${off[0]}" track must be exactly ${steps} characters (the spec's "steps")`;
+  }
+  return 'the goal can\'t be done on this instrument: a piano takes {"type": "notes"}, drums take {"type": "pattern"} or {"type": "tap"}';
+}

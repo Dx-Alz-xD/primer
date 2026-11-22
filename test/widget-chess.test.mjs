@@ -290,11 +290,25 @@ test('the positions the prompt calls right are right, and each one in it is test
   for (const [what, spec, line] of chess.KNOWN) {
     const b = chess.block({ ...spec, moves: line });
     assert.ok(b, `${what}: ${chess.explain({ ...spec, moves: line })}`);
-    assert.ok(chess.prompt.includes(spec.setup || spec.fen), `${what} is in the prompt as tested`);
+    // a piece list is written in the prompt as JSON with a space after each colon and comma
+    const written = spec.pieces ? JSON.stringify(spec.pieces).replace(/":/g, '": ').replace(/,/g, ', ') : spec.setup || spec.fen;
+    assert.ok(chess.prompt.includes(written), `${what} is in the prompt as tested`);
     if (/#$/.test(line)) assert.equal(R.status(after(b.fen, b.moves)), 'checkmate', what);
   }
-  assert.equal(chess.prompt.match(/fen "/g).length, chess.KNOWN.filter(([, s]) => s.fen).length, 'every FEN in the prompt is tested');
+  assert.equal((chess.prompt.match(/pieces {/g) || []).length, chess.KNOWN.filter(([, s]) => s.pieces).length, 'every piece list in the prompt is tested');
   assert.equal(chess.prompt.match(/setup "/g).length, chess.KNOWN.filter(([, s]) => s.setup).length, 'every setup in the prompt is tested');
+});
+
+test('a position can be written piece by piece, and a wrong one says what is wrong', () => {
+  const b = chess.block({ pieces: { white: ['Kf6', 'Qg1'], black: ['Kh8'] } });
+  assert.equal(b.fen, '7k/8/5K2/8/8/8/8/6Q1 w - - 0 1');
+  assert.equal(chess.block({ pieces: { white: 'Kf6, Qg1', black: ['Kh8'] }, turn: 'black' }).fen, '7k/8/5K2/8/8/8/8/6Q1 b - - 0 1');
+  assert.match(chess.explain({ pieces: { white: ['Ke1'], black: ['e7'] } }), /each side needs exactly one king/);
+  assert.match(chess.explain({ pieces: { white: ['Ke1', 'Qe7'], black: ['Ke8'] } }), /side not to move is in check/);
+  assert.match(chess.explain({ pieces: { white: ['Ke1', 'Ke1'], black: ['Ke8'] } }), /two pieces are on e1/);
+  assert.match(chess.explain({ pieces: { white: ['Kx9'], black: ['Ke8'] } }), /isn't a piece and a square/);
+  // a checked spec keeps its FEN: the list is only how the AI writes it
+  assert.equal(chess.block(b).fen, b.fen);
 });
 
 test('which lessons are offered a board: chess, in the languages Primer serves', () => {

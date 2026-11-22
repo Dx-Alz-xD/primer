@@ -115,12 +115,29 @@ function note(what, err, data) {
   if (debug()) console.log(`[widgets] circuit ${what} left out: ${err && err.message}${data ? ' ' + JSON.stringify(data).slice(0, 1500) : ''}`);
 }
 
+// A circuit written with nothing to try gets something: a slider on its first resistor (or bulb, or cell),
+// from a quarter of its value to three times it, in steps that keep the value it was written with.
+function withSlider(spec, out) {
+  const p = ['resistor', 'bulb', 'cell', 'battery'].map((t) => out.parts.find((x) => x.type === t && x.value > 0)).find(Boolean);
+  if (!p) return null;
+  const T = core.TYPES[p.type];
+  const step = Number((p.value / 4).toPrecision(3));
+  const max = Math.min(T.max, Number((p.value * 3).toPrecision(3)));
+  if (!(step >= T.min) || max <= step) return null;
+  try {
+    const next = core.normSpec({ ...spec, controls: [{ part: p.id, min: step, max, step }] });
+    return next.controls.length ? next : null;
+  } catch { return null; }
+}
+
 // A widget block's spec, checked; null leaves it out.
 export function block(spec) {
   try {
-    const out = core.normSpec(spec);
-    // a block is for trying things; one with no switch or slider is only a picture (lessons have figures for that)
-    if (!out.controls || !out.controls.length) throw new core.CircuitError('a block needs something to try: a switch or a slider');
+    let out = core.normSpec(spec);
+    // a block is for trying things; one with no switch or slider is only a picture (lessons have figures for that),
+    // so it gets a slider if it has a value to change, and is left out if it hasn't
+    if (!out.controls || !out.controls.length) out = withSlider(spec, out);
+    if (!out) throw new core.CircuitError('a block needs something to try: a switch or a slider');
     return out;
   } catch (err) {
     if (!(err instanceof core.CircuitError)) throw err;
@@ -161,5 +178,11 @@ export function withTexts(spec, words) {
 
 // Why a spec (and goal) would be left out, or '' if it holds together: for tests and the debug log.
 export function why(spec, goal) {
-  try { if (goal === undefined) core.normSpec(spec); else core.normTask(spec, goal); return ''; } catch (err) { return err.message; }
+  try {
+    if (goal === undefined) {
+      const out = core.normSpec(spec);
+      if ((!out.controls || !out.controls.length) && !withSlider(spec, out)) return 'a block needs something to try: give it "controls" (a switch, or a slider for a value)';
+    } else core.normTask(spec, goal);
+    return '';
+  } catch (err) { return err.message; }
 }

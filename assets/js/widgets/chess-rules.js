@@ -449,14 +449,51 @@
   const isObj = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
   const MAX_SETUP = 80, MAX_DEMO = 60, MAX_LINE = 15;
 
-  // the position a spec describes: from "start" (a checked spec) or "fen" (as the AI writes it), then "setup"
+  // A position written piece by piece, which a model gets right far more often than a FEN:
+  //   { "white": ["Kg1", "Rd1", "f2"], "black": ["Kg8", "f7"] }   a pawn may be just its square; the
+  // piece letter is always a capital (K Q R B N P), the side comes from the list it is in.
+  function fenFromPieces(pieces, turn) {
+    if (!isObj(pieces)) fail('"pieces" must be {"white": ["Ke1", ...], "black": ["Ke8", ...]}');
+    const board = Array(64).fill('');
+    for (const side of ['white', 'black']) {
+      let list = pieces[side] != null ? pieces[side] : pieces[side[0]];
+      if (typeof list === 'string') list = list.split(/[\s,;]+/).filter(Boolean);
+      if (!Array.isArray(list) || !list.length) fail(`"pieces" needs a "${side}" list, like ["Ke1", "Qd1", "e2"]`);
+      if (list.length > 16) fail(`${side} has more than 16 pieces`);
+      for (const w of list) {
+        const g = /^\s*([KQRBNP])?\s*([a-h][1-8])\s*$/.exec(String(w));
+        if (!g) fail(`"${String(w).slice(0, 12)}" in the ${side} pieces isn't a piece and a square, like "Ke1" or "e4"`);
+        const i = sqIndex(g[2]);
+        if (board[i]) fail(`two pieces are on ${g[2]}`);
+        const letter = g[1] || 'P';
+        board[i] = side === 'white' ? letter : letter.toLowerCase();
+      }
+    }
+    const rows = [];
+    for (let r = 7; r >= 0; r--) {
+      let row = '', empty = 0;
+      for (let f = 0; f < 8; f++) {
+        const c = board[r * 8 + f];
+        if (!c) { empty++; continue; }
+        if (empty) row += empty;
+        empty = 0;
+        row += c;
+      }
+      rows.push(row + (empty || ''));
+    }
+    return `${rows.join('/')} ${/^b/i.test(String(turn || 'w').trim()) ? 'b' : 'w'} - - 0 1`;
+  }
+
+  // the position a spec describes: from "start" (a checked spec), "pieces" or "fen" (as the AI writes it), then "setup"
   function position(spec) {
     let given = spec.start != null ? spec.start : spec.fen != null ? spec.fen : spec.position;
     if (given != null && typeof given !== 'string') fail('the FEN must be a string');
     given = String(given || '').trim();
-    const fen = !given || /^(start|startpos|initial|standard|new game)$/i.test(given) ? START : given;
+    const listed = spec.start == null && spec.pieces != null;
+    const fen = listed ? fenFromPieces(spec.pieces, spec.turn != null ? spec.turn : spec.to_move)
+      : !given || /^(start|startpos|initial|standard|new game)$/i.test(given) ? START : given;
     let start;
-    try { start = parseFEN(fen); } catch (err) { fail(`bad FEN: ${err.message}`); }
+    try { start = parseFEN(fen); } catch (err) { fail(listed ? `bad position (${fen.split(' ')[0]}): ${err.message}` : `bad FEN: ${err.message}`); }
     const list = words(spec.setup, MAX_SETUP);
     if (list.length > MAX_SETUP) fail(`more than ${MAX_SETUP} setup moves`);
     const { ucis, pos } = playLine(start, list, 'setup');
