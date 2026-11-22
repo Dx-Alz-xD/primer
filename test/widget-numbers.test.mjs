@@ -293,7 +293,7 @@ test('the prompt is short, and its examples pass the checks', () => {
   assert.ok(widgets.normTask(task, { prompt: task.prompt }), 'the example task');
   assert.equal(numbers.why(block.spec), '');
   assert.equal(numbers.why(task.spec, task.goal), '');
-  assert.match(widgets.widgetPrompt(['numbers']), /at least one interactive block/);
+  assert.match(widgets.widgetPrompt(['numbers']), /at least two in the lesson/);
 });
 
 test('blocks and tasks through server/widgets.mjs; why() names what to fix', () => {
