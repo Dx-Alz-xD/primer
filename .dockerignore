@@ -1,0 +1,9 @@
+# Only the server, the assets and the pages go into the image (see Dockerfile); never secrets or data.
+.env
+.env.*
+data/
+.git/
+.claude/
+node_modules/
+test/
+docs/

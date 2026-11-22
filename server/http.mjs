@@ -95,7 +95,14 @@ export function checkOrigin(req) {
   if (host !== req.headers.host) throw new HttpError('Request refused.', 403);
 }
 
+// Behind a host's proxy (PRIMER_TRUST_PROXY=1, set in the Dockerfile) every request comes from the proxy, so
+// the visitor is the last address in X-Forwarded-For: the one that proxy added. Earlier ones are whatever
+// the visitor sent, so they are never trusted. Without the setting, the socket's own address.
 export function clientIp(req) {
+  if (process.env.PRIMER_TRUST_PROXY === '1') {
+    const list = String(req.headers['x-forwarded-for'] || '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (list.length) return list[list.length - 1].slice(0, 64);
+  }
   return req.socket.remoteAddress || 'unknown';
 }
 
