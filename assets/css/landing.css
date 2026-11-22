@@ -260,3 +260,22 @@ html:not([lang="en"]):not([lang="es"]):not([lang="fr"]):not([lang="pt"]):not([la
   .toc__p{flex:1 0 100%;padding-left:3.5rem;text-align:left;font-size:.98rem}
   .frame__body{padding:1rem}
 }
+
+/* Who it is for: four illustrative learners, and how Primer narrows the gap (SDG 4 and SDG 10) */
+.who__goals{display:flex;flex-wrap:wrap;gap:.5rem .6rem;margin:0 0 .9rem}
+.who__goal{display:inline-block;padding:.28rem .75rem;border-radius:999px;font-family:var(--font-head);font-size:1rem;letter-spacing:.02em;color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.who__goal--4{background:#c5192d}
+.who__goal--10{background:#dd1367}
+.who__cases{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.1rem}
+.who__case{position:relative;display:flex;flex-direction:column;gap:.55rem;padding:1.35rem 1.2rem 1.2rem}
+.who__av{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--crimson, #8f1d22);color:#fff;font-family:var(--font-head);font-size:1.25rem;box-shadow:0 0 0 3px rgba(214,165,84,.45)}
+.who__case h3{font-size:1.22rem;line-height:1.25;color:var(--cream);margin:.15rem 0 0}
+.who__need{color:var(--cream-dim);font-style:italic;line-height:1.45;margin:0}
+.who__does{color:var(--cream);line-height:1.45;margin:0}
+.who__tag{margin:auto 0 0;padding-top:.55rem;border-top:1px solid rgba(214,165,84,.28);font-family:var(--font-head);font-size:.98rem;color:var(--gold)}
+.who__gaps{list-style:none;margin:1.6rem 0 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.1rem}
+.who__gaps li{display:flex;flex-direction:column;gap:.3rem;padding:.9rem 1rem;border-left:3px solid var(--gold);background:rgba(24,15,8,.55);border-radius:0 6px 6px 0}
+.who__gaps b{font-family:var(--font-head);font-weight:400;font-size:1.15rem;color:var(--gold)}
+.who__gaps span{color:var(--cream-dim);line-height:1.45}
+@media (max-width:1000px){.who__cases,.who__gaps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.who__cases,.who__gaps{grid-template-columns:1fr}}
