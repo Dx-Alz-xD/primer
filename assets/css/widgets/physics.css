@@ -1,0 +1,78 @@
+/* =====================================================================
+   The physics sandbox (assets/js/widgets/physics.js), on the lesson's
+   parchment: the scene on a lighter sheet with ink lines, gold for what
+   the learner can change, the values panel beside it (below it on a
+   phone), sliders big enough for a thumb.
+   ===================================================================== */
+.phx{color:var(--ink,#2b1d11);font-family:var(--font-body,Georgia,serif);font-size:1.02rem;line-height:1.4;font-variant-numeric:lining-nums tabular-nums}
+.phx-main{display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-start}
+.phx-stage{position:relative;flex:3 1 330px;min-width:0}
+.phx-canvas{display:block;width:100%;height:auto;border:1px solid var(--parchment-edge,#c9b48a);border-radius:5px;background:#f6eedb;box-shadow:inset 0 0 24px rgba(150,110,60,.12);touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;cursor:grab;outline:none}
+.phx-canvas:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:2px}
+.phx--task .phx-canvas{cursor:pointer}
+.phx.is-dragging .phx-canvas{cursor:grabbing}
+
+/* the values: the window with every variable */
+.phx-panel{flex:1 1 220px;min-width:0;max-width:100%;padding:.55rem .7rem .6rem;border:1px solid var(--parchment-edge,#c9b48a);border-radius:5px;background:rgba(255,250,235,.55)}
+.phx-pick{display:flex;flex-wrap:wrap;gap:.3rem;margin:0 0 .4rem}
+.phx-pick[hidden]{display:none}
+.phx-chip{display:inline-flex;align-items:center;gap:.35rem;min-height:32px;padding:.1rem .65rem;border:1px solid var(--parchment-edge,#c9b48a);border-radius:999px;background:transparent;font:inherit;font-size:.98rem;font-weight:600;color:var(--ink,#2b1d11);cursor:pointer}
+.phx-chip[aria-pressed="true"]{border-color:var(--ink-gold,#8a6128);background:#efdfb8}
+.phx-chip:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:1px}
+.phx-chip__dot{display:inline-block;flex:none;width:11px;height:11px;border-radius:50%;border:1px solid rgba(43,29,17,.6)}
+.phx-who{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .5rem;margin:0 0 .3rem;font-size:1.02rem}
+.phx-who b{font-weight:700}
+.phx-who span{color:var(--ink-soft,#5b4730)}
+.phx-tag{font-style:italic;font-size:.95rem}
+.phx-vals{display:grid;margin:0;gap:0}
+.phx-row{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;padding:.12rem 0;border-bottom:1px dotted rgba(91,71,48,.25)}
+.phx-row:last-child{border-bottom:0}
+.phx-row dt{display:flex;align-items:center;gap:.35rem;min-width:0;color:var(--ink-soft,#5b4730);font-size:.98rem}
+.phx-row dd{margin:0;white-space:nowrap;font-weight:600;color:var(--ink,#2b1d11);text-align:right}
+.phx-sw{flex:none;display:inline-block;width:12px;height:3px;border-radius:2px}
+/* impact against strength, as a bar */
+.phx-row--meter{position:relative;padding-bottom:.45rem}
+.phx-row--meter::after{content:"";position:absolute;left:0;bottom:.12rem;height:4px;width:calc(var(--phx-meter, 0) * 100%);max-width:100%;border-radius:2px;background:var(--ink-gold,#8a6128);transition:width .2s}
+.phx-row--meter.is-over::after{background:var(--ink-red,#9a3324)}
+.phx-graph{margin-top:.5rem}
+.phx-graph__c{display:block;width:100%;height:118px}
+.phx-graph__cap{margin:.15rem 0 0;font-size:.9rem;font-style:italic;color:var(--ink-soft,#5b4730);text-align:center}
+
+/* play, step, slow motion, reset; arrows and trail */
+.phx-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin-top:.55rem}
+.phx-btn{display:inline-flex;align-items:center;gap:.35rem;min-height:36px;padding:.2rem .75rem;border:1px solid var(--parchment-edge,#c9b48a);border-radius:6px;background:rgba(255,250,235,.6);font:inherit;font-size:1rem;font-weight:600;color:var(--ink,#2b1d11);cursor:pointer}
+.phx-btn:hover{border-color:var(--ink-gold,#8a6128)}
+.phx-btn:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:1px}
+.phx-play{border-color:var(--ink-gold,#8a6128);color:var(--ink-gold,#8a6128)}
+.phx.is-playing .phx-play{background:#efdfb8}
+.phx-speed{min-width:3.2em;justify-content:center}
+.phx-check{display:inline-flex;align-items:center;gap:.3rem;min-height:36px;font-size:.98rem;color:var(--ink-soft,#5b4730);cursor:pointer}
+.phx-check input{width:18px;height:18px;margin:0;accent-color:#8a6128}
+
+/* sliders, big enough for a thumb */
+.phx-sliders{display:grid;gap:.15rem;margin-top:.5rem}
+.phx-slider{display:grid;grid-template-columns:minmax(6.5rem,max-content) minmax(0,1fr) 5.4rem;align-items:center;gap:.2rem .8rem}
+.phx-slider__name{font-size:1.02rem;color:var(--ink,#2b1d11);overflow-wrap:anywhere}
+.phx-slider__out{text-align:right;white-space:nowrap;font-weight:600;color:var(--ink,#2b1d11)}
+.phx-range{-webkit-appearance:none;appearance:none;width:100%;height:44px;margin:0;background:transparent;cursor:pointer;touch-action:pan-y}
+.phx-range:focus{outline:none}
+.phx-range::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(#c9b48a,#d8c69f);box-shadow:inset 0 1px 1px rgba(91,71,48,.35)}
+.phx-range::-moz-range-track{height:6px;border-radius:3px;background:#cdb98f;box-shadow:inset 0 1px 1px rgba(91,71,48,.35)}
+.phx-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;margin-top:-10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#c99a52,#8a6128 70%);border:2px solid #f6eedb;box-shadow:0 1px 3px rgba(43,29,17,.45)}
+.phx-range::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#c99a52,#8a6128 70%);border:2px solid #f6eedb;box-shadow:0 1px 3px rgba(43,29,17,.45)}
+.phx-range:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px rgba(138,97,40,.45),0 1px 3px rgba(43,29,17,.45)}
+.phx-range:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(138,97,40,.45)}
+.phx-range:disabled{cursor:default;opacity:.7}
+
+.phx-hint{margin:.45rem 0 0;font-style:italic;color:var(--ink-soft,#5b4730);font-size:.98rem}
+.phx.is-locked .phx-canvas{cursor:default}
+.phx .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+
+@media (max-width:520px){
+  .phx-slider{grid-template-columns:minmax(0,1fr) auto;gap:0 .6rem}
+  .phx-slider .phx-range{grid-column:1 / -1;grid-row:2}
+  .phx-btn{padding:.2rem .6rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .phx-row--meter::after{transition:none}
+}
