@@ -73,6 +73,21 @@
         case 'ldr': return t('Light sensor (LDR)');
         case 'buzzer': return t('Buzzer');
         case 'motor': return t('Motor');
+        case 'npn': return t('NPN transistor');
+        case 'mosfet': return t('MOSFET');
+        case 'diode': return t('Diode');
+        case 'zener': return t('Zener diode');
+        case 'capacitor': return t('Capacitor');
+        case 'electrolytic': return t('Electrolytic capacitor');
+        case 'tmp36': return t('Temperature sensor (TMP36)');
+        case 'rgb': return t('RGB LED');
+        case 'seg7': return t('7-segment display');
+        case 'servo': return t('Servo motor');
+        case 'sonar': return t('Ultrasonic sensor');
+        case 'lcd': return t('LCD screen');
+        case 'relay': return t('Relay module');
+        case 'pir': return t('Motion sensor (PIR)');
+        case 'dht11': return t('Temperature and humidity sensor');
         default: return type;
       }
     }
@@ -111,6 +126,7 @@
       if (!p) return '';
       if (p.type === 'led') return fill('the {color} LED ({id})', { color: colorName(p.color, t), id: p.id });
       if (p.type === 'resistor') return fill('the {ohms} resistor ({id})', { ohms: C.fmtOhms(p.ohms), id: p.id });
+      if (p.type === 'capacitor' || p.type === 'electrolytic') return fill('the {uf} capacitor ({id})', { uf: C.fmtFarads(p.uf), id: p.id });
       if (p.type === 'motor') return t('the motor');
       return fill('{name} {id}', { name: partName(p.type, t), id: p.id });
     }
@@ -129,6 +145,7 @@
       if (name === 'BAT+') return t('Battery +');
       if (name === 'BAT-') return t('Battery −');
       if (name === 'M+' || name === 'M-') return fill('Motor terminal {n}', { n: name === 'M+' ? '1' : '2' });
+      if (/\./.test(name)) { const [id, pin] = name.split('.'); return fill('{id} pin {pin}', { id, pin }); }
       if (/^D\d+$/.test(name)) return fill('Arduino pin {pin}', { pin: name.slice(1) });
       if (/^A\d$/.test(name)) return fill('Arduino pin {pin}', { pin: name });
       if (name === '3V3') return fill('Arduino pin {pin}', { pin: '3.3V' });
@@ -155,8 +172,16 @@
         case 'twice': return fill('Line {line}: {name} is declared twice.', v);
         case 'nosetup': return t('There is no setup() function. Every sketch needs void setup() { } and void loop() { }.');
         case 'noloop': return t('There is no loop() function. Every sketch needs void setup() { } and void loop() { }.');
-        case 'string': return fill('Line {line}: String and text variables aren’t supported here. Print words directly, like Serial.print("Hello");', v);
-        case 'concat': return fill('Line {line}: "text" + a number doesn’t join them in Arduino C. Use two prints: Serial.print("text"); Serial.println(x);', v);
+        case 'string': return fill('Line {line}: text in a char array isn’t supported here; use a String, like String name = "Asha";', v);
+        case 'concat': return fill('Line {line}: "text" + a number doesn’t join them in Arduino C. Make one a String: String("text") + x, or use two prints.', v);
+        case 'library': return fill('Line {line}: there is no {name} library on this bench (it has Servo.h, Wire.h, LiquidCrystal_I2C.h and DHT.h).', v);
+        case 'include': return fill('Line {line}: {name} needs #include <{lib}> at the top of the sketch.', v);
+        case 'strnum': return fill('Line {line}: a String is text, not a number: use {name}.toInt() to read a number from it.', v);
+        case 'isobject': return fill('Line {line}: {name} is a {cls}: use its functions, like {name}.{eg}().', v);
+        case 'method': return fill('Line {line}: a {cls} has no {name}() function.', v);
+        case 'isr': return fill('Line {line}: attachInterrupt needs the name of a void function with no ( ) values, like attachInterrupt(digitalPinToInterrupt(2), pressed, FALLING);', v);
+        case 'intpin': return fill('Line {line}: only pins 2 and 3 have interrupts on the Uno: use digitalPinToInterrupt(2) or digitalPinToInterrupt(3).', v);
+        case 'isrlong': return fill('The interrupt function {name}() runs too long: keep it short, with no delay() or waiting loops.', v);
         case 'unsupported': return fill('Line {line}: {what} isn’t supported here.', v);
         case 'macro': return fill('Line {line}: #define with ( ) isn’t supported here; write a function instead.', v);
         case 'number': return fill('Line {line}: "{got}" isn’t a number I can read.', v);
@@ -226,6 +251,40 @@
         case 'sketch': return sketchText(why.error, t, fill);
         case 'slow': return t('The sketch takes too long: is there a loop that never ends?');
         case 'empty': return t('Build something on the board first.');
+        case 'qburn': return fill('{name} gets too hot: {mA} mA flows through it. Put a resistor of about 1 kΩ between the pin and its base.', { name: name(why.name), mA: why.mA });
+        case 'capreversed': return fill('{name} is the wrong way round: an electrolytic capacitor’s + leg (the longer one) must face the + side, or it bursts.', { name: name(why.name) });
+        case 'flyback': return t('The motor works. Now add the diode across the motor, its striped end towards +, to catch the kick when the motor stops.');
+        case 'ground': return t('The battery’s − isn’t joined to the Arduino’s GND. Add a wire between them so both share one ground.');
+        case 'common': return why.common === 'anode' ? fill('{name} is a common-anode display: its COM pin goes to +, and a segment lights when its pin is LOW.', { name: name(why.name) }) : fill('{name} is a common-cathode display: its COM pin goes to GND, and a segment lights when its pin is HIGH.', { name: name(why.name) });
+        case 'noservo': return t('There’s no servo on the bench yet.');
+        case 'servopin': return fill('Wire the servo’s SIG (orange) wire to pin {pin}.', why);
+        case 'servosig': return fill('{name} gets no signal: wire its SIG to a pin, then attach() it to that pin in the sketch and write() an angle.', { name: name(why.name) });
+        case 'servopower': return fill('{name} has no power: wire its VCC (red) to 5V and its GND (brown) to GND.', { name: name(why.name) });
+        case 'servoangle': return fill('The servo is at {at}°; the goal is {want}°.', why);
+        case 'servosweep': return fill('The servo should sweep from {lo}° to {hi}° and back, again and again.', why);
+        case 'nodisplay': return t('There’s no 7-segment display on the board yet.');
+        case 'digit': return fill('The display lights segments {segs}; the digit {want} needs {want_segs}.', why);
+        case 'segdark': return t('No segment of the display lights. Is its COM pin joined, through a resistor, to the right side?');
+        case 'nolcd': return t('There’s no LCD screen on the bench yet.');
+        case 'lcdpower': return t('The LCD has no power: wire its VCC to 5V and its GND to GND.');
+        case 'lcdwires': return t('The LCD talks over I2C: wire its SDA to A4 and its SCL to A5.');
+        case 'lcdinit': return t('The LCD is never started: call lcd.init(); (and lcd.backlight();) in setup().');
+        case 'lcdoff': return t('The LCD is switched off: call lcd.display();');
+        case 'lcdtext': return fill('The LCD shows "{shows}"; it should show "{text}".', why);
+        case 'nosonar': return t('There’s no ultrasonic sensor on the bench yet.');
+        case 'notmp': return t('There’s no temperature sensor on the board yet.');
+        case 'nodht': return t('There’s no temperature and humidity sensor on the bench yet.');
+        case 'modpower': return fill('{name} has no power: wire its VCC to 5V and its GND to GND.', { name: name(why.name) });
+        case 'noping': return fill('{name} never measures: wire its TRIG to a pin and send it a 10 µs HIGH pulse, then read its ECHO with pulseIn().', { name: name(why.name) });
+        case 'nearalways': return fill('The output stays on even when nothing is near. It should come on only nearer than {cm} cm.', why);
+        case 'nearflip': return fill('The output comes on when things are far away. It should come on only nearer than {cm} cm.', why);
+        case 'neardark': return fill('Nothing comes on, even with something nearer than {cm} cm.', why);
+        case 'tempalways': return fill('The output stays on even when it’s cool. It should come on only above {above} °C.', why);
+        case 'tempflip': return fill('The output comes on when it’s cool. It should come on only above {above} °C.', why);
+        case 'tempdark': return fill('Nothing comes on, even above {above} °C.', why);
+        case 'nocap': return t('There’s no capacitor on the board yet.');
+        case 'fadequick': return fill('The LED goes out {ms} ms after the switch opens; it should glow for at least {want} ms. A capacitor across it keeps it lit.', why);
+        case 'fadestays': return t('The LED stays lit after the switch opens. Should the switch cut its power?');
         default: return '';
       }
     }
@@ -244,6 +303,26 @@
     const LED_OFF = { red: '#b5574f', green: '#5c9a63', yellow: '#c4a955', blue: '#5974ad', white: '#dedbd0' };
     const WIRE = { red: '#d93a2b', black: '#2a2a2a', blue: '#2f6fd6', green: '#2e9b47', yellow: '#e8bf27', orange: '#ec7f22', white: '#efeee6', purple: '#8a4fc7' };
     const BAND = { black: '#1b1b1b', brown: '#7b4a20', red: '#d23a2a', orange: '#ef7d1a', yellow: '#f1cf22', green: '#2f9e44', blue: '#2f62d1', violet: '#8546c6', grey: '#8c8c8c', white: '#f5f5f5', gold: '#c9a13b', silver: '#b8bcc2' };
+    const FONT = 'Arial, Helvetica, sans-serif';
+    // the modules beside the board: their size, and where their pins are (in the order their type lists them)
+    const MOD = {
+      servo: { w: 150, h: 98, pins: [[30, 88], [52, 88], [74, 88]] },
+      sonar: { w: 172, h: 122, pins: [[52, 112], [74, 112], [96, 112], [118, 112]] },
+      lcd: { w: 250, h: 108, pins: [[24, 98], [46, 98], [68, 98], [90, 98]] },
+      relay: { w: 178, h: 104, pins: [[20, 94], [42, 94], [64, 94], [114, 94], [136, 94], [158, 94]] },
+      pir: { w: 112, h: 106, pins: [[34, 96], [56, 96], [78, 96]] },
+      dht11: { w: 96, h: 106, pins: [[26, 96], [48, 96], [70, 96]] }
+    };
+    const SEG_LINE = { a: [-13, -32, 13, -32], b: [17, -28, 17, -4], c: [17, 4, 17, 28], d: [-13, 32, 13, 32], e: [-17, 4, -17, 28], f: [-17, -28, -17, -4], g: [-13, 0, 13, 0] };
+    // a ceramic capacitor's printed code: 104 is 10 and four zeros, in picofarads
+    function capCode(uf) {
+      const pf = uf * 1e6;
+      if (pf < 100) return String(Math.round(pf));
+      const e = Math.floor(Math.log10(pf)) - 1;
+      return String(Math.round(pf / Math.pow(10, e))) + e;
+    }
+    // how far away the sonar's obstacle looks: 2 cm close, 400 cm at the top
+    const wallAt = (cm) => clamp(Math.log(clamp(cm, 2, 400) / 2) / Math.log(200), 0, 1);
     let uid = 0;
 
     // a tiny tree of SVG nodes, made into markup (the book) or DOM (the page); text is escaped or set as text
@@ -290,9 +369,44 @@
         add('M+', L.mot.x + L.mot.w - 6, L.mot.y + 34);
         add('M-', L.mot.x + L.mot.w - 6, L.mot.y + 62);
       }
-      const bottom = Math.max(BH, L.ard ? L.ard.y + L.ard.h : 0, L.bat ? L.bat.y + L.bat.h + 8 : 0, L.mot ? L.mot.y + L.mot.h : 0);
+      // the modules (servo, sensors, screen, relay) beside it: a place for each one the bench has, wherever there's room
+      const taken = [[0, 0, BW, BH]];
+      if (L.ard) taken.push([L.ard.x - 14, L.ard.y, L.ard.w + 14, L.ard.h]);
+      if (L.bat) taken.push([L.bat.x - 6, L.bat.y - 6, L.bat.w + 40, L.bat.h + 24]);
+      if (L.mot) taken.push([L.mot.x, L.mot.y, L.mot.w + 4, L.mot.h + 10]);
+      const clash = (x, y, w, h) => taken.some(([a, b, c, d]) => x < a + c + 10 && x + w + 10 > a && y < b + d + 10 && y + h + 10 > b);
+      L.slots = [];
+      C.inventory(spec).filter((x) => C.TYPES[x.type].dock).forEach((it) => {
+        const g = MOD[it.type];
+        let at = null;
+        for (let y = FY; y < 4000 && !at; y += 6) for (let x = 14; x + g.w <= BW + 4 && !at; x += 6) if (!clash(x, y, g.w, g.h)) at = [x, y];
+        if (!at) return;
+        taken.push([at[0], at[1], g.w, g.h]);
+        L.slots.push({ type: it.type, x: at[0], y: at[1], w: g.w, h: g.h });
+      });
+      const bottom = Math.max(BH, L.ard ? L.ard.y + L.ard.h : 0, L.bat ? L.bat.y + L.bat.h + 8 : 0, L.mot ? L.mot.y + L.mot.h : 0, ...L.slots.map((s) => s.y + s.h + 6));
       L.vb = [-8, -8, BW + 16, bottom + 18];
+      L.base = new Map(L.terms);
       return L;
+    }
+    // each module of a build in its place: id -> slot
+    function slotsFor(L, build) {
+      const out = new Map(), free = L.slots.slice();
+      build.parts.forEach((p) => {
+        if (!C.TYPES[p.type].dock) return;
+        const i = free.findIndex((s) => s.type === p.type);
+        if (i >= 0) out.set(p.id, free.splice(i, 1)[0]);
+      });
+      return out;
+    }
+    // the terminals: the fixtures', and the pins of the modules this build has
+    function placeTerms(L, build) {
+      L.terms = new Map(L.base);
+      L.mods = slotsFor(L, build);
+      L.mods.forEach((s, id) => {
+        const p = build.parts.find((x) => x.id === id);
+        C.TYPES[p.type].pins.forEach((pin, i) => { const q = MOD[p.type].pins[i]; L.terms.set(id + '.' + pin, [[r1(s.x + q[0]), r1(s.y + q[1])]]); });
+      });
     }
     // a terminal's place for a wire: the one of its pins nearest the wire's other end
     function termXY(L, name, near) {
@@ -506,13 +620,178 @@
           el('path', { d: `M ${r1(c[0] + 15)} ${r1(c[1] - 6)} Q ${r1(c[0] + 19)} ${r1(c[1])} ${r1(c[0] + 15)} ${r1(c[1] + 6)}` }),
           el('path', { d: `M ${r1(c[0] + 20)} ${r1(c[1] - 10)} Q ${r1(c[0] + 26)} ${r1(c[1])} ${r1(c[0] + 20)} ${r1(c[1] + 10)}` })
         ], ref('waves')));
+      } else if (p.type === 'npn' || p.type === 'tmp36' || p.type === 'mosfet') {
+        // a TO-92 (a half-disc, its flat face towards you) or a TO-220 with its metal tab; the legs named
+        const m = pts[1];
+        pts.forEach((q) => kids.push(leg(q, [m[0] + (q[0] - m[0]) * 0.3, m[1] + (q[1] - m[1]) * 0.3]), tip(q)));
+        const mrot = `translate(${r1(m[0])} ${r1(m[1])}) rotate(${ang})`;
+        if (p.type === 'mosfet') {
+          kids.push(el('g', { transform: mrot }, [
+            el('rect', { x: -15, y: -25, width: 30, height: 15, rx: 2, fill: '#b9bec4', stroke: '#7f868e' }),
+            el('circle', { cx: 0, cy: -18, r: 3.5, fill: '#e9e3d3', stroke: '#7f868e' }),
+            el('rect', { x: -15, y: -11, width: 30, height: 16, rx: 1.5, fill: '#232323', stroke: '#000' }),
+            el('text', { x: 0, y: -3, 'text-anchor': 'middle', 'font-size': 5.5, fill: '#c8c8c8', 'font-family': FONT }, ['IRF540'])
+          ]));
+        } else {
+          kids.push(el('g', { transform: mrot }, [
+            el('path', { d: 'M -14 4 L 14 4 A 15 15 0 0 0 -14 4 Z', fill: '#232323', stroke: '#000' }),
+            el('text', { x: 0, y: -3, 'text-anchor': 'middle', 'font-size': 5, fill: '#c8c8c8', 'font-family': FONT }, [p.type === 'tmp36' ? 'TMP36' : '2N2222'])
+          ], ref('body')));
+        }
+        C.TYPES[p.type].pins.forEach((nm, i) => { const q = pts[i]; kids.push(el('text', { x: r1(q[0] + n[0] * 11), y: r1(q[1] + n[1] * 11), dy: '0.35em', 'text-anchor': 'middle', 'font-size': nm.length > 2 ? 5.5 : 7, 'font-weight': 700, fill: SOFT, 'font-family': FONT }, [nm])); });
+      } else if (p.type === 'diode' || p.type === 'zener') {
+        const s = Math.min(1, (len - 6) / 30);
+        kids.push(leg(a, at(-12 * s)), leg(at(12 * s), b), tip(a), tip(b));
+        const z = p.type === 'zener';
+        kids.push(el('g', { transform: rot + (s < 1 ? ` scale(${r1(Math.max(0.4, s) * 100) / 100})` : '') }, [
+          el('rect', { x: -12, y: -4.5, width: 24, height: 9, rx: 2, fill: z ? '#e9a23b' : '#262626', stroke: '#111', 'stroke-width': 0.8 }),
+          el('rect', { x: 6, y: -4.5, width: 3.5, height: 9, fill: z ? '#262626' : '#cfd3d6' })
+        ]));
+        if (z) kids.push(el('text', { x: r1(c[0] + n[0] * 11), y: r1(c[1] + n[1] * 11), dy: '0.35em', 'text-anchor': 'middle', 'font-size': 7, fill: SOFT, 'font-family': FONT }, [String(p.volts).replace('.', 'V') + (String(p.volts).includes('.') ? '' : 'V')]));
+      } else if (p.type === 'capacitor') {
+        kids.push(leg(a, c), leg(b, c), tip(a), tip(b));
+        kids.push(el('g', { transform: rot }, [
+          el('ellipse', { cx: 0, cy: -7, rx: 10, ry: 8, fill: '#e3a13a', stroke: '#9c6a1d' }),
+          el('text', { x: 0, y: -7, dy: '0.35em', 'text-anchor': 'middle', 'font-size': 6.5, fill: '#3b2a10', 'font-family': FONT }, [capCode(p.uf)])
+        ]));
+      } else if (p.type === 'electrolytic') {
+        // seen from above: the can, its − stripe on the − leg's side, and how full of charge it is
+        kids.push(leg(a, c), leg(b, c), tip(a), tip(b));
+        const bad = look.burnt || look.fault;
+        const frac = clamp((look.vc || 0) / 9, 0, 1);
+        kids.push(el('g', { transform: rot }, [
+          el('circle', { cx: 0, cy: 0, r: 12.5, fill: bad ? '#4a3426' : '#2a4f9c', stroke: bad ? '#20150e' : '#16305f' }),
+          el('path', { d: 'M 7 -10.3 A 12.5 12.5 0 0 1 7 10.3 Z', fill: bad ? '#6b5444' : '#d8deeb' }),
+          el('text', { x: 10, y: 0, dy: '0.35em', 'text-anchor': 'middle', 'font-size': 8, 'font-weight': 700, fill: '#16305f', 'font-family': FONT }, ['−']),
+          el('circle', { cx: 0, cy: 0, r: 10.2, fill: 'none', stroke: '#ffcf3a', 'stroke-width': 2.4, 'stroke-dasharray': `${r1(frac * 64.1)} 64.1`, transform: 'rotate(-90)', opacity: bad ? 0 : 1 }, [], ref('charge')),
+          el('circle', { cx: 0, cy: 0, r: 7, fill: bad ? '#8a7a6a' : '#c9ccd0', stroke: '#888' }),
+          bad ? el('path', { d: 'M -5 -4 L -1 0 L -4 3 L 2 5', fill: 'none', stroke: '#2b1d11', 'stroke-width': 1.2 }) : el('path', { d: 'M -4 0 H 4 M 0 -4 V 4', stroke: '#8d9095', 'stroke-width': 1 })
+        ]));
+        const plus = [a[0] + n[0] * 11, a[1] + n[1] * 11];
+        kids.push(el('text', { x: r1(plus[0]), y: r1(plus[1]), dy: '0.36em', 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 700, fill: '#b02a1d', 'font-family': FONT }, ['+']));
+        kids.push(el('text', { x: r1(c[0] - n[0] * 19), y: r1(c[1] - n[1] * 19), dy: '0.35em', 'text-anchor': 'middle', 'font-size': 7.5, fill: SOFT, 'font-family': FONT, class: 'bb-id' }, [(look.vc || 0).toFixed(1) + ' V'], ref('cv')));
+        if (bad) kids.push(el('g', { class: 'bb-smoke', fill: '#8e8a86' }, [el('circle', { cx: r1(c[0] + 3), cy: r1(c[1] - 16), r: 4, opacity: 0.55 }), el('circle', { cx: r1(c[0] - 2), cy: r1(c[1] - 23), r: 5, opacity: 0.4 })]));
+      } else if (p.type === 'rgb') {
+        const m = [(pts[1][0] + pts[2][0]) / 2, (pts[1][1] + pts[2][1]) / 2];
+        pts.forEach((q) => kids.push(leg(q, m), tip(q)));
+        const col = rgbOf(look.dies);
+        kids.push(el('circle', { cx: r1(m[0]), cy: r1(m[1]), r: 24, fill: col.c, opacity: col.on ? r1(0.2 + 0.6 * col.k) : 0, class: 'bb-glow' }, [], ref('rglow')));
+        kids.push(el('circle', { cx: r1(m[0]), cy: r1(m[1]), r: 11, fill: col.on ? col.c : '#ece8ef', stroke: '#9d97a3', 'fill-opacity': col.on ? 0.9 : 0.85 }, [], ref('rdome')));
+        kids.push(el('ellipse', { cx: r1(m[0] - 3), cy: r1(m[1] - 3.5), rx: 3, ry: 2, fill: '#fff', opacity: 0.7 }));
+        C.TYPES.rgb.pins.forEach((nm, i) => { const q = pts[i]; kids.push(el('text', { x: r1(q[0] + n[0] * 11), y: r1(q[1] + n[1] * 11), dy: '0.35em', 'text-anchor': 'middle', 'font-size': 7, 'font-weight': 700, fill: nm === 'R' ? '#b02a1d' : nm === 'G' ? '#2e7d32' : nm === 'B' ? '#2f5fb3' : SOFT, 'font-family': FONT }, [nm])); });
+      } else if (p.type === 'seg7') {
+        // the body over its ten pins, and the segments, each an LED lit by its own current
+        const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+        const x0 = Math.min(...xs) - 9, x1 = Math.max(...xs) + 9, y0 = Math.min(...ys) - 7, y1 = Math.max(...ys) + 7;
+        kids.push(el('rect', { x: r1(x0), y: r1(y0), width: r1(x1 - x0), height: r1(y1 - y0), rx: 3, fill: '#1c1c1c', stroke: '#000' }));
+        pts.forEach((q) => kids.push(tip(q)));
+        const segs = look.segs || {};
+        const segEls = Object.keys(SEG_LINE).map((s) => { const [p1, q1, p2, q2] = SEG_LINE[s]; return el('line', { x1: p1, y1: q1, x2: p2, y2: q2, stroke: segColor(segs[s]), 'stroke-width': 6.5, 'stroke-linecap': 'round' }, [], ref('s' + s)); });
+        segEls.push(el('circle', { cx: 25, cy: 33, r: 3.6, fill: segColor(segs.dp) }, [], ref('sdp')));
+        kids.push(el('g', { transform: `translate(${r1((x0 + x1) / 2)} ${r1((y0 + y1) / 2)}) skewX(-6)` }, segEls));
+        C.TYPES.seg7.pins.forEach((nm, i) => { const q = pts[i]; kids.push(el('text', { x: r1(q[0]), y: r1(q[1] + (i < 5 ? 9 : -9)), dy: '0.35em', 'text-anchor': 'middle', 'font-size': 5.5, fill: '#9a9a9a', 'font-family': FONT }, [nm])); });
+        kids.push(el('text', { x: r1(x1 - 5), y: r1((y0 + y1) / 2), dy: '0.35em', 'text-anchor': 'end', 'font-size': 5.5, fill: '#8a8a8a', 'font-family': FONT }, [p.common === 'anode' ? 'CA' : 'CC']));
       }
       // its id, small, beside it
-      const off = p.type === 'pot' ? 26 : p.type === 'button' ? 24 : p.type === 'buzzer' ? 20 : p.type === 'switch' ? 17 : 14;
-      const lab = [c[0] - n[0] * off, c[1] - n[1] * off];
+      const off = p.type === 'pot' ? 26 : p.type === 'button' ? 24 : p.type === 'buzzer' ? 20 : p.type === 'switch' ? 17 : p.type === 'electrolytic' ? 30 : ['npn', 'tmp36', 'mosfet'].includes(p.type) ? 30 : p.type === 'rgb' ? 22 : p.type === 'capacitor' ? 20 : 14;
+      const lab = p.type === 'seg7' ? [pts[0][0] - 16, pts[0][1] - 12] : [c[0] - n[0] * off, c[1] - n[1] * off];
       kids.push(el('text', { x: r1(lab[0]), y: r1(lab[1]), dy: '0.35em', 'text-anchor': 'middle', 'font-size': 8.5, fill: SOFT, 'font-family': 'Arial, Helvetica, sans-serif', class: 'bb-id' }, [p.id]));
       return el('g', { class: 'bb-part' + (opts.ghost ? ' bb-ghost' : '') + (opts.bad ? ' is-bad' : ''), 'data-part': live ? id : null, opacity: opts.ghost ? 0.6 : null }, kids, live ? 'part:' + id : null);
     }
+
+    const mix = (c1, c2, k) => { const pc = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); const x = pc(c1), y = pc(c2); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
+    const segColor = (s) => (!s || !s.lit ? (s && s.burn ? '#262120' : '#3d1d1a') : mix('#a3302a', '#ff4a3a', clamp(0.45 + 0.55 * (s.glow || 0), 0, 1)));
+    // an RGB LED's colour from its three dies
+    function rgbOf(dies) {
+      const g = (k) => (dies && dies[k] && dies[k].lit ? dies[k].glow || 0.05 : 0);
+      const r = g('r'), gg = g('g'), b = g('b'), k = Math.max(r, gg, b);
+      if (!k) return { on: false, c: '#ece8ef', k: 0 };
+      const ch = (x) => (x > 0 ? Math.round(255 * Math.min(1, 0.1 + 0.9 * x / k)) : 0);
+      return { on: true, c: `rgb(${ch(r)},${ch(gg)},${ch(b)})`, k };
+    }
+    const lcdRow = (s) => (s || '').padEnd(16, ' ').slice(0, 16).replace(/ /g, ' ');
+    const LCD_X = Array.from({ length: 16 }, (_, i) => i);
+
+    // a module beside the board, in its place s; look: what it is doing (angle, distance, text, power)
+    function moduleTree(p, s, look, opts) {
+      look = look || {};
+      const live = opts && opts.live, id = p.id;
+      const ref = (k) => (live ? k + ':' + id : null);
+      const x = s.x, y = s.y, w = s.w, h = s.h;
+      const kids = [];
+      const txt = (tx, ty, str, more, rf) => el('text', Object.assign({ x: r1(tx), y: r1(ty), dy: '0.35em', 'text-anchor': 'middle', 'font-size': 7.5, fill: '#f4f1e6', 'font-family': FONT }, more || {}), [str], rf);
+      kids.push(el('rect', { x: x - 3, y: y - 3, width: w + 6, height: h + 6, rx: 6, fill: '#000', opacity: 0, class: 'bb-mod__hit' }));
+      if (p.type === 'servo') {
+        const cx = x + 44, cy = y + 40;
+        kids.push(el('rect', { x: x + 8, y: y + 32, width: 120, height: 16, rx: 3, fill: '#4f8be8', stroke: '#1d4b9a' }),
+          el('rect', { x: x + 20, y: y + 18, width: 96, height: 44, rx: 4, fill: '#2f6fd6', stroke: '#1d4b9a' }),
+          el('circle', { cx: x + 14, cy: y + 40, r: 2.5, fill: '#e9e3d3' }), el('circle', { cx: x + 122, cy: y + 40, r: 2.5, fill: '#e9e3d3' }),
+          txt(x + 88, y + 33, 'SG90', { 'font-size': 10, 'font-weight': 700 }),
+          txt(x + 88, y + 48, Math.round(look.angle != null ? look.angle : 90) + '°', { 'font-size': 9 }, ref('deg')));
+        // its cable: brown, red and orange, to the pins
+        [['#7b4a20', 0], ['#d93a2b', 1], ['#ef7d1a', 2]].forEach(([col, i]) => { const [px, py] = MOD.servo.pins[i]; kids.push(el('path', { d: `M${x + 96 + i * 5} ${y + 62} C ${x + 96 + i * 5} ${y + 74} ${x + px} ${y + 66} ${x + px} ${y + py - 4}`, fill: 'none', stroke: col, 'stroke-width': 2.4 })); });
+        kids.push(el('circle', { cx, cy, r: 10, fill: '#f2f2f2', stroke: '#9a9a9a' }));
+        kids.push(el('g', { transform: `rotate(${r1(-(look.angle != null ? look.angle : 90))} ${cx} ${cy})`, class: 'bb-horn' }, [
+          el('path', { d: `M${cx - 7} ${cy - 5} H${cx + 34} A5 5 0 0 1 ${cx + 34} ${cy + 5} H${cx - 7} A5 5 0 0 1 ${cx - 7} ${cy - 5} Z`, fill: '#fbfbfb', stroke: '#a5a5a5' }),
+          el('circle', { cx: cx + 16, cy, r: 1.4, fill: '#bbb' }), el('circle', { cx: cx + 26, cy, r: 1.4, fill: '#bbb' }), el('circle', { cx, cy, r: 3, fill: '#d0d0d0', stroke: '#999' })
+        ], ref('horn')));
+      } else if (p.type === 'sonar') {
+        const f = wallAt(look.cm != null ? look.cm : p.cm || 100);
+        const wy = y + 30 - f * 24;
+        kids.push(el('path', { d: `M${x + 46} ${y + 50} L${x + 30} ${y + 6} M${x + 46} ${y + 50} L${x + 62} ${y + 6} M${x + 126} ${y + 50} L${x + 110} ${y + 6} M${x + 126} ${y + 50} L${x + 142} ${y + 6}`, stroke: GOLD, 'stroke-width': 0.8, 'stroke-dasharray': '3 3', opacity: 0.6 }));
+        kids.push(el('g', { transform: `translate(0 ${r1(wy - (y + 30))})`, class: 'bb-wall' }, [
+          el('rect', { x: x + 26, y: y + 28, width: 120, height: 6, rx: 1.5, fill: '#8a6128', stroke: '#5b4730' }),
+          el('text', { x: x + 150, y: y + 31, dy: '0.35em', 'font-size': 8, fill: INK, 'font-family': FONT }, [Math.round(look.cm != null ? look.cm : p.cm || 100) + ' cm'], ref('cm'))
+        ], ref('wall')));
+        kids.push(el('rect', { x: x + 6, y: y + 40, width: 160, height: 56, rx: 3, fill: '#1d5fa8', stroke: '#12407a' }));
+        [x + 46, x + 126].forEach((ex) => kids.push(el('circle', { cx: ex, cy: y + 68, r: 19, fill: '#c9cdd2', stroke: '#7a7f86' }), el('circle', { cx: ex, cy: y + 68, r: 13, fill: '#4a4a4a' }), el('circle', { cx: ex, cy: y + 68, r: 9, fill: 'none', stroke: '#666', 'stroke-dasharray': '1.5 1.5' })));
+        kids.push(txt(x + 86, y + 56, 'HC-SR04', { 'font-size': 7.5, 'font-weight': 700 }), el('rect', { x: x + 78, y: y + 66, width: 16, height: 8, rx: 2, fill: '#c9ccd0' }));
+      } else if (p.type === 'lcd') {
+        const d = look.lcd || {};
+        kids.push(el('rect', { x, y, width: w, height: h - 26, rx: 4, fill: '#1f7a3a', stroke: '#125226' }));
+        [[8, 8], [w - 8, 8], [8, h - 34], [w - 8, h - 34]].forEach(([hx2, hy2]) => kids.push(el('circle', { cx: x + hx2, cy: y + hy2, r: 3.5, fill: '#e9e3d3' })));
+        kids.push(el('rect', { x: x + 16, y: y + 10, width: 218, height: 54, rx: 2, fill: '#1b1b1b' }));
+        kids.push(el('rect', { x: x + 22, y: y + 15, width: 206, height: 44, rx: 1, fill: lcdScreen(look) }, [], ref('scr')));
+        const xs = LCD_X.map((i) => r1(x + 31 + i * 12.6)).join(' ');
+        const ink = lcdInk(look);
+        [0, 1].forEach((r) => kids.push(el('text', { x: xs, y: y + 29 + r * 18, dy: '0.35em', 'text-anchor': 'middle', 'font-size': 14, fill: ink, 'font-family': 'ui-monospace, Menlo, Consolas, monospace' }, [lcdRow(d.rows ? d.rows[r] : '')], ref('row' + r))));
+        kids.push(txt(x + 226, y + 74, 'I2C', { 'font-size': 6.5 }));
+      } else if (p.type === 'relay') {
+        const on = Boolean(look.on);
+        kids.push(el('rect', { x: x + 2, y: y + 2, width: w - 4, height: h - 26, rx: 3, fill: '#1d5fa8', stroke: '#12407a' }));
+        kids.push(el('rect', { x: x + 64, y: y + 8, width: 56, height: 44, rx: 2, fill: '#2c62c4', stroke: '#173f85' }), txt(x + 92, y + 24, 'SRD-05VDC', { 'font-size': 5.5 }), txt(x + 92, y + 34, '10A 250VAC', { 'font-size': 5 }));
+        kids.push(el('circle', { cx: x + 24, cy: y + 18, r: 4, fill: on ? '#ff4433' : '#5a2a2a', stroke: '#2a1010' }, [], ref('rled')), txt(x + 24, y + 28, 'IN', { 'font-size': 6 }));
+        kids.push(el('rect', { x: x + 100, y: y + 58, width: 70, height: 18, rx: 2, fill: '#2e8b57', stroke: '#1d5c39' }));
+        [114, 136, 158].forEach((sx) => kids.push(el('circle', { cx: x + sx, cy: y + 67, r: 5, fill: '#c9ccd0', stroke: '#777' }), el('line', { x1: x + sx - 3, y1: y + 67, x2: x + sx + 3, y2: y + 67, stroke: '#666', 'stroke-width': 1.2 })));
+        // its contact, drawn: COM swings to NO when the coil is on, back to NC when off
+        kids.push(el('circle', { cx: x + 136, cy: y + 18, r: 2, fill: '#f4f1e6' }), el('circle', { cx: x + 156, cy: y + 10, r: 2, fill: '#f4f1e6' }), el('circle', { cx: x + 156, cy: y + 30, r: 2, fill: '#f4f1e6' }),
+          txt(x + 166, y + 10, 'NO', { 'font-size': 5.5 }), txt(x + 166, y + 30, 'NC', { 'font-size': 5.5 }), txt(x + 132, y + 26, 'COM', { 'font-size': 5.5 }),
+          el('line', { x1: x + 136, y1: y + 18, x2: x + 155, y2: on ? y + 11 : y + 29, stroke: '#ffd23a', 'stroke-width': 2, 'stroke-linecap': 'round' }, [], ref('arm')));
+        kids.push(el('text', { x: x + 40, y: y + 46, dy: '0.35em', 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 700, fill: '#ffd23a', opacity: 0, 'font-family': FONT, class: 'bb-click' }, [T('click!')], ref('click')));
+      } else if (p.type === 'pir') {
+        const out = look.out > 2;
+        kids.push(el('rect', { x: x + 6, y: y + 34, width: 100, height: 46, rx: 3, fill: '#1f7a3a', stroke: '#125226' }));
+        kids.push(el('circle', { cx: x + 56, cy: y + 36, r: 28, fill: '#f6f4ec', stroke: '#c9c4b4' }), el('circle', { cx: x + 56, cy: y + 36, r: 18, fill: 'none', stroke: '#ddd8c8' }), el('circle', { cx: x + 56, cy: y + 36, r: 8, fill: 'none', stroke: '#ddd8c8' }));
+        kids.push(el('g', { fill: 'none', stroke: GOLD, 'stroke-width': 1.6, opacity: look.motion ? 1 : 0, class: 'bb-waves' }, [el('path', { d: `M${x + 18} ${y + 22} q -6 8 0 16` }), el('path', { d: `M${x + 11} ${y + 18} q -8 12 0 24` })], ref('wave')));
+        kids.push(el('circle', { cx: x + 94, cy: y + 72, r: 3.5, fill: out ? '#ff4433' : '#5a2a2a' }, [], ref('pled')));
+      } else if (p.type === 'dht11') {
+        kids.push(el('rect', { x: x + 14, y: y + 4, width: 68, height: 76, rx: 4, fill: '#2f7fd0', stroke: '#1d5a9a' }));
+        for (let i = 0; i < 5; i++) kids.push(el('rect', { x: x + 24, y: y + 12 + i * 10, width: 48, height: 5, rx: 2.5, fill: '#1d5a9a' }));
+        kids.push(txt(x + 48, y + 70, 'DHT11', { 'font-size': 8, 'font-weight': 700 }));
+      }
+      // the pins, a header along the bottom, each named
+      C.TYPES[p.type].pins.forEach((pin, i) => {
+        const [px, py] = MOD[p.type].pins[i];
+        kids.push(el('line', { x1: x + px, y1: y + h - 26, x2: x + px, y2: y + py, stroke: '#9aa3ab', 'stroke-width': 1.6 }));
+        kids.push(el('rect', { x: x + px - 4, y: y + py - 4, width: 8, height: 8, rx: 1, fill: '#55585c', stroke: '#111', 'stroke-width': 0.8 }));
+        kids.push(el('text', { x: x + px, y: y + py - 12, dy: '0.35em', 'text-anchor': 'middle', 'font-size': 6.5, 'font-weight': 700, fill: p.type === 'servo' ? ['#6b3d16', '#b02a1d', '#c0640e'][i] : INK, 'font-family': FONT }, [pin]));
+      });
+      kids.push(el('text', { x: x + 2, y: y - 4, 'font-size': 8.5, fill: SOFT, 'font-family': FONT, class: 'bb-id' }, [id]));
+      kids.push(el('text', { x: x + w, y: y - 4, 'text-anchor': 'end', 'font-size': 8, 'font-style': 'italic', fill: RED, 'font-family': FONT, opacity: look.powered === false ? 1 : 0, class: 'bb-id' }, [T('no power')], ref('nopow')));
+      return el('g', { class: 'bb-part bb-mod', 'data-part': live ? id : null }, kids, live ? 'part:' + id : null);
+    }
+    const lcdScreen = (look) => (!look.powered ? '#3a4433' : look.lcd && look.lcd.light ? '#9fd64e' : '#5d7a3c');
+    const lcdInk = (look) => (look.lcd && look.lcd.light ? '#14240a' : '#1f2e14');
 
     function wireTree(L, w, i, opts) {
       opts = opts || {};
@@ -549,26 +828,55 @@
       if (it.type === 'pot') return el('g', {}, [el('rect', { x: -11, y: -11, width: 22, height: 22, rx: 2, fill: '#2f63b3' }), el('circle', { r: 7.5, fill: '#ece8de' }), el('line', { x1: 0, y1: 0, x2: -4, y2: -5, stroke: '#222', 'stroke-width': 2 })]);
       if (it.type === 'ldr') return el('g', {}, [el('circle', { r: 8, fill: '#e4b14d', stroke: '#9b6a1d' }), el('path', { d: 'M -4.5 -3.5 H 4.5 V -1.2 H -4.5 V 1.2 H 4.5 V 3.5 H -4.5', fill: 'none', stroke: '#7a4a1a', 'stroke-width': 1 })]);
       if (it.type === 'buzzer') return el('g', {}, [el('circle', { r: 10, fill: '#1f1f1f' }), el('circle', { r: 2.5, fill: '#555' })]);
+      const legs3 = [-7, 0, 7].map((x) => el('line', { x1: x, y1: 2, x2: x, y2: 13, stroke: LEG, 'stroke-width': 1.8 }));
+      if (it.type === 'npn' || it.type === 'tmp36') return el('g', {}, legs3.concat([el('path', { d: 'M -11 4 L 11 4 A 12 12 0 0 0 -11 4 Z', fill: '#232323' }), el('text', { x: 0, y: -1, 'text-anchor': 'middle', 'font-size': 5, fill: '#ccc', 'font-family': FONT }, [it.type === 'npn' ? 'NPN' : 'TMP'])]));
+      if (it.type === 'mosfet') return el('g', {}, legs3.concat([el('rect', { x: -10, y: -13, width: 20, height: 8, rx: 1.5, fill: '#b9bec4' }), el('rect', { x: -10, y: -6, width: 20, height: 10, rx: 1, fill: '#232323' })]));
+      if (it.type === 'diode' || it.type === 'zener') return el('g', {}, [el('line', { x1: -19, y1: 0, x2: 19, y2: 0, stroke: LEG, 'stroke-width': 2 }), el('rect', { x: -10, y: -4.5, width: 20, height: 9, rx: 2, fill: it.type === 'zener' ? '#e9a23b' : '#262626' }), el('rect', { x: 5, y: -4.5, width: 3, height: 9, fill: it.type === 'zener' ? '#262626' : '#cfd3d6' })]);
+      if (it.type === 'capacitor') return el('g', {}, [el('line', { x1: -4, y1: 2, x2: -4, y2: 13, stroke: LEG, 'stroke-width': 1.8 }), el('line', { x1: 4, y1: 2, x2: 4, y2: 13, stroke: LEG, 'stroke-width': 1.8 }), el('ellipse', { cx: 0, cy: -3, rx: 9, ry: 7.5, fill: '#e3a13a', stroke: '#9c6a1d' })]);
+      if (it.type === 'electrolytic') return el('g', {}, [el('line', { x1: -3, y1: 8, x2: -3, y2: 14, stroke: LEG, 'stroke-width': 1.8 }), el('line', { x1: 3, y1: 8, x2: 3, y2: 12, stroke: LEG, 'stroke-width': 1.8 }), el('rect', { x: -8, y: -12, width: 16, height: 21, rx: 3, fill: '#2a4f9c' }), el('rect', { x: 3, y: -12, width: 4, height: 21, fill: '#d8deeb' })]);
+      if (it.type === 'rgb') return el('g', {}, [-6, -2, 2, 6].map((x) => el('line', { x1: x, y1: 4, x2: x, y2: 13, stroke: LEG, 'stroke-width': 1.6 })).concat([el('path', { d: 'M -8 6 V -3 A 8 8 0 0 1 8 -3 V 6 Z', fill: '#ece8ef', stroke: '#9d97a3' }), el('circle', { cx: -3, cy: -1, r: 2, fill: '#ff3b2f' }), el('circle', { cx: 0, cy: -4, r: 2, fill: '#35d24c' }), el('circle', { cx: 3, cy: -1, r: 2, fill: '#3f86ff' })]));
+      if (it.type === 'seg7') return el('g', {}, [el('rect', { x: -10, y: -13, width: 20, height: 26, rx: 2, fill: '#1c1c1c' }), el('path', { d: 'M -4 -9 H 4 M 5 -8 V -1 M 5 1 V 8 M -4 9 H 4 M -5 1 V 8 M -5 -8 V -1 M -4 0 H 4', stroke: '#ff3b2f', 'stroke-width': 2, 'stroke-linecap': 'round' })]);
+      if (it.type === 'servo') return el('g', {}, [el('rect', { x: -15, y: -7, width: 30, height: 14, rx: 2, fill: '#2f6fd6' }), el('path', { d: 'M -9 -3 H 6 A 3 3 0 0 1 6 3 H -9 Z', fill: '#fbfbfb', stroke: '#aaa' }), el('circle', { cx: -8, cy: 0, r: 3, fill: '#ddd' })]);
+      if (it.type === 'sonar') return el('g', {}, [el('rect', { x: -17, y: -8, width: 34, height: 16, rx: 2, fill: '#1d5fa8' }), el('circle', { cx: -8, cy: 0, r: 6, fill: '#c9cdd2' }), el('circle', { cx: 8, cy: 0, r: 6, fill: '#c9cdd2' }), el('circle', { cx: -8, cy: 0, r: 3.5, fill: '#4a4a4a' }), el('circle', { cx: 8, cy: 0, r: 3.5, fill: '#4a4a4a' })]);
+      if (it.type === 'lcd') return el('g', {}, [el('rect', { x: -18, y: -10, width: 36, height: 20, rx: 2, fill: '#1f7a3a' }), el('rect', { x: -14, y: -6, width: 28, height: 12, fill: '#9fd64e' }), el('path', { d: 'M -12 -2 H 4 M -12 3 H 0', stroke: '#14240a', 'stroke-width': 1.6 })]);
+      if (it.type === 'relay') return el('g', {}, [el('rect', { x: -17, y: -10, width: 34, height: 20, rx: 2, fill: '#1d5fa8' }), el('rect', { x: -6, y: -8, width: 14, height: 12, fill: '#2c62c4', stroke: '#173f85' }), el('rect', { x: 9, y: 2, width: 7, height: 7, fill: '#2e8b57' })]);
+      if (it.type === 'pir') return el('g', {}, [el('rect', { x: -14, y: 0, width: 28, height: 10, rx: 2, fill: '#1f7a3a' }), el('circle', { cx: 0, cy: 0, r: 9, fill: '#f6f4ec', stroke: '#c9c4b4' })]);
+      if (it.type === 'dht11') return el('g', {}, [el('rect', { x: -9, y: -12, width: 18, height: 24, rx: 2, fill: '#2f7fd0' })].concat([0, 1, 2, 3].map((i) => el('rect', { x: -6, y: -9 + i * 5, width: 12, height: 2.5, rx: 1, fill: '#1d5a9a' }))));
       return el('g');
     }
     // the bin's parts, grouped: [{ type, color, ohms, n }]
     function binGroups(items) {
       const m = new Map();
-      items.forEach((x) => { const k = x.type + ':' + (x.color || x.ohms || ''); if (!m.has(k)) m.set(k, Object.assign({ n: 0 }, x)); m.get(k).n++; });
+      items.forEach((x) => { const v = C.variantOf(x); const k = x.type + ':' + (v == null ? '' : v); if (!m.has(k)) m.set(k, Object.assign({ n: 0 }, x)); m.get(k).n++; });
       return [...m.values()];
     }
     function binLabel(it, spec, t, fill) {
       if (it.type === 'led') return it.color === 'any' ? partName('led', t) : fill('{color} LED', { color: colorName(it.color, t) });
       if (it.type === 'resistor') return it.ohms && !spec.hide_values ? fill('Resistor {ohms}', { ohms: C.fmtOhms(it.ohms) }) : partName('resistor', t);
+      if (it.type === 'capacitor' || it.type === 'electrolytic') return it.uf ? fill('{name} {uf}', { name: partName(it.type, t), uf: C.fmtFarads(it.uf) }) : partName(it.type, t);
+      if (it.type === 'seg7') return it.common === 'anode' ? t('7-segment display (common anode)') : t('7-segment display (common cathode)');
       return partName(it.type, t);
     }
 
-    // what a solved state does to each part
+    // what a solved state (and the run, S) does to each part
     function looks(build, v, extra) {
       const out = {};
+      const S = extra && extra.S;
       build.parts.forEach((p) => {
         const o = (v && v.parts[p.id]) || {};
-        out[p.id] = { lit: Boolean(o.lit), glow: o.glow || 0, burnt: Boolean(extra && extra.burnt && extra.burnt.has(p.id)) || Boolean(o.burn), on: p.type === 'switch' ? Boolean(p.on) : Boolean(o.on), pressed: Boolean(extra && extra.press && extra.press[p.id]), knob: p.knob };
+        const burnt = Boolean(extra && extra.burnt && extra.burnt.has(p.id));
+        const k = { lit: Boolean(o.lit), glow: o.glow || 0, burnt: burnt || Boolean(o.burn), on: p.type === 'switch' ? Boolean(p.on) : Boolean(o.on), pressed: Boolean(extra && extra.press && extra.press[p.id]), knob: p.knob };
+        if (o.segs) { k.segs = {}; Object.keys(o.segs).forEach((s) => { k.segs[s] = Object.assign({}, o.segs[s], extra && extra.burnt && extra.burnt.has(p.id + '#' + s) ? { burn: true, lit: false } : {}); }); }
+        if (o.dies) k.dies = o.dies;
+        if (p.type === 'electrolytic' || p.type === 'capacitor') { k.vc = Math.max(0, o.vc != null ? o.vc : 0); k.fault = burnt || Boolean(o.fault); }
+        if (C.TYPES[p.type].dock) {
+          k.powered = Boolean(o.powered);
+          if (p.type === 'servo') k.angle = S && S.servo[p.id] != null ? S.servo[p.id] : 90;
+          if (p.type === 'sonar') k.cm = S ? S.inputs.cm[p.id] : p.cm;
+          if (p.type === 'pir') { k.motion = S ? Boolean(S.inputs.motion[p.id]) : Boolean(p.motion); k.out = o.out || 0; }
+          if (p.type === 'lcd') { const d = S && S.lcd[p.id]; k.lcd = { light: Boolean(d && d.light), rows: !k.powered ? ['', ''] : d && d.on ? (d.disp ? S.lcdText(p.id) : ['', '']) : ['█'.repeat(16), ''] }; }
+        }
+        out[p.id] = k;
       });
       return out;
     }
@@ -577,15 +885,17 @@
     function stillSvg(spec) {
       const L = layout(spec);
       const build = C.startBuild(spec);
-      let v = null;
-      try { v = C.session(C.bench(spec, build), { run: false }).view(); } catch (e) { v = null; }
-      const lk = looks(build, v);
+      placeTerms(L, build);
+      let v = null, S = null;
+      try { S = C.session(C.bench(spec, build), { run: false }); v = S.view(); } catch (e) { v = null; S = null; }
+      const lk = looks(build, v, { S });
       const gid = 'bbs' + (++uid);
       const kids = [glowDefs(gid), boardTree()];
       if (L.ard) kids.push(arduinoTree(L, {}));
       if (L.bat) kids.push(batteryTree(L, { hot: v && v.short }));
       if (L.mot) kids.push(motorTree(L, {}));
-      kids.push(el('g', {}, build.parts.map((p) => partTree(p, lk[p.id], { gid }))));
+      kids.push(el('g', {}, build.parts.filter((p) => C.TYPES[p.type].dock && L.mods.has(p.id)).map((p) => moduleTree(p, L.mods.get(p.id), lk[p.id]))));
+      kids.push(el('g', {}, build.parts.filter((p) => !C.TYPES[p.type].dock).map((p) => partTree(p, lk[p.id], { gid }))));
       kids.push(el('g', {}, build.wires.map((w, i) => wireTree(L, w, i))));
       // the parts still to place, in a row underneath
       const vb = L.vb.slice();
@@ -680,6 +990,7 @@
       const L = layout(spec);
       const startB = C.startBuild(spec);
       let build = clone(startB);
+      placeTerms(L, build);
       let touched = false, locked = false, destroyed = false;
       let B = null, S = null;            // the compiled bench and its run
       let sel = null;                    // { k: 'part', id } | { k: 'wire', i }
@@ -721,7 +1032,7 @@
       // the hole box: type a hole or pin, as if tapping it
       const goBox = hostEl('form', 'bb-go');
       const goLabel = hostEl('label', 'bb-go__label', null, t('Hole'));
-      const goIn = hostEl('input', 'bb-go__in', { type: 'text', inputmode: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: 'a12', 'aria-label': t('Hole or pin to tap, like a12 or D13'), maxlength: '8' });
+      const goIn = hostEl('input', 'bb-go__in', { type: 'text', inputmode: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: 'a12', 'aria-label': t('Hole or pin to tap, like a12 or D13'), maxlength: '10' });
       const goBtn = hostEl('button', 'bb-btn', { type: 'submit' }, t('Tap'));
       goLabel.appendChild(goIn);
       goBox.append(goLabel, goBtn);
@@ -769,7 +1080,7 @@
       root.appendChild(binWrap);
 
       // the Arduino's code panel and serial monitor
-      let codeIn = null, nums = null, codeErr = null, runBtn = null, stopBtn = null, runState = null, serialOut = null;
+      let codeIn = null, nums = null, codeErr = null, runBtn = null, stopBtn = null, runState = null, serialOut = null, sendIn = null;
       if (spec.arduino) {
         const panel = hostEl('div', 'bb-code');
         const cbar = hostEl('div', 'bb-code__bar');
@@ -791,7 +1102,18 @@
         sbar.appendChild(hostEl('span', null, null, t('Serial monitor')));
         sbar.appendChild(button('bb-btn bb-btn--small', t('Clear'), () => { serialOut.textContent = ''; serialText = ''; }));
         serialOut = hostEl('pre', 'bb-serial__out', { role: 'log', 'aria-label': t('Serial monitor') });
-        ser.append(sbar, serialOut);
+        // what the learner types goes to the sketch's Serial.read(), parseInt() and readString(), with a newline
+        const sendBox = hostEl('form', 'bb-serial__send');
+        sendIn = hostEl('input', 'bb-serial__in', { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', maxlength: '120', 'aria-label': t('Text to send to the Arduino'), placeholder: t('Send to the Arduino') });
+        sendBox.append(sendIn, hostEl('button', 'bb-btn bb-btn--small', { type: 'submit' }, t('Send')));
+        sendBox.addEventListener('submit', (e) => {
+          e.preventDefault();
+          if (!S || !sendIn.value) return;
+          S.send(sendIn.value + '\n');
+          announce(fill('Sent "{text}" to the Arduino.', { text: sendIn.value.slice(0, 40) }));
+          sendIn.value = '';
+        });
+        ser.append(sbar, serialOut, sendBox);
         panel.append(cbar, edit, codeErr, ser);
         root.appendChild(panel);
         let shownLines = 0;
@@ -852,12 +1174,17 @@
       svg.append(toDom(glowDefs(gid)), gStatic, gStrip, gParts, gWires, gOver);
       gStatic.appendChild(toDom(boardTree()));
       let fixtures = null;
-      function drawFixtures(v) {
+      function drawFixtures(v, lk) {
         if (fixtures) fixtures.remove();
         const kids = [];
         if (L.ard) kids.push(arduinoTree(L, {}));
         if (L.bat) kids.push(batteryTree(L, { hot: v && v.short }));
         if (L.mot) kids.push(motorTree(L, {}));
+        // the modules beside it, and the one chosen
+        L.mods.forEach((s, id) => {
+          const p = build.parts.find((x) => x.id === id);
+          if (p) kids.push(moduleTree(p, s, lk && lk[id], { live: true }));
+        });
         // the terminals, as targets
         const terms = [];
         L.terms.forEach((list, name) => list.forEach(([x, y]) => terms.push(el('circle', { cx: x, cy: y, r: 9, class: 'bb-term', 'data-term': name, fill: 'transparent' }))));
@@ -909,10 +1236,11 @@
       // what's left in the bin: [{ key, type, color, ohms, n, any }]
       function binLeft() {
         const inv = C.inventory(spec);
-        build.parts.forEach((p) => C.take(inv, p.type, p.type === 'led' ? p.color : p.type === 'resistor' ? p.ohms : null));
+        build.parts.forEach((p) => C.take(inv, p.type, C.variantOf(p)));
         const groups = new Map();
         inv.forEach((x) => {
-          const key = x.type + ':' + (x.type === 'led' ? x.color : x.type === 'resistor' ? (x.ohms || 'any') : '');
+          const vr = C.variantOf(x);
+          const key = x.type + ':' + (vr == null ? '' : vr || 'any');
           if (!groups.has(key)) groups.set(key, Object.assign({ key, n: 0 }, x));
           groups.get(key).n++;
         });
@@ -926,21 +1254,24 @@
         return pre + n;
       }
       function footprint(type, rot) {
+        if (C.TYPES[type].fixed) rot = 0;
         return C.TYPES[type].foot.map(([dx, dy]) => {
           let x = dx, y = dy;
           for (let k = 0; k < rot; k++) { const nx = -y; y = x; x = nx; }
           return [x, y];
         });
       }
-      // the holes a part's legs would go in, anchored at a hole; null where they can't
-      function legsAt(anchor, offsets, ignoreId) {
+      // the holes a part's legs would go in, anchored at a hole; null where they can't (a rigid part's pins
+      // go in the board's strips, never a rail)
+      function legsAt(anchor, offsets, ignoreId, type) {
         const h0 = C.HOLES.get(anchor);
         if (!h0) return null;
         const occ = occupancy(build);
+        const rigid = type && C.TYPES[type].rigid;
         const at = [];
         for (const [dx, dy] of offsets) {
           const name = C.holeAt(h0.x + dx, h0.y + dy);
-          if (!name) return null;
+          if (!name || (rigid && !/^[UD]/.test(C.HOLES.get(name).strip))) return null;
           const o = occ.get(name);
           if (o && !(o.k === 'part' && o.id === ignoreId)) return null;
           at.push(name);
@@ -963,13 +1294,23 @@
       let lastView = null;
       function compileBench() {
         const old = S;
+        placeTerms(L, build);
         B = C.bench(spec, build);
         S = C.session(B, { run: false, onSerial: (s) => { serialText += s; } });
-        if (old && running && old.vm && !old.vm.done) {
-          if (B.program || old.vm) S.adopt(old);
-        }
+        // the same time, charges, servo angles and screens carry on; and the sketch, if it is running
+        if (old) S.adopt(old, Boolean(running && old.vm && !old.vm.done));
         // the inputs as the learner set them
-        build.parts.forEach((p) => { if (p.type === 'switch') S.set('on', p.id, Boolean(p.on)); if (p.type === 'pot') S.set('knob', p.id, p.knob); if (p.type === 'ldr') S.set('light', p.id, p.light); });
+        build.parts.forEach((p) => {
+          if (p.type === 'switch') S.set('on', p.id, Boolean(p.on));
+          if (p.type === 'pot') S.set('knob', p.id, p.knob);
+          if (p.type === 'ldr') S.set('light', p.id, p.light);
+          if (p.type === 'sonar') S.set('cm', p.id, p.cm);
+          if (p.type === 'tmp36' || p.type === 'dht11') S.set('temp', p.id, p.temp);
+          if (p.type === 'dht11') S.set('hum', p.id, p.hum);
+          if (p.type === 'pir') S.set('motion', p.id, Boolean(p.motion));
+        });
+        termList = [...L.terms.keys()];
+        lastClicks = S.clicks;
       }
       function rebuilt() {
         compileBench();
@@ -978,40 +1319,85 @@
         drawControls();
         paintLive();
       }
+      const lookNow = (v) => looks(build, v, { burnt: S.burnt, press: S.inputs.press, S });
       function drawBuild() {
         while (gParts.firstChild) gParts.removeChild(gParts.firstChild);
         while (gWires.firstChild) gWires.removeChild(gWires.firstChild);
         const v = S.latch();
         lastView = v;
-        const lk = looks(build, v, { burnt: S.burnt, press: S.inputs.press });
-        build.parts.forEach((p) => gParts.appendChild(toDom(partTree(p, lk[p.id], { live: true, gid }), R)));
+        const lk = lookNow(v);
+        drawFixtures(v, lk);
+        build.parts.forEach((p) => { if (!C.TYPES[p.type].dock) gParts.appendChild(toDom(partTree(p, lk[p.id], { live: true, gid }), R)); });
         build.wires.forEach((w, i) => gWires.appendChild(toDom(wireTree(L, w, i, { live: true, sel: sel && sel.k === 'wire' && sel.i === i }), R)));
         drawOverlay();
       }
       // what changes as the circuit runs: glows, the buzzer, the motor, warnings, the meter
-      let spinAngle = 0, spinSpeed = 0;
+      let spinAngle = 0, spinSpeed = 0, lastClicks = 0, clickTimer = 0;
       function paintLive() {
         if (!S) return;
         const v = S.latch();
         lastView = v;
-        const lk = looks(build, v, { burnt: S.burnt, press: S.inputs.press });
+        const lk = lookNow(v);
         let buzzing = false, freq = 0;
+        const attr = (k, a, val) => { const n = R[k]; if (n && n.getAttribute(a) !== String(val)) n.setAttribute(a, val); };
+        const text = (k, s) => { const n = R[k]; if (n && n.textContent !== s) n.textContent = s; };
         build.parts.forEach((p) => {
-          const k = lk[p.id];
+          const k = lk[p.id], id = p.id;
           if (p.type === 'led') {
-            const g = R['glow:' + p.id], d = R['dome:' + p.id];
+            const g = R['glow:' + id], d = R['dome:' + id];
             if (g) g.setAttribute('opacity', k.lit ? r1(0.25 + 0.75 * k.glow) : 0);
             if (d && !k.burnt) d.setAttribute('fill', k.lit ? LED_ON[p.color] : LED_OFF[p.color]);
             if (k.burnt && d && d.getAttribute('fill') !== '#3a3433') { redrawPart(p, k); }
           } else if (p.type === 'buzzer') {
-            const w = R['waves:' + p.id];
+            const w = R['waves:' + id];
             if (w) w.setAttribute('opacity', k.on ? 1 : 0);
             if (k.on) { buzzing = true; S.pins.forEach((ps) => { if (ps.freq) freq = ps.freq; }); }
           } else if (p.type === 'button') {
-            const cap = R['cap:' + p.id];
+            const cap = R['cap:' + id];
             if (cap) { cap.setAttribute('r', k.pressed ? 5.6 : 6.8); cap.setAttribute('fill', k.pressed ? '#9c2b22' : '#d9453a'); }
+          } else if (p.type === 'seg7') {
+            Object.keys(SEG_LINE).forEach((s) => attr('s' + s + ':' + id, 'stroke', segColor(k.segs && k.segs[s])));
+            attr('sdp:' + id, 'fill', segColor(k.segs && k.segs.dp));
+          } else if (p.type === 'rgb') {
+            const col = rgbOf(k.dies);
+            attr('rglow:' + id, 'fill', col.c); attr('rglow:' + id, 'opacity', col.on ? r1(0.2 + 0.6 * col.k) : 0);
+            attr('rdome:' + id, 'fill', col.on ? col.c : '#ece8ef');
+          } else if (p.type === 'electrolytic') {
+            if (k.fault && R['charge:' + id] && R['charge:' + id].getAttribute('opacity') !== '0') { redrawPart(p, k); return; }
+            attr('charge:' + id, 'stroke-dasharray', `${r1(clamp(k.vc / 9, 0, 1) * 64.1)} 64.1`);
+            text('cv:' + id, k.vc.toFixed(1) + ' V');
+          } else if (p.type === 'servo') {
+            const m = L.mods.get(id);
+            if (m) attr('horn:' + id, 'transform', `rotate(${r1(-k.angle)} ${m.x + 44} ${m.y + 40})`);
+            text('deg:' + id, Math.round(k.angle) + '°');
+          } else if (p.type === 'sonar') {
+            attr('wall:' + id, 'transform', `translate(0 ${r1(-wallAt(k.cm) * 24)})`);
+            text('cm:' + id, Math.round(k.cm) + ' cm');
+          } else if (p.type === 'lcd') {
+            attr('scr:' + id, 'fill', lcdScreen(k));
+            [0, 1].forEach((r) => { text('row' + r + ':' + id, lcdRow(k.lcd.rows[r])); attr('row' + r + ':' + id, 'fill', lcdInk(k)); });
+          } else if (p.type === 'relay') {
+            const m = L.mods.get(id);
+            attr('rled:' + id, 'fill', k.on ? '#ff4433' : '#5a2a2a');
+            if (m) attr('arm:' + id, 'y2', k.on ? m.y + 11 : m.y + 29);
+          } else if (p.type === 'pir') {
+            attr('wave:' + id, 'opacity', k.motion ? 1 : 0);
+            attr('pled:' + id, 'fill', k.out > 2 ? '#ff4433' : '#5a2a2a');
           }
+          if (C.TYPES[p.type].dock) attr('nopow:' + id, 'opacity', k.powered ? 0 : 1);
         });
+        // a relay that just moved: it clicks
+        if (S.clicks !== lastClicks) {
+          lastClicks = S.clicks;
+          build.parts.forEach((p) => {
+            const c = p.type === 'relay' && R['click:' + p.id];
+            if (!c) return;
+            c.setAttribute('opacity', 1);
+            clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => { if (!destroyed && c) c.setAttribute('opacity', 0); }, reduce ? 900 : 450);
+          });
+          announce(t('The relay clicks.'));
+        }
         sound.set(buzzing, freq || 2000);
         // the motor
         const mo = v.parts.MOTOR;
@@ -1027,9 +1413,16 @@
         // what's wrong, if anything
         let msg = '', bad = false;
         if (v.short) { msg = v.shortSrc === 'BAT' ? t('Short circuit! The battery is getting hot: something joins + to − with nothing to slow the current.') : t('Short circuit! The Arduino’s power pin is joined straight to GND.'); bad = true; }
-        else if (S.burnt.size) { const id = [...S.burnt][0]; msg = fill('{name} burnt out: too much current. Add a resistor in series, then put in a new LED (move it, or undo).', { name: partWords(B.parts.get(id), t, fill) }); bad = true; }
+        else if (S.burnt.size) {
+          const id = [...S.burnt][0].split('#')[0], bp = B.parts.get(id), name = partWords(bp, t, fill);
+          const ty = bp ? bp.type : 'led';
+          msg = ty === 'electrolytic' ? fill('{name} burst: it was the wrong way round. Its + leg must face the + side; move it, or undo.', { name })
+            : ty === 'npn' || ty === 'mosfet' ? fill('{name} burnt out: too much current. Put a resistor of about 1 kΩ before its base, then move it, or undo.', { name })
+              : fill('{name} burnt out: too much current. Add a resistor in series, then put in a new LED (move it, or undo).', { name });
+          bad = true;
+        }
         else if (v.overload.length) { const p = v.overload[0]; msg = fill('Pin {pin} is giving {mA} mA, more than an Arduino pin can. Add a resistor.', { pin: p < 14 ? p : 'A' + (p - 14), mA: C.mA(v.pinPeak[p]) }); bad = true; }
-        status.textContent = msg;
+        status.textContent = msg ? msg.charAt(0).toUpperCase() + msg.slice(1) : '';
         status.hidden = !msg;
         status.classList.toggle('is-bad', bad);
         // the meter
@@ -1066,7 +1459,9 @@
         }
         if (sel && sel.k === 'part') {
           const p = build.parts.find((x) => x.id === sel.id);
-          if (p) {
+          const m = p && L.mods.get(p.id);
+          if (m) add(el('rect', { x: m.x - 6, y: m.y - 14, width: m.w + 12, height: m.h + 20, rx: 6, fill: 'none', stroke: GOLD, 'stroke-width': 1.8, 'stroke-dasharray': '4 3' }));
+          else if (p) {
             const pts = p.at.map(holeXY);
             const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
             add(el('rect', { x: Math.min(...xs) - 15, y: Math.min(...ys) - 15, width: Math.max(...xs) - Math.min(...xs) + 30, height: Math.max(...ys) - Math.min(...ys) + 30, rx: 6, fill: 'none', stroke: GOLD, 'stroke-width': 1.8, 'stroke-dasharray': '4 3' }));
@@ -1087,11 +1482,11 @@
         if (dragPart && ghostAt) {
           const p = build.parts.find((x) => x.id === dragPart.id);
           if (!p) return null;
-          const at = legsAt(ghostAt, dragPart.offs, p.id);
+          const at = legsAt(ghostAt, dragPart.offs, p.id, p.type);
           return at ? { part: Object.assign({}, p, { at }), ok: true } : null;
         }
         if (!act || act.k !== 'place' || !ghostAt) return null;
-        const at = legsAt(ghostAt, footprint(act.item.type, act.rot));
+        const at = legsAt(ghostAt, footprint(act.item.type, act.rot), null, act.item.type);
         if (!at) return null;
         return { part: newPart(act.item, at, true), ok: true };
       }
@@ -1102,18 +1497,40 @@
         if (item.type === 'pot') { p.ohms = 10000; p.knob = 0.5; }
         if (item.type === 'ldr') p.light = 0.5;
         if (item.type === 'switch') p.on = false;
+        if (item.type === 'capacitor' || item.type === 'electrolytic') p.uf = item.uf || Number(pickVal[item.key] || (item.type === 'capacitor' ? 0.1 : 100));
+        if (item.type === 'zener') p.volts = 5.1;
+        if (item.type === 'seg7') p.common = item.common || 'cathode';
+        if (item.type === 'tmp36') p.temp = 25;
+        if (item.type === 'sonar') p.cm = 100;
+        if (item.type === 'pir') p.motion = false;
+        if (item.type === 'dht11') { p.temp = 25; p.hum = 50; }
         return p;
+      }
+      // a module goes straight to its place beside the board
+      function placeModule(item) {
+        snapshot();
+        const p = newPart(item, [], false);
+        build.parts.push(p);
+        sel = { k: 'part', id: p.id };
+        act = null;
+        rebuilt();
+        changed(true);
+        const pins = C.TYPES[p.type].pins.join(', ');
+        announce(fill('Placed {name} beside the board. Its pins: {pins}.', { name: partWords(p, t, fill), pins }));
+        setHint(fill('{name} is beside the board: tap one of its pins, then a pin of the Arduino, to wire them. Its pins: {pins}.', { name: partWords(p, t, fill), pins }));
       }
 
       /* edits */
       function changed(structure) {
         touched = true;
+        quiet = 0;
         if (structure) { S && S.burnt.clear(); }
+        scheduleAnim();
         try { ctx.onChange && ctx.onChange(value()); } catch (e) { /* the page's own handler */ }
       }
       function placeAt(hole) {
         const item = act.item;
-        const at = legsAt(hole, footprint(item.type, act.rot));
+        const at = legsAt(hole, footprint(item.type, act.rot), null, item.type);
         if (!at) { setHint(t('That doesn’t fit there: a leg would land off the board or in a hole that’s taken. Try another hole, or rotate it.')); return false; }
         snapshot();
         const p = newPart(item, at, false);
@@ -1129,20 +1546,28 @@
       function legHint(p) {
         if (p.type === 'led') return fill('The LED’s + leg (the anode) is in {a}, its − leg in {b}. Current only flows from + to −.', { a: p.at[0], b: p.at[1] });
         if (p.type === 'resistor') { const b = C.bands(p.ohms); return fill('{ohms}: its bands are {bands}.', { ohms: C.fmtOhms(p.ohms), bands: andList(b.map((x) => bandName(x, t))) }); }
+        if (p.type === 'npn') return fill('The transistor’s legs: E (emitter) in {a}, B (base) in {b}, C (collector) in {c}. A small current into B lets a big one flow from C to E.', { a: p.at[0], b: p.at[1], c: p.at[2] });
+        if (p.type === 'mosfet') return fill('The MOSFET’s legs: G (gate) in {a}, D (drain) in {b}, S (source) in {c}. 5 V on G lets current flow from D to S.', { a: p.at[0], b: p.at[1], c: p.at[2] });
+        if (p.type === 'diode' || p.type === 'zener') return fill('The diode’s anode is in {a}, its cathode (the striped end) in {b}. Current flows only from anode to cathode.', { a: p.at[0], b: p.at[1] });
+        if (p.type === 'electrolytic') return fill('The capacitor’s + leg is in {a}, its − leg (the striped side) in {b}. It must not go in backwards.', { a: p.at[0], b: p.at[1] });
+        if (p.type === 'tmp36') return fill('The TMP36’s legs: +Vs in {a} (to 5V), Vout in {b} (to an analog pin), GND in {c}.', { a: p.at[0], b: p.at[1], c: p.at[2] });
+        if (p.type === 'rgb') return fill('The RGB LED’s legs: red in {a}, the common − in {b}, green in {c}, blue in {d}.', { a: p.at[0], b: p.at[1], c: p.at[2], d: p.at[3] });
+        if (p.type === 'seg7') return fill('The display’s top pins are g, f, COM, a, b ({a} to {b}); its bottom pins e, d, COM, c, dp ({c} to {d}).', { a: p.at[0], b: p.at[4], c: p.at[5], d: p.at[9] });
         return fill('Placed in {holes}.', { holes: p.at.join(', ') });
       }
       function rotate() {
         if (locked) return;
-        if (act && act.k === 'place') { act.rot = (act.rot + 1) % 4; drawOverlay(); return; }
+        if (act && act.k === 'place') { act.rot = C.TYPES[act.item.type].fixed ? 0 : (act.rot + 1) % 4; drawOverlay(); return; }
         if (!sel || sel.k !== 'part') return;
         const p = build.parts.find((x) => x.id === sel.id);
         if (!p) return;
+        if (C.TYPES[p.type].dock || C.TYPES[p.type].fixed) { setHint(t('This part sits one way only.')); return; }
         const offs = offsetsOf(p).map(([x, y]) => [-y, x]);
         // turn about each leg in turn until it fits
         for (let i = 0; i < p.at.length; i++) {
           const piv = offs[i], h = C.HOLES.get(p.at[i]);
           const anchor = C.holeAt(h.x - piv[0], h.y - piv[1]);
-          const at = anchor && legsAt(anchor, offs, p.id);
+          const at = anchor && legsAt(anchor, offs, p.id, p.type);
           if (at) { snapshot(); p.at = at; rebuilt(); changed(true); announce(fill('Turned {name}: now in {holes}.', { name: partWords(p, t, fill), holes: at.join(', ') })); return; }
         }
         setHint(t('There’s no room to turn it here.'));
@@ -1150,7 +1575,13 @@
       function removeSel() {
         if (locked || !sel) return;
         snapshot();
-        if (sel.k === 'part') { const p = build.parts.find((x) => x.id === sel.id); build.parts = build.parts.filter((x) => x.id !== sel.id); announce(fill('Took {name} back to the bin.', { name: partWords(p, t, fill) })); }
+        if (sel.k === 'part') {
+          const p = build.parts.find((x) => x.id === sel.id);
+          build.parts = build.parts.filter((x) => x.id !== sel.id);
+          // a module's wires go with it
+          if (p && C.TYPES[p.type].dock) build.wires = build.wires.filter((w) => !w.from.startsWith(p.id + '.') && !w.to.startsWith(p.id + '.'));
+          announce(fill('Took {name} back to the bin.', { name: partWords(p, t, fill) }));
+        }
         else { build.wires.splice(sel.i, 1); announce(t('Wire removed.')); }
         sel = null;
         rebuilt();
@@ -1246,10 +1677,18 @@
       function tapPart(id) {
         if (locked) return;
         if (act && act.k === 'place') return;
-        if (act && act.k === 'probe') { const p = build.parts.find((x) => x.id === id); if (p) tapPoint(p.at[0]); return; }
+        if (act && act.k === 'probe') { const p = build.parts.find((x) => x.id === id); if (p) tapPoint(p.at[0] || p.id + '.' + C.TYPES[p.type].pins[0]); return; }
         if (act && act.k === 'wire') { act = null; setHint(''); }
         const p = build.parts.find((x) => x.id === id);
         if (!p) return;
+        if (p.type === 'pir') { setMotion(p, !p.motion); }
+        if (C.TYPES[p.type].dock) {
+          sel = { k: 'part', id };
+          drawBuild();
+          setHint(fill('{name}: tap one of its pins ({pins}) to wire it. Delete takes it back to the bin.', { name: partWords(p, t, fill), pins: C.TYPES[p.type].pins.join(', ') }));
+          announce(partWords(p, t, fill));
+          return;
+        }
         if (p.type === 'switch') {
           p.on = !p.on;
           S.set('on', id, p.on);
@@ -1270,6 +1709,7 @@
         if (!S || !S.inputs.press || !has(S.inputs.press, id)) return;
         S.set('press', id, down);
         touched = touched || down;
+        quiet = 0;
         paintLive();
       }
 
@@ -1335,9 +1775,10 @@
         if (!g.moved) {
           g.moved = true;
           if (g.pressing) { press(g.pressing, false); g.pressing = null; }
-          if (locked) g.k = 'pan';
+          const gp = g.part && build.parts.find((x) => x.id === g.part);
+          if (locked || (gp && C.TYPES[gp.type].dock)) g.k = root.classList.contains('is-zoomed') || locked ? 'pan' : 'none'; // a module stays in its place
           else if (g.part && !(act && act.k === 'probe')) {
-            const p = build.parts.find((x) => x.id === g.part);
+            const p = gp;
             const near = pointNear(g.sx, g.sy);
             const grab = near && C.HOLES.has(near) ? near : p.at[0];
             const gh = C.HOLES.get(grab), h0 = C.HOLES.get(p.at[0]);
@@ -1392,7 +1833,7 @@
         }
         if (g.k === 'move' && dragPart) {
           const p = build.parts.find((x) => x.id === dragPart.id);
-          const at = ghostAt && legsAt(ghostAt, dragPart.offs, p.id);
+          const at = ghostAt && legsAt(ghostAt, dragPart.offs, p.id, p.type);
           dragPart = null; ghostAt = null;
           if (at && at.join() !== p.at.join()) { snapshot(); p.at = at; rebuilt(); changed(true); announce(fill('Moved {name} to {holes}.', { name: partWords(p, t, fill), holes: at.join(', ') })); }
           else drawOverlay();
@@ -1424,7 +1865,7 @@
 
       /* the keyboard: a cursor over the holes and pins */
       const ROW_ORDER = ['-T', '+T', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', '+B', '-B', 'terms'];
-      const termList = [...L.terms.keys()];
+      let termList = [...L.terms.keys()];
       function rowOf(name) { if (C.HOLES.has(name)) return C.HOLES.get(name).row; return 'terms'; }
       function moveCursor(dx, dy) {
         let row = rowOf(cursor);
@@ -1489,6 +1930,9 @@
         e.preventDefault();
         const q = C.parsePoint(goIn.value, spec.arduino);
         let name = q && (q.hole || q.term || (q.rail ? q.rail + nearestRail(q.col || 1) : null));
+        // a module's pin, like SV1.SIG
+        const typed = goIn.value.trim().toLowerCase();
+        if (!name && /\./.test(typed)) name = [...L.terms.keys()].find((k) => k.toLowerCase() === typed) || null;
         if (name && !C.HOLES.has(name) && !L.terms.has(name)) name = null;
         if (!name) { setHint(t('Type a hole like a12 (a row a to j, a column 1 to 30), a rail like +T5, or a pin like D13, 5V or GND.')); return; }
         cursor = name;
@@ -1520,11 +1964,12 @@
           b.addEventListener('click', () => choose(it));
           b.addEventListener('pointerdown', (e) => binDrag(e, it));
           row.appendChild(b);
-          if ((it.type === 'led' && it.color === 'any') || (it.type === 'resistor' && !it.ohms)) {
-            const s = hostEl('select', 'bb-item__pick', { 'aria-label': it.type === 'led' ? t('LED colour') : t('Resistor value') });
-            const opts = it.type === 'led' ? C.LED_COLORS : C.STANDARD;
-            opts.forEach((o) => { const op = hostEl('option', null, { value: String(o) }, it.type === 'led' ? colorName(o, t) : C.fmtOhms(o)); s.appendChild(op); });
-            s.value = String(pickVal[it.key] || (it.type === 'led' ? 'red' : 220));
+          const cap = it.type === 'capacitor' || it.type === 'electrolytic';
+          if ((it.type === 'led' && it.color === 'any') || (it.type === 'resistor' && !it.ohms) || (cap && !it.uf)) {
+            const s = hostEl('select', 'bb-item__pick', { 'aria-label': it.type === 'led' ? t('LED colour') : cap ? t('Capacitor value') : t('Resistor value') });
+            const opts = it.type === 'led' ? C.LED_COLORS : cap ? C.CAP_STANDARD.filter((u) => (it.type === 'capacitor' ? u <= 1 : u >= 1)) : C.STANDARD;
+            opts.forEach((o) => { const op = hostEl('option', null, { value: String(o) }, it.type === 'led' ? colorName(o, t) : cap ? C.fmtFarads(o) : C.fmtOhms(o)); s.appendChild(op); });
+            s.value = String(pickVal[it.key] || (it.type === 'led' ? 'red' : it.type === 'capacitor' ? 0.1 : cap ? 100 : 220));
             s.addEventListener('change', () => { pickVal[it.key] = it.type === 'led' ? s.value : Number(s.value); drawOverlay(); });
             row.appendChild(s);
           }
@@ -1535,19 +1980,30 @@
       }
       function choose(it) {
         if (locked) return;
+        if (C.TYPES[it.type].dock) { placeModule(it); return; }
         if (act && act.k === 'place' && act.item.key === it.key) { act = null; setHint(''); drawBin(); drawOverlay(); return; }
         act = { k: 'place', item: it, rot: act && act.k === 'place' ? act.rot : 0 };
         sel = null;
         ghostAt = cursorOn && C.HOLES.has(cursor) ? cursor : null;
         drawBin();
         drawOverlay();
-        const what = it.type === 'led' ? t('Tap a hole for the LED’s + leg (the anode); the − leg goes in the next column. R turns it.') : it.type === 'pot' || it.type === 'switch' ? t('Tap a hole for its first leg; the others go in the next two columns. R turns it.') : t('Tap a hole for its first leg. R turns it.');
+        const ty = it.type;
+        const what = ty === 'led' ? t('Tap a hole for the LED’s + leg (the anode); the − leg goes in the next column. R turns it.')
+          : ty === 'pot' || ty === 'switch' ? t('Tap a hole for its first leg; the others go in the next two columns. R turns it.')
+            : ty === 'npn' ? t('Tap a hole for the transistor’s E leg; B and C go in the next two columns. R turns it.')
+              : ty === 'mosfet' ? t('Tap a hole for the MOSFET’s G leg; D and S go in the next two columns. R turns it.')
+                : ty === 'tmp36' ? t('Tap a hole for the TMP36’s +Vs leg; Vout and GND go in the next two columns. R turns it.')
+                  : ty === 'diode' || ty === 'zener' ? t('Tap a hole for the diode’s anode; the striped end (the cathode) goes four columns on. R turns it.')
+                    : ty === 'electrolytic' ? t('Tap a hole for the capacitor’s + leg; the − leg goes in the next column. R turns it.')
+                      : ty === 'rgb' ? t('Tap a hole for the red leg; the common −, green and blue legs follow in the next columns. R turns it.')
+                        : ty === 'seg7' ? t('Tap a hole in row a to e for the display’s top-left pin (g); it sits across the centre gap.')
+                          : t('Tap a hole for its first leg. R turns it.');
         setHint(what);
         announce(what);
       }
       // dragging from the bin onto the board
       function binDrag(e, it) {
-        if (locked || e.button > 0) return;
+        if (locked || e.button > 0 || C.TYPES[it.type].dock) return;
         const x0 = e.clientX, y0 = e.clientY;
         let dragging = false;
         const target = e.currentTarget;
@@ -1620,15 +2076,57 @@
             });
             lab.append(input, out);
             controls.appendChild(lab);
+          } else if (p.type === 'sonar') {
+            // the distance to the obstacle: 2 cm to 4 m, finer close up
+            const toCm = (x) => Math.round(2 * Math.pow(200, x / 100)), toX = (cm) => Math.round(100 * Math.log(cm / 2) / Math.log(200));
+            slider(p, fill('Distance from {id}', { id: p.id }), toX(p.cm), (x) => { p.cm = toCm(x); S.set('cm', p.id, p.cm); return fill('{cm} cm', { cm: p.cm }); }, fill('{cm} cm', { cm: Math.round(p.cm) }));
+          } else if (p.type === 'tmp36' || p.type === 'dht11') {
+            const lo = p.type === 'tmp36' ? -10 : 0, hi = p.type === 'tmp36' ? 60 : 50;
+            slider(p, fill('Temperature at {id}', { id: p.id }), Math.round((p.temp - lo) / (hi - lo) * 100), (x) => { p.temp = Math.round(lo + (hi - lo) * x / 100); S.set('temp', p.id, p.temp); return fill('{c} °C', { c: p.temp }); }, fill('{c} °C', { c: Math.round(p.temp) }));
+            if (p.type === 'dht11') slider(p, fill('Humidity at {id}', { id: p.id }), Math.round((p.hum - 20) / 70 * 100), (x) => { p.hum = Math.round(20 + 70 * x / 100); S.set('hum', p.id, p.hum); return fill('{h}%', { h: p.hum }); }, fill('{h}%', { h: Math.round(p.hum) }));
+          } else if (p.type === 'pir') {
+            const b = button('bb-ctl', motionWords(p), () => { if (!locked) setMotion(p, !p.motion); }, { 'aria-pressed': p.motion ? 'true' : 'false', 'data-ctl': p.id });
+            ctlRefs[p.id] = b;
+            controls.appendChild(b);
           }
         });
         controls.hidden = !controls.childNodes.length;
         if (had) { const again = controls.querySelector(`[data-ctl="${had}"]`); if (again) again.focus({ preventScroll: true }); }
       }
       const lightWord = (x) => (x < 0.2 ? t('dark') : x < 0.5 ? t('dim') : x < 0.8 ? t('bright') : t('very bright'));
+      // a slider below the bench for a sensor's world: set(0-100) changes it and gives the words to show
+      function slider(p, label, x0, set, words) {
+        const lab = hostEl('label', 'bb-ctl bb-ctl--slider');
+        lab.appendChild(hostEl('span', null, null, label));
+        const input = hostEl('input', null, { type: 'range', min: '0', max: '100', step: '1', 'aria-valuetext': words });
+        input.value = String(clamp(x0, 0, 100));
+        const out = hostEl('output', null, null, words);
+        input.addEventListener('input', () => {
+          if (locked) return;
+          out.textContent = set(Number(input.value));
+          input.setAttribute('aria-valuetext', out.textContent);
+          touched = true;
+          paintLive();
+          changed(false);
+        });
+        lab.append(input, out);
+        controls.appendChild(lab);
+      }
+      const motionWords = (p) => (p.motion ? fill('Motion at {id}: someone moves', { id: p.id }) : fill('Motion at {id}: still', { id: p.id }));
+      function setMotion(p, x) {
+        if (locked) return;
+        p.motion = Boolean(x);
+        S.set('motion', p.id, p.motion);
+        touched = true;
+        changed(false);
+        paintLive();
+        const ctl = ctlRefs[p.id];
+        if (ctl) { ctl.textContent = motionWords(p); ctl.setAttribute('aria-pressed', p.motion ? 'true' : 'false'); }
+        announce(motionWords(p));
+      }
 
       /* the sketch */
-      let raf = 0, realBase = 0, simBase = 0, onScreen = true, lastShown = -1;
+      let raf = 0, onScreen = true, lastShown = -1;
       function markErrLine(line) {
         if (!nums) return;
         nums.classList.toggle('has-err', Boolean(line));
@@ -1655,8 +2153,7 @@
         serialText = '';
         S.start();
         running = true;
-        realBase = performance.now();
-        simBase = 0;
+        lastFrame = 0;
         runBtn.textContent = t('Upload again');
         stopBtn.disabled = false;
         paintLive();
@@ -1671,7 +2168,11 @@
         if (runState) runState.textContent = t('Stopped');
         paintLive();
       }
-      const animating = () => !destroyed && onScreen && !document.hidden && ((running && S && S.vm && !S.vm.done) || (!reduce && spinSpeed));
+      // time moves on while a sketch runs, or while a capacitor charges or discharges (until it settles)
+      let quiet = 0, lastVc = null;
+      const sketchOn = () => Boolean(running && S && S.vm && !S.vm.done);
+      const timeFlows = () => Boolean(S && (sketchOn() || (S.dynamic && quiet < 2000) || S.events.length));
+      const animating = () => !destroyed && onScreen && !document.hidden && (timeFlows() || (!reduce && spinSpeed));
       function scheduleAnim() { if (!raf && animating()) { raf = requestAnimationFrame(frame); } }
       let lastFrame = 0;
       function frame(now) {
@@ -1679,24 +2180,29 @@
         if (!animating()) { lastFrame = 0; return; }
         const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
         lastFrame = now;
-        if (running && S.vm && !S.vm.done) {
-          const target = simBase + (now - realBase) * 1000;
-          const before = S.vm.t;
-          C.advance(S.vm, target, 30000);
-          S.tones();
-          if (S.vm.t < target - 150000) { realBase = now; simBase = S.vm.t; } // a busy sketch: let it run slower than real time
-          if (S.vm.error) { const err = S.vm.error; stopSketch(); showErr(err); }
-          if (serialText) {
+        if (timeFlows() && dt > 0) {
+          const t0 = S.tc;
+          // a busy sketch runs slower than real time rather than freezing the page
+          S.runTo(S.tc + dt * 1e6, 30000);
+          if (S.vm && S.vm.error) { const err = S.vm.error; stopSketch(); showErr(err); }
+          if (S.dynamic) {
+            const most = lastVc && lastVc.length === S.vc.length ? Math.max(0, ...Array.from(S.vc, (x, i) => Math.abs(x - lastVc[i]))) : 1;
+            quiet = most < 1e-4 && !sketchOn() ? quiet + dt * 1000 : 0;
+            lastVc = Float64Array.from(S.vc);
+          }
+          if (serialOut && serialText) {
             const cur = serialOut.textContent + serialText;
             serialOut.textContent = cur.length > 6000 ? cur.slice(-5000) : cur;
             serialText = '';
             serialOut.scrollTop = serialOut.scrollHeight;
             if (R.ledTX) { R.ledTX.setAttribute('fill', '#ffd76e'); setTimeout(() => { if (R.ledTX) R.ledTX.setAttribute('fill', '#6b5a3a'); }, 60); }
           }
-          if (S.dirty || S.vm.t !== before) paintLive();
-          const sec = Math.floor(S.vm.t / 100000) / 10;
-          if (sec !== lastShown && runState) { lastShown = sec; runState.textContent = fill('Running · {s} s', { s: sec.toFixed(1) }); }
-          if (S.vm && S.vm.noBegin && !serialOut.textContent && !S.vm.toldBegin) { S.vm.toldBegin = true; serialOut.textContent = t('(Nothing is sent until setup() calls Serial.begin(9600);)'); }
+          if (S.dirty || S.tc !== t0) paintLive();
+          if (sketchOn()) {
+            const sec = Math.floor(S.tc / 100000) / 10;
+            if (sec !== lastShown && runState) { lastShown = sec; runState.textContent = fill('Running · {s} s', { s: sec.toFixed(1) }); }
+            if (S.vm.noBegin && !serialOut.textContent && !S.vm.toldBegin) { S.vm.toldBegin = true; serialOut.textContent = t('(Nothing is sent until setup() calls Serial.begin(9600);)'); }
+          }
         }
         if (spinSpeed && !reduce && R.prop && L.mot) {
           spinAngle = (spinAngle + spinSpeed * dt * 900) % 360;
@@ -1706,14 +2212,13 @@
         raf = requestAnimationFrame(frame);
       }
       const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => {
-        const was = onScreen;
         onScreen = es.some((x) => x.isIntersecting);
-        if (onScreen && !was && running) { realBase = performance.now(); simBase = S && S.vm ? S.vm.t : 0; }
         if (!onScreen) sound.set(false);
+        lastFrame = 0;
         scheduleAnim();
       }) : null;
       if (io) io.observe(root);
-      const onVis = () => { if (!document.hidden && running) { realBase = performance.now(); simBase = S && S.vm ? S.vm.t : 0; } if (document.hidden) sound.set(false); scheduleAnim(); };
+      const onVis = () => { if (document.hidden) sound.set(false); lastFrame = 0; scheduleAnim(); };
       document.addEventListener('visibilitychange', onVis);
 
       // first drawing
@@ -1756,6 +2261,7 @@
           running = false;
           if (raf) cancelAnimationFrame(raf);
           clearTimeout(sayTimer);
+          clearTimeout(clickTimer);
           if (io) io.disconnect();
           document.removeEventListener('visibilitychange', onVis);
           svg.removeEventListener('pointerdown', onDown);
@@ -1781,7 +2287,7 @@
 
     // the words for a build: "a red LED, a 220 Ω resistor and 3 wires; a 9-line sketch"
     function buildWords(b, spec) {
-      const bits = b.parts.map((p) => (p.type === 'led' ? F('a {color} LED', { color: colorName(p.color, T) }) : p.type === 'resistor' ? F('a {ohms} resistor', { ohms: C.fmtOhms(p.ohms) }) : partName(p.type, T)));
+      const bits = b.parts.map((p) => (p.type === 'led' ? F('a {color} LED', { color: colorName(p.color, T) }) : p.type === 'resistor' ? F('a {ohms} resistor', { ohms: C.fmtOhms(p.ohms) }) : p.type === 'capacitor' || p.type === 'electrolytic' ? F('a {uf} capacitor', { uf: C.fmtFarads(p.uf) }) : partName(p.type, T)));
       if (b.wires.length) bits.push(b.wires.length === 1 ? T('1 wire') : F('{n} wires', { n: b.wires.length }));
       let s = bits.length ? andList(bits) : T('Nothing built');
       const lines = (b.code || '').trim() ? b.code.trim().split('\n').length : 0;
@@ -1823,8 +2329,12 @@
         if (!ref) return '';
         const g = tk.goal, ohms = ref.info.ohms ? C.fmtOhms(ref.info.ohms) : '';
         const color = ref.info.color ? colorName(ref.info.color, T) : '';
+        const drv = ref.info.driver;
+        const motorWords = (pin) => (drv === 'relay' ? F('Pin {pin} to the relay’s IN, its VCC to 5V and GND to GND; the battery’s + through COM and NO to the motor, and the motor back to −.', { pin })
+          : drv === 'mosfet' ? F('Pin {pin} through a {ohms} resistor to the MOSFET’s gate; its source to GND; the motor from + to its drain.', { pin, ohms })
+            : F('Pin {pin} through a {ohms} resistor to the transistor’s base; its emitter to GND; the motor from + to its collector, with a diode across the motor (stripe towards +) and the battery’s − joined to GND.', { pin, ohms }));
         switch (g.type) {
-          case 'light': return g.part === 'motor' ? T('Join the motor’s two terminals to the battery’s + and −.') : g.part === 'buzzer' ? T('Join the buzzer’s + leg towards +, and its other leg back to −.')
+          case 'light': return g.part === 'motor' && g.pin != null ? motorWords(g.pin) : g.part === 'motor' ? T('Join the motor’s two terminals to the battery’s + and −.') : g.part === 'buzzer' ? T('Join the buzzer’s + leg towards +, and its other leg back to −.')
             : g.pin != null ? F('From pin {pin}, a {ohms} resistor, then the LED’s + leg; its − leg to GND; and a sketch that sets pin {pin} HIGH.', { pin: g.pin, ohms })
               : F('A loop from + through a {ohms} resistor and the {color} LED’s + leg (the anode), then from its − leg back to −.', { ohms, color });
           case 'series': return F('One loop: + → a {ohms} resistor → each LED in turn, + leg first → −.', { ohms });
@@ -1838,6 +2348,13 @@
               : F('The LDR in the loop with a {ohms} resistor and the LED: more light, less resistance, a brighter LED.', { ohms });
           case 'blink': return F('Pin {pin} through a {ohms} resistor to the LED’s + leg, its − leg to GND; in loop(): HIGH, delay({on}), LOW, delay({off}).', { pin: g.pin, ohms, on: g.on_ms, off: g.off_ms });
           case 'serial': return F('In setup(): Serial.begin(9600); then Serial.println("{text}");', { text: g.text });
+          case 'servo': return g.sweep ? F('The servo’s GND (brown) to GND, VCC (red) to 5V, SIG (orange) to pin 9; in loop(), write() each angle from {lo} to {hi} and back, with a short delay().', { lo: g.sweep[0], hi: g.sweep[1] })
+            : F('The servo’s GND (brown) to GND, VCC (red) to 5V, SIG (orange) to pin {pin}; then #include <Servo.h>, attach({pin}) and write({angle}).', { pin: g.pin != null ? g.pin : 9, angle: g.angle });
+          case 'display': return F('The segments a to g wired to pins 2 to 8, COM through a {ohms} resistor to GND (or 5V, for common anode); then light the segments the digit {digit} needs.', { ohms, digit: g.digit });
+          case 'lcd': return F('The LCD’s GND to GND, VCC to 5V, SDA to A4, SCL to A5; then lcd.init(), lcd.backlight(), lcd.setCursor(0, 0) and lcd.print("{text}").', { text: g.text });
+          case 'distance': return F('The sensor’s VCC to 5V, GND to GND, TRIG to pin 9, ECHO to pin 10; send a 10 µs pulse on TRIG, time the echo with pulseIn(), and light the LED when the distance (duration × 0.034 / 2) is under {cm} cm.', { cm: g.cm });
+          case 'temperature': return (g.by === 'dht11' ? F('The DHT11’s DATA to a pin (with DHT dht(pin, DHT11)); read dht.readTemperature(), and switch the output on above {above} °C.', { above: g.above }) : F('The TMP36 from 5V to GND, its middle leg to A0; temperature = (volts − 0.5) × 100; switch the output on above {above} °C.', { above: g.above })) + (g.part === 'motor' ? ' ' + motorWords(g.led_pin != null ? g.led_pin : 9) : '');
+          case 'fade': return F('The switch feeds a {uf} capacitor (+ leg towards +) and, through a {ohms} resistor, the LED: when the switch opens, the capacitor keeps the LED glowing as it empties.', { ohms, uf: C.fmtFarads((ref.build.parts.find((p) => p.type === 'electrolytic' || p.type === 'capacitor') || { uf: 1000 }).uf) });
           default: return buildWords(ref.build, tk.spec);
         }
       },
