@@ -1,0 +1,45 @@
+/* =====================================================================
+   The geometry board (assets/js/widgets/geometry.js), on the lesson's
+   parchment, in its inks (base.css, lesson.css): ink for the figure,
+   blue for what is constructed from it, gold for marked angles, red for
+   the points the learner drags. The drawing's colours are attributes (so
+   a still picture in the book needs none of this); this adds the text
+   sizes, the panel and what responds to the learner.
+   ===================================================================== */
+.geo{color:var(--ink,#2b1d11);font-family:var(--font-body,Georgia,serif);font-size:1.02rem;line-height:1.4;font-variant-numeric:lining-nums tabular-nums}
+
+/* the board: as wide as there is room for, centred */
+.geo__board{display:flex;justify-content:center}
+.geo__svg{display:block;max-width:100%;height:auto;border:1px solid var(--parchment-edge,#c9b48a);border-radius:5px;background:#f6eedb;box-shadow:inset 0 0 24px rgba(150,110,60,.12);touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;font-family:"Cormorant Garamond",var(--font-body,Georgia,serif);font-variant-numeric:lining-nums tabular-nums}
+.geo__svg text{font-size:15px;font-weight:600}
+.geo__svg .geo-name{font-size:19px;font-style:italic;font-weight:600}
+.geo__svg .geo-deg,.geo__svg .geo-len{font-size:15px;font-weight:700}
+.geo__svg .geo-note{font-size:15px;font-style:italic;font-weight:600}
+.geo__svg .geo-ticks text{font-size:13px;font-weight:500}
+
+/* a draggable point's handle: invisible, big, and the keyboard's way in */
+.geo__hit{fill:transparent;stroke:none;cursor:grab;touch-action:none;outline:none}
+.geo.is-dragging .geo__hit,.geo.is-dragging .geo__svg{cursor:grabbing}
+.geo.is-locked .geo__hit{cursor:default}
+
+/* the measurements, live */
+.geo__panel{display:flex;flex-wrap:wrap;justify-content:center;gap:.25rem 1.4rem;margin:.55rem auto 0;max-width:640px;font-size:1.06rem}
+.geo__m{display:inline-flex;align-items:baseline;gap:.45rem;white-space:nowrap}
+.geo__mlabel{color:var(--ink-soft,#5b4730);font-style:italic;white-space:normal}
+.geo__mval{color:var(--ink,#2b1d11);font-weight:600}
+
+/* what to do, and Reset */
+.geo__bar{display:flex;align-items:center;justify-content:space-between;gap:.4rem 1rem;flex-wrap:wrap;max-width:640px;margin:.45rem auto 0}
+.geo__hint{margin:0;font-style:italic;color:var(--ink-soft,#5b4730);font-size:.98rem}
+.geo__reset{flex:none;min-height:40px;padding:.3rem .95rem;border:1px solid var(--parchment-edge,#c9b48a);border-radius:999px;background:rgba(255,250,238,.7);color:var(--ink,#2b1d11);font:inherit;font-size:.95rem;cursor:pointer}
+.geo__reset:hover{background:#fffaf0;border-color:var(--ink-gold,#8a6128)}
+.geo__reset:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:2px}
+.geo__reset:disabled{opacity:.55;cursor:default}
+
+/* for screen readers only */
+.geo__sr{position:absolute;width:1px;height:1px;margin:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+
+@media (max-width:520px){
+  .geo__panel{justify-content:flex-start;gap:.15rem 1rem;font-size:1.02rem}
+  .geo__bar{justify-content:flex-start}
+}
