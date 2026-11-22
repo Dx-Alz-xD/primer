@@ -487,7 +487,7 @@ function numberQuestions(sections) {
 // Interactive parts that failed their checks go back to the model once, each with the reason its kind
 // gives (widgetWhy), to be fixed. What comes back is checked again and put where the part was; anything
 // still wrong stays out. Returns how many were put back. Never throws: the lesson is fine without them.
-async function repairWidgets(lesson, failed, { kinds, lessonTitle }) {
+export async function repairWidgets(lesson, failed, { kinds, lessonTitle }) {
   const todo = failed.filter((f) => lesson.sections.includes(f.section)).slice(0, 6);
   if (!todo.length) return 0;
   const items = todo.map((f, i) => {

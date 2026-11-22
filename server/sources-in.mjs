@@ -47,7 +47,8 @@ import { q, tx, now, schema, parseJSON, DATA_DIR } from './db.mjs';
 import { HttpError, send, sendJSON, readBody, readRaw, text, longText, overLimit } from './http.mjs';
 import { requireUser, sessionUser } from './auth.mjs';
 import { hooks, ownCourse, insertCourse, loadCourse, cleanMeta, flatten, newId } from './data.mjs';
-import { askJSON, askVision, visionReady, cached, normalizeLesson, OUTLINE_SYSTEM, LESSON_SYSTEM, LANG_NAMES } from './ai.mjs';
+import { askJSON, askVision, visionReady, cached, normalizeLesson, repairWidgets, OUTLINE_SYSTEM, LESSON_SYSTEM, LANG_NAMES } from './ai.mjs';
+import { widgetKinds, widgetPrompt, PROMPT_VERSION as WIDGETS_PROMPT_VERSION } from './widgets.mjs';
 import { screen, promptNote, safetyKey, REFUSED } from './safety.mjs';
 import { isLang } from './langs.mjs';
 import { refHooks } from './refs.mjs';
@@ -432,13 +433,19 @@ async function groundedLesson(user, row, meta, n, safety) {
   const gaps = arr(src.plan.gaps).filter(Boolean);
   const lang = meta.lang || 'en';
   const outlineLines = flat.map((l) => `${l.n}. [${l.unit}] ${l.title}${l.desc ? ` — ${l.desc}` : ''}`);
+  // interactive parts too (server/widgets.mjs), built from the material's own facts: the cards suit any
+  // subject, and a page of physics or chemistry gets its lab
+  const kinds = safety ? [] : widgetKinds({ topic: meta.title || src.title, title: me.title, desc: me.desc, instructions: meta.instructions });
   const key = {
     v: 1, kind: src.kind, n, title: me.title.toLowerCase(), lang, instructions: String(meta.instructions || '').toLowerCase(),
-    outline: sha(outlineLines.join('\n')), mat: sha(part.text), focus: focus.join(','), ...safetyKey(safety)
+    outline: sha(outlineLines.join('\n')), mat: sha(part.text), focus: focus.join(','), ...safetyKey(safety),
+    ...(kinds.length ? { w: kinds.join(','), wv: WIDGETS_PROMPT_VERSION } : {})
   };
   return cached('sflesson', key, async () => {
+    const failed = []; // interactive parts that failed their checks, sent back once to be fixed
     const { value, model } = await askJSON({
-      system: LESSON_SYSTEM + '\n' + GROUNDED_LESSON_RULES,
+      system: LESSON_SYSTEM + '\n' + GROUNDED_LESSON_RULES + widgetPrompt(kinds)
+        + (kinds.length ? '\nThe grounding rules hold for interactive parts too: build every card, board, circuit or task only from the material\'s own facts, names and numbers.' : ''),
       user: [
         `Course: "${meta.title || src.title}", built from ${KIND_LINE[src.kind] || KIND_LINE.knowledge}.`,
         `Teaching instructions from the learner: ${meta.instructions || 'none'}`,
@@ -462,7 +469,8 @@ async function groundedLesson(user, row, meta, n, safety) {
       timeoutMs: 110000,
       deadlineMs: 300000,
       validate: (raw) => {
-        const lesson = normalizeLesson(raw, me.title);
+        failed.length = 0;
+        const lesson = normalizeLesson(raw, me.title, failed);
         // no photos from the web in a lesson from the learner's own material, and none guessed later (photos.mjs)
         lesson.sections.forEach((s) => { s.blocks = s.blocks.filter((b) => b.t !== 'photo'); });
         lesson.photoCheck = 'none';
@@ -470,6 +478,7 @@ async function groundedLesson(user, row, meta, n, safety) {
       },
       label: `${src.kind} lesson ${n} "${me.title}"`
     });
+    if (failed.length) await repairWidgets(value, failed, { kinds, lessonTitle: me.title });
     return { lesson: value, model };
   });
 }
