@@ -1,0 +1,154 @@
+/* =====================================================================
+   The breadboard bench (assets/js/widgets/breadboard.js), on the
+   lesson's parchment: the bench itself is drawn like the real thing
+   (a white board, a green Arduino) and keeps its own colours (so a
+   still picture in the book needs none of this); the controls around
+   it use the ink colours of lesson.css, gold for what is chosen, red
+   for a warning.
+   ===================================================================== */
+.bb{position:relative;color:var(--ink,#2b1d11);font-family:var(--font-body);-webkit-tap-highlight-color:transparent}
+
+/* the toolbar */
+.bb-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .5rem;margin:0 0 .55rem}
+.bb-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.35rem;min-height:2.4rem;min-width:2.4rem;
+  font-family:var(--font-head);font-size:.98rem;line-height:1.1;color:var(--ink,#2b1d11);
+  background:#f2e8d0;border:1px solid #b39a6b;border-radius:4px;padding:.32rem .7rem;cursor:pointer;
+  transition:background-color .15s,border-color .15s,filter .15s;
+}
+.bb-btn:hover{border-color:var(--ink-gold,#8a6128);background:#efdfb8}
+.bb-btn:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:2px}
+.bb-btn:disabled{opacity:.5;cursor:default}
+.bb-btn[aria-pressed="true"]{background:#e2cc98;box-shadow:inset 0 2px 3px rgba(91,71,48,.25)}
+.bb-btn--small{min-height:1.9rem;padding:.15rem .55rem;font-size:.9rem}
+.bb-btn--go{
+  color:var(--gold-ink,#24160a);border-color:#8a6128;
+  background:linear-gradient(180deg,#f3d38f 0%,#d6a554 55%,#b07f3a 100%);
+  box-shadow:inset 0 1px 0 rgba(255,246,220,.6),inset 0 -1px 0 rgba(90,58,20,.3);
+}
+.bb-btn--go:hover{background:linear-gradient(180deg,#f3d38f 0%,#d6a554 55%,#b07f3a 100%);filter:brightness(1.06)}
+.bb-swatches{display:inline-flex;flex-wrap:wrap;gap:.25rem;align-items:center}
+.bb-swatch{
+  width:2.1rem;height:2.1rem;padding:0;border-radius:50%;border:2px solid #b39a6b;cursor:pointer;
+  background:var(--sw,#f2e8d0);font-family:var(--font-head);font-size:.72rem;color:var(--ink,#2b1d11);
+}
+.bb-swatch.is-auto{width:auto;min-width:2.6rem;border-radius:999px;padding:0 .45rem;background:#f2e8d0}
+.bb-swatch[aria-pressed="true"]{border-color:var(--ink,#2b1d11);box-shadow:0 0 0 2px #f6c445}
+.bb-swatch:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:2px}
+.bb-swatch:disabled{opacity:.45;cursor:default}
+.bb-go{display:inline-flex;align-items:center;gap:.3rem;margin-inline-start:auto}
+.bb-go__label{display:inline-flex;align-items:center;gap:.35rem;color:var(--ink-soft,#5b4730);font-size:.98rem}
+.bb-go__in{
+  width:4.6rem;min-height:2.3rem;padding:.2rem .45rem;font:inherit;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.95rem;
+  color:var(--ink,#2b1d11);background:rgba(255,250,235,.75);border:1px solid #b39a6b;border-radius:4px;
+}
+.bb-go__in:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:1px}
+
+/* the bench */
+.bb-stage{position:relative;border:1px solid #b9a47a;border-radius:6px;background:#e9e3d3;overflow:hidden}
+.bb-svg{
+  display:block;width:100%;height:auto;max-height:78vh;outline:none;
+  touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  font-family:Arial,Helvetica,sans-serif;
+}
+.bb.is-zoomed .bb-svg{touch-action:none}
+.bb-svg:focus-visible{box-shadow:inset 0 0 0 3px #d6a554}
+.bb-part{cursor:grab}
+.bb-part.bb-ghost{pointer-events:none}
+.bb-wire{cursor:pointer}
+.bb-wire.is-sel path:nth-child(3){stroke-dasharray:6 3}
+.bb-term{cursor:crosshair}
+.bb-over,.bb-strips,.bb-glow,.bb-smoke,.bb-waves,.bb-id{pointer-events:none}
+.bb-glow{transition:opacity .2s}
+.bb-waves{transition:opacity .1s}
+.bb.is-locked .bb-part,.bb.is-locked .bb-wire,.bb.is-locked .bb-term{cursor:default}
+.bb-zoom{position:absolute;bottom:6px;right:6px;display:flex;gap:4px}
+.bb-zbtn{
+  width:2.5rem;height:2.5rem;padding:0;border-radius:6px;border:1px solid #9c8a65;cursor:pointer;
+  background:rgba(250,244,228,.92);color:var(--ink,#2b1d11);font-size:1.25rem;line-height:1;font-family:var(--font-head);
+  box-shadow:0 1px 2px rgba(43,29,17,.25);
+}
+.bb-zbtn:disabled{opacity:.45;cursor:default}
+.bb-zbtn:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:1px}
+
+/* warnings and hints */
+.bb-status{margin:.5rem 0 0;padding:.4rem .75rem;border:1px solid rgba(138,97,40,.45);border-radius:4px;background:rgba(138,97,40,.08);color:var(--ink-soft,#5b4730);font-size:1rem;line-height:1.4}
+.bb-status.is-bad{border-color:rgba(154,51,36,.55);background:rgba(154,51,36,.09);color:var(--ink-red,#9a3324)}
+.bb-status[hidden],.bb-meter[hidden],.bb-controls[hidden],.bb-code__err[hidden]{display:none}
+.bb-hint{min-height:1.4em;margin:.35rem 0 0;font-style:italic;color:var(--ink-soft,#5b4730);font-size:.98rem;line-height:1.4}
+.bb-meter{margin:.35rem 0 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92rem;color:var(--ink,#2b1d11)}
+
+/* what the learner can press, flip and turn */
+.bb-controls{display:flex;flex-wrap:wrap;gap:.45rem .8rem;align-items:center;margin:.55rem 0 0}
+.bb-ctl{
+  display:inline-flex;align-items:center;gap:.45rem;min-height:2.6rem;padding:.3rem .7rem;
+  font-family:var(--font-head);font-size:.98rem;color:var(--ink,#2b1d11);
+  background:#f2e8d0;border:1px solid #b39a6b;border-radius:4px;
+}
+button.bb-ctl{cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+button.bb-ctl:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:2px}
+button.bb-ctl[aria-pressed="true"],.bb-ctl.is-down{background:#e2cc98;box-shadow:inset 0 2px 3px rgba(91,71,48,.3)}
+.bb-ctl--slider{background:transparent;border:0;padding:0;flex:1 1 13rem}
+.bb-ctl--slider input{flex:1;min-width:6rem;min-height:2rem;margin:0;accent-color:#8a6128;cursor:pointer}
+.bb-ctl--slider output{min-width:5.5em;font-family:var(--font-body);color:var(--ink-soft,#5b4730)}
+
+/* the parts bin: a drawer that scrolls sideways on a phone */
+.bb-bin{margin:.7rem 0 0}
+.bb-bin__head{margin:0 0 .3rem;font-family:var(--font-head);font-size:1.02rem;color:var(--ink-soft,#5b4730)}
+.bb-bin__list{display:flex;flex-wrap:wrap;gap:.4rem}
+.bb-bin__empty{margin:0;font-style:italic;color:var(--ink-soft,#5b4730)}
+.bb-item{display:inline-flex;align-items:stretch;gap:0;border:1px solid #b39a6b;border-radius:5px;background:#f6eed9;overflow:hidden}
+.bb-item__btn{
+  display:inline-flex;align-items:center;gap:.4rem;min-height:2.8rem;padding:.25rem .6rem .25rem .4rem;border:0;margin:0;
+  background:transparent;font-family:var(--font-head);font-size:.98rem;color:var(--ink,#2b1d11);cursor:pointer;touch-action:pan-x;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+}
+.bb-item__btn:hover{background:#efdfb8}
+.bb-item__btn.is-on{background:#e2cc98;box-shadow:inset 0 0 0 2px var(--ink-gold,#8a6128)}
+.bb-item__btn:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:-2px}
+.bb-item__btn:disabled{opacity:.5;cursor:default}
+.bb-item__icon{width:2.2rem;height:1.55rem;flex:none}
+.bb-item__n{font-family:var(--font-body);color:var(--ink-soft,#5b4730);font-size:.92rem}
+.bb-item__pick{border:0;border-inline-start:1px solid #c9b48a;background:#efe4c7;font:inherit;font-size:.92rem;color:var(--ink,#2b1d11);padding:0 .35rem;min-height:2.8rem}
+
+/* the Arduino's code and serial monitor */
+.bb-code{margin:.8rem 0 0;border:1px solid #b39a6b;border-radius:6px;background:rgba(255,250,235,.55);overflow:hidden}
+.bb-code__bar{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .6rem;padding:.45rem .6rem;border-bottom:1px solid #d6c59d;background:rgba(226,211,177,.45)}
+.bb-code__title{font-family:var(--font-head);font-size:1.05rem;margin-inline-end:auto}
+.bb-code__state{font-size:.92rem;color:var(--ink-soft,#5b4730);font-variant-numeric:tabular-nums;min-width:7.5em}
+.bb-code__edit{display:flex;align-items:stretch;background:#fbf7ec}
+.bb-code__nums{
+  margin:0;padding:.55rem .4rem .55rem .5rem;min-width:2.4em;text-align:right;overflow:hidden;user-select:none;
+  font:13.5px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#9c8c6c;background:#f1e8d2;border-inline-end:1px solid #e0d2b0;
+  white-space:pre;height:calc(12 * 1.5 * 13.5px + 1.1rem);box-sizing:border-box;
+}
+.bb-code__nums.has-err{color:var(--ink-red,#9a3324)}
+.bb-code__in{
+  flex:1;min-width:0;margin:0;padding:.55rem .6rem;border:0;resize:vertical;tab-size:2;
+  font:13.5px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#1f1a14;background:transparent;
+  height:calc(12 * 1.5 * 13.5px + 1.1rem);box-sizing:border-box;white-space:pre;overflow:auto;
+}
+.bb-code__in:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:-2px}
+.bb-code__err{margin:0;padding:.45rem .7rem;border-top:1px solid rgba(154,51,36,.35);background:rgba(154,51,36,.08);color:var(--ink-red,#9a3324);font-size:.98rem;line-height:1.4}
+.bb-serial{border-top:1px solid #d6c59d}
+.bb-serial__bar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.3rem .6rem;font-family:var(--font-head);font-size:.98rem;color:var(--ink-soft,#5b4730)}
+.bb-serial__out{
+  margin:0;padding:.4rem .7rem .6rem;min-height:3.2em;max-height:9.5em;overflow:auto;
+  font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;color:#d7f5d0;background:#1f2a22;white-space:pre-wrap;word-break:break-word;
+}
+
+.bb.is-locked .bb-bar,.bb.is-locked .bb-bin{opacity:.7}
+
+@media (max-width: 520px){
+  .bb-bar{gap:.3rem .35rem}
+  .bb-btn{padding:.3rem .5rem;font-size:.94rem;min-height:2.3rem}
+  .bb-swatch{width:1.85rem;height:1.85rem}
+  .bb-zbtn{width:2.3rem;height:2.3rem;background:rgba(250,244,228,.8)}
+  .bb-go{margin-inline-start:0}
+  .bb-bin__list{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:.35rem;scrollbar-width:thin}
+  .bb-item{flex:none}
+  .bb-svg{max-height:none}
+}
+@media (prefers-reduced-motion: reduce){
+  .bb-glow,.bb-waves,.bb-btn{transition:none}
+}

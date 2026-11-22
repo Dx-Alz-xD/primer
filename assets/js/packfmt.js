@@ -258,7 +258,7 @@
   }
 
   // the interactive parts this version knows (assets/js/widgets.js, server/widgets.mjs)
-  const WIDGET_KINDS = new Set(['chess', 'circuit', 'graph', 'music', 'arrange', 'chem', 'optics', 'geometry', 'numbers', 'physics', 'code']);
+  const WIDGET_KINDS = new Set(['chess', 'circuit', 'graph', 'music', 'arrange', 'chem', 'optics', 'geometry', 'numbers', 'physics', 'code', 'breadboard']);
   // a JSON object of plain data (no functions, nothing cyclic), no bigger than max characters
   function plainData(v, max) {
     if (!isObj(v)) return null;
