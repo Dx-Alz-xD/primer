@@ -35,6 +35,13 @@
    current in each wire is shared out within the nodes it joins. A cell
    whose two ends are joined with no resistance, or two different cells
    joined straight across, is a short circuit: no numbers, a warning.
+
+   Build mode (a spec with "build": true, or a "palette"): the learner puts
+   the parts on a grid of dots themselves, and the same solver runs on what
+   they build. See "build mode" below for its spec, the learner's build and
+   its goals (bulbs lit, parts in series or in parallel, a reading, an
+   equivalent resistance, a meter placed right, a switch that controls a
+   lamp), each checked on the learner's netlist, whatever its layout.
    ===================================================================== */
 (function (root, factory) {
   const api = factory();
@@ -124,6 +131,8 @@
   // opts.fixed: nothing for the learner to change (a connect task)
   function normSpec(raw, opts = {}) {
     if (!isObj(raw)) fail('the spec is not an object');
+    // a circuit the learner builds: its own checks (a block's, unless only drawn or described)
+    if (isBuild(raw)) return normBuildSpec(raw, { block: !opts.loose && !opts.apart && !opts.fixed });
 
     const nodes = new Map();
     const entries = Array.isArray(raw.nodes)
@@ -250,8 +259,17 @@
     const spec = { nodes: {}, parts, controls, labels };
     for (const [n, pos] of nodes) spec.nodes[n] = pos;
     const start = run(compile(spec), stateOf(spec, null));
-    if (start.short) fail('it is a short circuit as it starts');
+    if (start.short) fail(shortWhy(spec, start));
     return spec;
+  }
+
+  // a short circuit as it starts, in words the AI can act on: what joins which cell's ends
+  function shortWhy(spec, r) {
+    const type = (id) => (spec.parts.find((p) => p.id === id) || {}).type;
+    const amm = r.short.path.filter((id) => type(id) === 'ammeter'), sw = r.short.path.filter((id) => type(id) === 'switch');
+    const what = [amm.length ? `the ammeter ${amm.join(', ')}` : '', sw.length ? `the closed switch ${sw.join(', ')}` : '', r.short.path.some((id) => type(id) === 'wire') ? 'wires' : ''].filter(Boolean);
+    return `it is a short circuit as it starts: nothing but ${what.join(' and ') || 'wires'} joins the two ends of ${r.short.cells.join(' and ')}`
+      + (amm.length ? ' (an ammeter goes in series, in the loop, never straight across a cell)' : sw.length ? ' (open the switch, or put a part in its path)' : ' (put a bulb or resistor in the loop)');
   }
 
   // a slider's value: on one of its steps
@@ -611,7 +629,9 @@
   // A task: the circuit and its goal, checked; the goal can be met and isn't met from the start.
   function normTask(rawSpec, rawGoal) {
     if (!isObj(rawGoal)) fail('the goal is not an object');
+    if (isBuild(rawSpec)) return normBuildTask(rawSpec, rawGoal);
     const type = goalType(rawGoal.type != null ? rawGoal.type : rawGoal.kind);
+    if (!type && buildGoalType(rawGoal.type != null ? rawGoal.type : rawGoal.kind)) fail(`"${show(rawGoal.type)}" is a build goal: give the spec "build": true and a "palette" for the learner to build from`);
     if (!type) fail(`unknown goal type "${show(rawGoal.type)}" (light, reading or connect)`);
     let spec, goal;
     if (type === 'connect') {
@@ -645,11 +665,1018 @@
 
   // the learner's attempt, checked: { correct, invalid?, why? }
   function check(spec, goal, value) {
+    if (spec && spec.build) return checkBuild(spec, goal, value);
     if (!isObj(value)) return { correct: false, invalid: true };
     const st = stateOf(spec, value, goal);
     if (goal.type === 'connect' && !st.w) return { correct: false, invalid: true, why: { wire: true } };
     const m = meets(compile(spec), goal, st);
     return { correct: m.ok, why: m.why || null };
+  }
+
+  /* ---------------- build mode: the learner places the parts ----------------
+
+     A build spec, after normSpec:
+       build       true
+       grid        [W, H]: dots at whole x from 0 to W, y from 0 to H (W up to 8, H up to 6; 6 by 4 if not given)
+       nodes       { "P": [x, y] }  labelled dots (shown with their names: for "the resistance between P and Q")
+       parts       placed at the start: { id, type, from: [x, y], to: [x, y], value?, values?, closed?, color?, label?, locked }
+                   (locked: it stays where it is; its switch can still be tapped, its value chosen from "values")
+       palette     [{ type, ids: ["R1", "R2"], values: [4] (or a choice: [2, 4, 6]), color? }, { type: "wire", count }]
+                   its parts are named after the spec's own: R1, R2 ... by type, in order
+       resistance  ["P", "Q"]: the resistance between them is shown, live
+     Every part lies along a row or a column between two dots, a wire too. A wire joins every dot it passes;
+     another part joins only its two ends, and nothing may touch its middle (its leads). Two parts may share
+     the same two dots (a voltmeter across a resistor, a wire across a bulb), drawn side by side.
+     The learner's build (the "value"): { parts: [{ id, type, from, to, value?, closed? }, { type: "wire", from, to }] },
+     everything on the board, the spec's fixed parts too (only their switch and value count).
+     A build goal names parts by id and carries "answer", a build that meets it made only from the palette:
+       { type: "lit", on: [...], off: [...], order?: [brightest ... dimmest], equal?: [...] }
+       { type: "series" | "parallel", parts: [...] }        those parts carry current, all in series or in parallel
+       { type: "reading", meter, value, tolerance }          a meter placed rightly reads it
+       { type: "equivalent", between: [P, Q], value, tolerance }   the resistance between two labelled dots
+       { type: "measure", meter, part }                      a voltmeter across the part, or an ammeter in series with it
+       { type: "control", switch, on: [...] }                the switch turns those lamps on and off, and no other
+     Checks look at the netlist: wires, closed switches and ammeters join dots into one node; two parts are in
+     parallel when they join the same two nodes, and in series when every loop through one goes through the
+     other (removing both splits the circuit, removing either alone does not).
+  */
+
+  const BUILD = { w: 6, h: 4, maxW: 8, maxH: 6, wires: 40, wiresDefault: 30, choices: 12 };
+  const ID_PREFIX = { cell: 'B', battery: 'B', resistor: 'R', bulb: 'L', switch: 'S', led: 'D', ammeter: 'A', voltmeter: 'V' };
+  const DEFAULTS = { cell: 1.5, battery: 6, resistor: 10, bulb: 10 };
+  const LOADS = ['resistor', 'bulb', 'led', 'cell', 'battery'];
+  const pkey = (p) => p[0] + ',' + p[1];
+  const samePt = (a, b) => a[0] === b[0] && a[1] === b[1];
+  const straight = (a, b) => (a[0] === b[0]) !== (a[1] === b[1]);
+  const sameSpan = (p, a, b) => (samePt(p.from, a) && samePt(p.to, b)) || (samePt(p.from, b) && samePt(p.to, a));
+  const edgeKey = (p, q) => (p[0] < q[0] || (p[0] === q[0] && p[1] < q[1]) ? pkey(p) + '|' + pkey(q) : pkey(q) + '|' + pkey(p));
+  const where = (p) => `[${p[0]}, ${p[1]}]`;
+  // the dots along a straight span, both ends included
+  function along(a, b) {
+    const dx = Math.sign(b[0] - a[0]), dy = Math.sign(b[1] - a[1]);
+    const n = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+    const out = [];
+    for (let i = 0; i <= n; i++) out.push([a[0] + dx * i, a[1] + dy * i]);
+    return out;
+  }
+  const ends = (p) => (Array.isArray(p.nodes) ? p.nodes : Array.isArray(p.between) ? p.between : Array.isArray(p.ends) ? p.ends
+    : [p.from != null ? p.from : p.a, p.to != null ? p.to : p.b]);
+  const copyPart = (p) => { const q = Object.assign({}, p, { from: p.from.slice(), to: p.to.slice() }); if (p.values) q.values = p.values.slice(); return q; };
+
+  function isBuild(raw) {
+    return isObj(raw) && (parseBool(raw.build, false) === true || raw.mode === 'build' || raw.palette != null);
+  }
+
+  // a point: a labelled node's name, or [x, y] on the grid's dots
+  function buildPoint(v, nodes, grid, what) {
+    let p;
+    if (typeof v === 'string' || typeof v === 'number') {
+      const n = nodeName(v);
+      if (!nodes.has(n)) fail(`${what} names "${show(n)}", which is not in "nodes" (or give an [x, y] point)`);
+      p = nodes.get(n);
+    } else if (Array.isArray(v) && v.length >= 2) p = [parseNum(v[0]), parseNum(v[1])];
+    else if (isObj(v)) p = [parseNum(v.x), parseNum(v.y)];
+    else fail(`${what} needs a point: a node's name or [x, y]`);
+    const x = Math.round(p[0]), y = Math.round(p[1]);
+    if (!(Math.abs(x - p[0]) < 0.01 && Math.abs(y - p[1]) < 0.01)) fail(`${what} [${show(p[0])}, ${show(p[1])}] is not on a dot: build points are whole numbers`);
+    if (!(x >= 0 && y >= 0 && (!grid || (x <= grid[0] && y <= grid[1])))) fail(`${what} [${x}, ${y}] is off the grid (x 0 to ${grid ? grid[0] : BUILD.maxW}, y 0 to ${grid ? grid[1] : BUILD.maxH})`);
+    return [x, y];
+  }
+
+  function checkValue(type, v, who) {
+    const T = TYPES[type];
+    if (!Number.isFinite(v)) fail(`${who} needs a value in ${T.unit === 'V' ? 'volts' : 'ohms'}`);
+    if (v < T.min || v > T.max) fail(`${who}'s value ${show(v)} is outside ${T.min} to ${T.max} ${T.unit === 'V' ? 'V' : 'ohms'}`);
+    return round(v);
+  }
+  const valueKeys = (type) => (TYPES[type].source ? ['value', 'volts', 'voltage', 'emf', 'v'] : ['value', 'ohms', 'resistance', 'r']);
+  function valueIn(raw, type) {
+    const k = valueKeys(type).find((key) => raw[key] != null);
+    return k ? parseNum(raw[k]) : NaN;
+  }
+  // a choice of values: a list, or {min, max, step}
+  function choiceList(type, v, who) {
+    let xs;
+    if (Array.isArray(v)) xs = v.map(parseNum);
+    else if (isObj(v) && v.min != null && v.max != null) {
+      const min = parseNum(v.min), max = parseNum(v.max), step = v.step != null ? parseNum(v.step) : (max - min) / 4;
+      if (!(Number.isFinite(min) && Number.isFinite(max) && step > 0 && max > min)) fail(`${who}'s choice needs a min below its max, and a step`);
+      xs = [];
+      for (let x = min; x <= max + 1e-9 && xs.length <= BUILD.choices; x += step) xs.push(round(x));
+    } else fail(`${who}'s "values" is a list, like [2, 4, 6]`);
+    const out = [...new Set(xs.map((x) => checkValue(type, x, who)))];
+    if (!out.length) fail(`${who}'s "values" is empty`);
+    if (out.length > BUILD.choices) fail(`${who} has more than ${BUILD.choices} values to choose from`);
+    return out;
+  }
+  const colorOf = (p) => { const c = typeof p.color === 'string' ? p.color.trim().toLowerCase() : typeof p.colour === 'string' ? p.colour.trim().toLowerCase() : ''; return COLORS.includes(c) ? c : 'red'; };
+  function freeId(type, taken) {
+    let k = 1;
+    while (taken.has(ID_PREFIX[type] + k)) k++;
+    return ID_PREFIX[type] + k;
+  }
+
+  // why a part can't go there: '' when it can (ignore: the id of a part being moved)
+  const PLACE_WHY = {
+    off: 'is off the grid',
+    same: 'starts and ends on the same dot',
+    bent: 'is not along a row or a column',
+    covered: 'crosses the middle of another part (a part joins only at its two ends)',
+    overlap: 'runs along the same stretch as another part',
+    full: 'is on two dots that already have two parts (or a wire) between them'
+  };
+  function placeWhy(spec, parts, c, ignore) {
+    const W = spec.grid[0], H = spec.grid[1];
+    if (![c.from, c.to].every((p) => p[0] >= 0 && p[1] >= 0 && p[0] <= W && p[1] <= H)) return 'off';
+    if (samePt(c.from, c.to)) return 'same';
+    if (!straight(c.from, c.to)) return 'bent';
+    const cw = c.type === 'wire';
+    const cPts = along(c.from, c.to), cIn = cPts.slice(1, -1);
+    const hits = (pts, mid) => pts.some((p) => mid.some((q) => samePt(p, q)));
+    if (!cw && hits(Object.keys(spec.nodes).map((n) => spec.nodes[n]), cIn)) return 'covered';
+    const cEdges = new Set();
+    for (let i = 0; i < cPts.length - 1; i++) cEdges.add(edgeKey(cPts[i], cPts[i + 1]));
+    let same = 0;
+    for (const q of parts) {
+      if (ignore != null && q.id === ignore) continue;
+      const qw = q.type === 'wire';
+      if (sameSpan(q, c.from, c.to)) {
+        if ((qw && cw) || ++same >= 2) return 'full';
+        continue;
+      }
+      const qPts = along(q.from, q.to);
+      for (let i = 0; i < qPts.length - 1; i++) if (cEdges.has(edgeKey(qPts[i], qPts[i + 1]))) return 'overlap';
+      if (!qw && hits(cPts, qPts.slice(1, -1))) return 'covered';
+      if (!cw && hits(qPts, cIn)) return 'covered';
+    }
+    return '';
+  }
+  // a wire from a to b: straight, or round one corner; the pieces, or null if there's no room
+  function wireRoute(spec, parts, a, b) {
+    if (samePt(a, b)) return null;
+    const ways = straight(a, b) ? [[[a, b]]] : [[[a, [b[0], a[1]]], [[b[0], a[1]], b]], [[a, [a[0], b[1]]], [[a[0], b[1]], b]]];
+    for (const segs of ways) {
+      const placed = parts.slice();
+      let ok = true;
+      for (const [p, q] of segs) {
+        const c = { id: '~?', type: 'wire', from: p, to: q };
+        if (placeWhy(spec, placed, c)) { ok = false; break; }
+        placed.push(c);
+      }
+      if (ok) return segs;
+    }
+    return null;
+  }
+
+  // the palette: { type: count | [values or colours] | { count, value, values, color, ids } } or a list of those
+  function normPalette(raw, taken, comps0, leds0) {
+    const items = [];
+    if (raw == null) raw = {};
+    if (Array.isArray(raw)) raw.forEach((x) => { if (!isObj(x)) fail('a palette entry is not an object'); items.push([x.type != null ? x.type : x.kind, x]); });
+    else if (isObj(raw)) Object.keys(raw).forEach((k) => items.push([k, raw[k]]));
+    else fail('"palette" is an object, like {"resistor": [4, 4], "wire": 10}');
+    const subs = [];
+    let wires = null;
+    const sub = (type, x) => {
+      const who = `the palette's ${type}`;
+      let n = x.count != null ? parseNum(x.count) : x.n != null ? parseNum(x.n) : NaN;
+      const idsRaw = Array.isArray(x.ids) ? x.ids.map((s) => (typeof s === 'string' ? s.trim() : '')) : null;
+      if (!Number.isFinite(n)) n = idsRaw ? idsRaw.length : 1;
+      n = Math.round(n);
+      if (!(n >= 0 && n <= LIMITS.parts)) fail(`${who} count ${show(x.count)} is not a small whole number`);
+      const s = { type, n, ids: idsRaw || [] };
+      if (hasValue(type)) {
+        const ch = x.values != null ? x.values : x.choices != null ? x.choices : x.min != null ? x : null;
+        if (ch != null) s.values = choiceList(type, ch, who);
+        else { const v = valueIn(x, type); s.values = [checkValue(type, Number.isFinite(v) ? v : DEFAULTS[type], who)]; }
+      }
+      if (type === 'led') s.color = colorOf(x);
+      subs.push(s);
+    };
+    // "bulbs", "switches", "batteries", "cells": a palette names kinds of part, often in the plural
+    const kind = (k) => {
+      const s = typeof k === 'string' ? k.trim().toLowerCase().replace(/_/g, ' ') : '';
+      const one = [s.replace(/ies$/, 'y'), s.replace(/(ch|sh)es$/, '$1'), s.replace(/s$/, '')].find((x) => x !== s && TYPES[x]);
+      return one || typeOf(k);
+    };
+    for (const [tRaw, v] of items) {
+      const type = kind(tRaw);
+      if (!type) fail(`the palette has an unknown part "${show(tRaw)}"`);
+      if (type === 'wire') {
+        const n = v === true ? BUILD.wiresDefault : parseNum(isObj(v) ? v.count : v);
+        if (!(Number.isFinite(n) && n >= 0)) fail('the palette\'s "wire" is how many wires, like 10');
+        wires = Math.min(BUILD.wires, (wires || 0) + Math.round(n));
+        continue;
+      }
+      const key = type === 'led' ? 'color' : 'value';
+      if (Array.isArray(v)) v.forEach((x) => sub(type, isObj(x) ? x : { count: 1, [key]: x }));
+      else if (isObj(v)) sub(type, v);
+      else if (typeof v === 'number' || (typeof v === 'string' && /^\s*\d+\s*$/.test(v))) sub(type, { count: v });
+      else if (v === true) sub(type, { count: 1 });
+      else if (typeof v === 'string') sub(type, { count: 1, [key]: v });
+      else fail(`the palette's "${type}" is a count, a list of values, or {"count": ..., "value": ...}`);
+    }
+    // the same part twice is one group
+    const groups = [];
+    for (const s of subs) {
+      const k = [s.type, JSON.stringify(s.values || null), s.color || ''].join('|');
+      const g = groups.find((x) => x.k === k);
+      if (g) { g.n += s.n; g.ids.push(...s.ids); } else groups.push(Object.assign({ k }, s));
+    }
+    let comps = comps0, leds = leds0;
+    const out = [];
+    for (const g of groups) {
+      if (!g.n) continue;
+      comps += g.n;
+      if (g.type === 'led') leds += g.n;
+      if (comps > LIMITS.parts) fail(`more than ${LIMITS.parts} parts in all, placed and in the palette`);
+      if (leds > LIMITS.leds) fail(`more than ${LIMITS.leds} LEDs`);
+      const ids = [];
+      for (let i = 0; i < g.n; i++) {
+        let id = g.ids[i];
+        if (!(id && ID.test(id) && !taken.has(id))) id = freeId(g.type, taken);
+        taken.add(id);
+        ids.push(id);
+      }
+      const o = { type: g.type, ids };
+      if (g.values) o.values = g.values;
+      if (g.color) o.color = g.color;
+      out.push(o);
+    }
+    out.push({ type: 'wire', count: wires == null ? BUILD.wiresDefault : wires });
+    return out;
+  }
+
+  function normBuildSpec(raw, opts = {}) {
+    // the labelled dots
+    const nodes = new Map();
+    const entries = raw.nodes == null ? []
+      : Array.isArray(raw.nodes) ? raw.nodes.map((n) => (isObj(n) ? [n.id != null ? n.id : n.name, n.at != null ? n.at : n.pos != null ? n.pos : [n.x, n.y]] : null))
+        : isObj(raw.nodes) ? Object.keys(raw.nodes).map((k) => [k, raw.nodes[k]]) : fail('"nodes" is not an object');
+    if (entries.length > LIMITS.nodes) fail(`more than ${LIMITS.nodes} nodes`);
+    const at = new Set();
+    for (const ent of entries) {
+      if (!ent) fail('a node is not an object');
+      const id = nodeName(ent[0]);
+      if (!NODE.test(id)) fail(`node "${show(ent[0])}" needs a short name (letters, digits, _)`);
+      if (nodes.has(id)) fail(`node ${id} is given twice`);
+      const p = buildPoint(Array.isArray(ent[1]) || isObj(ent[1]) ? ent[1] : null, nodes, null, `node ${id}`);
+      if (at.has(pkey(p))) fail(`two nodes are at ${where(p)}`);
+      at.add(pkey(p));
+      nodes.set(id, p);
+    }
+    const rawParts = raw.parts == null ? [] : Array.isArray(raw.parts) ? raw.parts : Array.isArray(raw.components) ? raw.components : fail('"parts" is not a list');
+    if (rawParts.length > LIMITS.parts + BUILD.wires) fail('too many parts');
+
+    // the grid: as given, or big enough for every point (at least 6 by 4)
+    let W, H;
+    const g = raw.grid != null ? raw.grid : raw.size;
+    if (g != null) {
+      W = Math.round(parseNum(Array.isArray(g) ? g[0] : isObj(g) ? (g.w != null ? g.w : g.width) : g));
+      H = Math.round(parseNum(Array.isArray(g) ? g[1] : isObj(g) ? (g.h != null ? g.h : g.height) : NaN));
+      if (!(W >= 2 && W <= BUILD.maxW && H >= 1 && H <= BUILD.maxH)) fail(`"grid" is [width, height], from [2, 1] to [${BUILD.maxW}, ${BUILD.maxH}]`);
+    } else {
+      let mx = 0, my = 0;
+      const see = (v) => { if (Array.isArray(v) && v.length >= 2) { mx = Math.max(mx, Math.round(parseNum(v[0])) || 0); my = Math.max(my, Math.round(parseNum(v[1])) || 0); } };
+      nodes.forEach(see);
+      rawParts.forEach((p) => { if (isObj(p)) ends(p).forEach(see); });
+      W = Math.min(BUILD.maxW, Math.max(BUILD.w, mx));
+      H = Math.min(BUILD.maxH, Math.max(BUILD.h, my));
+    }
+    const grid = [W, H];
+    nodes.forEach((p, id) => { if (p[0] > W || p[1] > H) fail(`node ${id} ${where(p)} is off the grid (x 0 to ${W}, y 0 to ${H})`); });
+
+    const spec = { build: true, grid, nodes: {}, parts: [], palette: [], controls: [], labels: [] };
+    nodes.forEach((p, id) => { spec.nodes[id] = p; });
+    const specLocked = raw.locked == null ? true : parseBool(raw.locked, true);
+    const ids = new Set();
+    const later = [];
+    let wires = 0, comps = 0, leds = 0;
+    for (const p of rawParts) {
+      if (!isObj(p)) fail('a part is not an object');
+      const type = typeOf(p.type != null ? p.type : p.kind);
+      if (!type) fail(`unknown part type "${show(p.type != null ? p.type : p.kind)}"`);
+      const pair = ends(p);
+      const idRaw = typeof p.id === 'string' ? p.id.trim() : '';
+      const what = type === 'wire' ? 'a wire' : `part ${show(idRaw) || type}`;
+      const out = { id: '', type, from: buildPoint(pair[0], nodes, grid, `${what}'s "from"`), to: buildPoint(pair[1], nodes, grid, `${what}'s "to"`) };
+      if (type === 'wire') {
+        if (++wires > BUILD.wires) fail(`more than ${BUILD.wires} wires`);
+        out.id = '~' + wires;
+      } else {
+        if (++comps > LIMITS.parts) fail(`more than ${LIMITS.parts} parts besides wires`);
+        if (idRaw) {
+          if (!ID.test(idRaw)) fail(`a ${type} needs a short id like R1 (got "${show(idRaw)}")`);
+          if (ids.has(idRaw)) fail(`two parts are called ${idRaw}`);
+          ids.add(idRaw);
+          out.id = idRaw;
+        } else later.push(out);
+        const who = idRaw || type;
+        if (hasValue(type)) {
+          const v = valueIn(p, type);
+          out.value = checkValue(type, Number.isFinite(v) ? v : DEFAULTS[type], who);
+          if (p.values != null) {
+            const vs = choiceList(type, p.values, who);
+            if (!vs.includes(out.value)) out.value = vs[0];
+            if (vs.length > 1) out.values = vs;
+          }
+        }
+        if (type === 'switch') out.closed = parseBool(p.closed != null ? p.closed : p.state != null ? p.state : p.on, false);
+        if (type === 'led') { if (++leds > LIMITS.leds) fail(`more than ${LIMITS.leds} LEDs`); out.color = colorOf(p); }
+        const label = txt(p.label, 16);
+        if (label) out.label = label;
+      }
+      out.locked = p.locked == null && p.fixed == null ? specLocked : parseBool(p.locked != null ? p.locked : p.fixed, specLocked);
+      spec.parts.push(out);
+    }
+    later.forEach((out) => { out.id = freeId(out.type, ids); ids.add(out.id); });
+    const placed = [];
+    for (const p of spec.parts) {
+      const why = placeWhy(spec, placed, p);
+      if (why) fail(`${p.type === 'wire' ? 'the wire' : p.id} from ${where(p.from)} to ${where(p.to)} ${PLACE_WHY[why]}`);
+      placed.push(p);
+    }
+    spec.palette = normPalette(raw.palette != null ? raw.palette : raw.bin, ids, comps, leds);
+
+    const rr = raw.resistance != null ? raw.resistance : raw.ohmmeter;
+    if (rr != null) {
+      const pair = list(rr).map(nodeName);
+      if (pair.length !== 2 || pair[0] === pair[1] || !pair.every((n) => own(spec.nodes, n))) fail('"resistance" names two labelled points in "nodes", like ["P", "Q"]');
+      spec.resistance = pair;
+    }
+    for (const l of Array.isArray(raw.labels) ? raw.labels.slice(0, LIMITS.labels) : []) {
+      if (!isObj(l)) continue;
+      const lat = Array.isArray(l.at) ? l.at : [l.x, l.y];
+      const x = snap(parseNum(lat[0])), y = snap(parseNum(lat[1])), text = txt(l.text, 40);
+      if (text && x >= -1 && x <= W + 1 && y >= -1 && y <= H + 1) spec.labels.push({ at: [x, y], text });
+    }
+
+    const r0 = solveBuild(spec, startBuild(spec));
+    if (r0.short) fail(shortWhy(r0.sol, r0));
+    if (opts.block) {
+      const pl = pools(spec);
+      // with a cell, the current it gives is always shown; without one, only a resistance between two points
+      const types = new Set([...spec.parts.map((p) => p.type), ...pl.groups.map((x) => x.type)]);
+      if (!types.has('cell') && !types.has('battery') && !spec.resistance) fail('there is nothing to see: put a cell (and bulbs or meters) in the palette or the parts, or show "resistance" between two labelled points');
+      if (!pl.groups.length && !spec.parts.length) fail('the palette is empty: give the learner parts to place');
+    }
+    return spec;
+  }
+
+  const startBuild = (spec) => spec.parts.map(copyPart);
+
+  // what the learner may place: the palette's groups, the spec's movable parts, and the wires
+  function pools(spec) {
+    const groups = [];
+    const add = (g) => {
+      const k = [g.type, JSON.stringify(g.values || null), g.color || '', g.label || ''].join('|');
+      const same = groups.find((x) => x.k === k);
+      if (same) same.ids.push(...g.ids);
+      else groups.push(Object.assign({ k }, g, { ids: g.ids.slice() }));
+    };
+    spec.palette.forEach((g) => { if (g.type !== 'wire') add({ type: g.type, ids: g.ids, values: g.values, color: g.color }); });
+    spec.parts.forEach((p) => { if (!p.locked && p.type !== 'wire') add({ type: p.type, ids: [p.id], values: p.values || (hasValue(p.type) ? [p.value] : undefined), color: p.color, label: p.label }); });
+    const w = spec.palette.find((g) => g.type === 'wire');
+    return { groups, wires: (w ? w.count : 0) + spec.parts.filter((p) => !p.locked && p.type === 'wire').length };
+  }
+
+  // A build from the learner (or a goal's "answer", strict: anything wrong fails with a reason): every part
+  // checked against the palette and the grid. Lenient, what can't be placed is left out; null if unreadable.
+  // The learner's build is the whole board; an "answer" adds to the spec's parts (and may move those not locked).
+  function readBuild(spec, value, strict) {
+    const items = Array.isArray(value) ? value : isObj(value) && Array.isArray(value.parts) ? value.parts : null;
+    const bad = (msg) => { if (strict) fail(msg); };
+    if (!items) { bad('the "answer" is a list of parts'); return null; }
+    if (items.length > LIMITS.parts + BUILD.wires + 4) { bad('the "answer" has too many parts'); return null; }
+    const nodes = new Map(Object.keys(spec.nodes).map((n) => [n, spec.nodes[n]]));
+    const pl = pools(spec);
+    const owner = new Map();
+    pl.groups.forEach((g) => g.ids.forEach((id) => owner.set(id, g)));
+    const out = (strict ? spec.parts : spec.parts.filter((p) => p.locked)).map(copyPart);
+    const used = new Set(out.map((p) => p.id));
+    const movable = new Set(strict ? spec.parts.filter((p) => !p.locked && p.type !== 'wire').map((p) => p.id) : []);
+    let wiresLeft = pl.wires - out.filter((p) => p.type === 'wire' && !p.locked).length, wn = 0;
+    const near = (vs, x) => vs.find((v) => Math.abs(v - x) <= 1e-9 * Math.max(1, Math.abs(v)));
+    for (const raw of items) {
+      if (!isObj(raw)) { bad('a part in the "answer" is not an object'); continue; }
+      const type = typeOf(raw.type != null ? raw.type : raw.kind);
+      if (!type) { bad(`the "answer" has an unknown part "${show(raw.type)}"`); continue; }
+      const idRaw = typeof raw.id === 'string' ? raw.id.trim() : '';
+      const who = `${type === 'wire' ? 'a wire' : show(idRaw) || 'a ' + type} in the "answer"`;
+      const pair = ends(raw);
+      let a, b;
+      try { a = buildPoint(pair[0], nodes, spec.grid, who); b = buildPoint(pair[1], nodes, spec.grid, who); } catch (err) { if (strict) throw err; continue; }
+      if (type === 'wire') {
+        if (out.some((q) => q.type === 'wire' && sameSpan(q, a, b))) continue; // a wire already there, given again
+        const segs = wireRoute(spec, out, a, b);
+        if (!segs) { bad(`the wire from ${where(a)} to ${where(b)} ${PLACE_WHY[placeWhy(spec, out, { type: 'wire', from: a, to: straight(a, b) ? b : [b[0], a[1]] }) || 'covered']}`); continue; }
+        if (segs.length > wiresLeft) { bad(`the "answer" uses more wires than the palette has (${pl.wires})`); continue; }
+        segs.forEach(([p, q]) => {
+          let id;
+          do { id = '~w' + (++wn); } while (used.has(id));
+          used.add(id);
+          out.push({ id, type: 'wire', from: p, to: q, locked: false });
+          wiresLeft--;
+        });
+        continue;
+      }
+      const fixed = out.find((q) => q.id === idRaw && q.locked);
+      if (fixed) {
+        if (fixed.type !== type || !sameSpan(fixed, a, b)) { bad(`${idRaw} is fixed in the spec (a ${fixed.type} from ${where(fixed.from)} to ${where(fixed.to)}); the "answer" can't move it`); }
+        if (fixed.type === 'switch') fixed.closed = parseBool(raw.closed != null ? raw.closed : raw.state, fixed.closed);
+        if (fixed.values) { const v = near(fixed.values, valueIn(raw, type)); if (v != null) fixed.value = v; }
+        continue;
+      }
+      // an answer that names one of the spec's movable parts moves it (once)
+      const moved = movable.has(idRaw) ? out.findIndex((q) => q.id === idRaw && q.type === type) : -1;
+      if (moved >= 0) { out.splice(moved, 1); used.delete(idRaw); movable.delete(idRaw); }
+      // a part from the palette, or one of the spec's that may move
+      const want = hasValue(type) ? valueIn(raw, type) : NaN;
+      const wantColor = type === 'led' && (raw.color || raw.colour) ? colorOf(raw) : '';
+      const fits = (g) => g.type === type && (!Number.isFinite(want) || near(g.values, want) != null) && (!wantColor || g.color === wantColor);
+      let id = idRaw, g = owner.get(idRaw);
+      if (!g || used.has(id) || !fits(g)) {
+        g = pl.groups.find((x) => fits(x) && x.ids.some((y) => !used.has(y)));
+        if (!g) {
+          const same = pl.groups.filter((x) => x.type === type);
+          if (!same.length) bad(`the "answer" uses a ${type}, but the palette has none`);
+          else if (!same.some(fits)) bad(`the "answer" uses ${show(idRaw) || 'a ' + type} of ${show(want)}, but the palette's ${type}s are ${same.map((x) => (x.values ? x.values.join(' or ') : x.color)).join(', ')}`);
+          else bad(`the "answer" uses more ${type}s than the palette has (${same.reduce((n, x) => n + x.ids.length, 0)})`);
+          continue;
+        }
+        id = g.ids.find((y) => !used.has(y));
+      }
+      const part = { id, type, from: a, to: b, locked: false };
+      if (hasValue(type)) {
+        part.value = Number.isFinite(want) ? near(g.values, want) : g.values[0];
+        if (g.values.length > 1) part.values = g.values.slice();
+      }
+      if (type === 'switch') part.closed = parseBool(raw.closed != null ? raw.closed : raw.state, false);
+      if (type === 'led') part.color = g.color || 'red';
+      if (g.label) part.label = g.label;
+      const why = placeWhy(spec, out, part);
+      if (why) { bad(`${id} from ${where(a)} to ${where(b)} ${PLACE_WHY[why]}`); continue; }
+      used.add(id);
+      out.push(part);
+    }
+    return out;
+  }
+
+  // the build as a circuit for the solver: a node at each end of a part, at each labelled dot and where wires
+  // cross; wires cut into pieces at the nodes they pass (a piece's id: the wire's, then .0, .1 ...)
+  function compileBuild(spec, parts) {
+    const mark = new Map(Object.keys(spec.nodes).map((n) => [pkey(spec.nodes[n]), n]));
+    const keyPts = new Set(mark.keys());
+    parts.forEach((p) => { keyPts.add(pkey(p.from)); keyPts.add(pkey(p.to)); });
+    const touch = new Map();
+    parts.forEach((p) => { if (p.type === 'wire') along(p.from, p.to).forEach((q) => { const k = pkey(q); touch.set(k, (touch.get(k) || 0) + 1); }); });
+    touch.forEach((n, k) => { if (n >= 2) keyPts.add(k); });
+    const nodes = {};
+    const nameAt = (p) => { const k = pkey(p); const n = mark.get(k) || '@' + k; nodes[n] = [p[0], p[1]]; return n; };
+    const out = [];
+    for (const p of parts) {
+      if (p.type !== 'wire') {
+        const q = { id: p.id, type: p.type, from: nameAt(p.from), to: nameAt(p.to) };
+        ['value', 'closed', 'color', 'label'].forEach((k) => { if (p[k] != null) q[k] = p[k]; });
+        out.push(q);
+        continue;
+      }
+      const pts = along(p.from, p.to).filter((q, i, all) => i === 0 || i === all.length - 1 || keyPts.has(pkey(q)));
+      for (let j = 0; j < pts.length - 1; j++) out.push({ id: p.id + '.' + j, type: 'wire', from: nameAt(pts[j]), to: nameAt(pts[j + 1]), wire: p.id });
+    }
+    mark.forEach((n, k) => { if (!nodes[n]) nodes[n] = k.split(',').map(Number); });
+    return { nodes, parts: out, controls: [], labels: spec.labels || [] };
+  }
+
+  /* the netlist: dots joined into nodes, and the parts between them as edges
+       'goal': wires, closed switches and ammeters join; voltmeters and open switches are left out
+       'amm':  ammeters stay edges (is one in series with a part?)
+       'volt': voltmeters and open switches stay edges (is one across a part?) */
+  function netOf(parts, mode) {
+    const uf = new Map();
+    const find = (k) => { if (!uf.has(k)) uf.set(k, k); let x = k; while (uf.get(x) !== x) { uf.set(x, uf.get(uf.get(x))); x = uf.get(x); } return x; };
+    const join = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) uf.set(ra, rb); };
+    const merges = (p) => p.type === 'wire' || (p.type === 'switch' && p.closed) || (p.type === 'ammeter' && mode !== 'amm');
+    const drops = (p) => (p.type === 'voltmeter' && mode !== 'volt') || (p.type === 'switch' && !p.closed && mode !== 'volt');
+    parts.forEach((p) => {
+      if (p.type === 'wire') { const pts = along(p.from, p.to); pts.forEach((q) => join(pkey(pts[0]), pkey(q))); } else if (merges(p)) join(pkey(p.from), pkey(p.to));
+    });
+    const edges = parts.filter((p) => !merges(p) && !drops(p)).map((p) => ({ id: p.id, type: p.type, value: p.value, u: find(pkey(p.from)), v: find(pkey(p.to)) }));
+    return { at: (pt) => find(pkey(pt)), edges, byId: new Map(edges.map((e) => [e.id, e])) };
+  }
+  function linked(edges, skip, a, b) {
+    if (a === b) return true;
+    const adj = new Map();
+    edges.forEach((e) => { if (skip.includes(e.id)) return; [[e.u, e.v], [e.v, e.u]].forEach(([x, y]) => { if (!adj.has(x)) adj.set(x, []); adj.get(x).push(y); }); });
+    const seen = new Set([a]);
+    const todo = [a];
+    while (todo.length) { const x = todo.pop(); for (const y of adj.get(x) || []) { if (y === b) return true; if (!seen.has(y)) { seen.add(y); todo.push(y); } } }
+    return false;
+  }
+  const loopy = (net, e) => e.u !== e.v && linked(net.edges, [e.id], e.u, e.v); // on some loop
+  function inSeries(net, a, b) {
+    const e = net.byId.get(a), f = net.byId.get(b);
+    if (!e || !f || e === f || !loopy(net, e) || !loopy(net, f)) return false;
+    return !linked(net.edges, [e.id, f.id], f.u, f.v);
+  }
+  function inParallel(net, a, b) {
+    const e = net.byId.get(a), f = net.byId.get(b);
+    return Boolean(e && f && e !== f && e.u !== e.v && ((e.u === f.u && e.v === f.v) || (e.u === f.v && e.v === f.u)));
+  }
+
+  // meters in the wrong place: an ammeter across a part (in parallel, it short-circuits it), a voltmeter in series
+  function meterProblems(parts) {
+    const out = [];
+    const amm = parts.filter((p) => p.type === 'ammeter');
+    if (amm.length) {
+      const net = netOf(parts, 'amm');
+      amm.forEach((m) => {
+        const e = net.byId.get(m.id);
+        if (!e || !loopy(net, e)) return;
+        if (net.edges.some((x) => x.type !== 'ammeter' && inSeries(net, m.id, x.id))) return;
+        const across = net.edges.find((x) => x.type !== 'ammeter' && inParallel(net, m.id, x.id));
+        out.push({ id: m.id, type: 'ammeter', across: across ? across.id : null });
+      });
+    }
+    const volt = parts.filter((p) => p.type === 'voltmeter');
+    if (volt.length) {
+      const net = netOf(parts, 'volt');
+      volt.forEach((m) => {
+        const e = net.byId.get(m.id);
+        if (!e || !loopy(net, e)) return;
+        if (net.edges.some((x) => x.type !== 'voltmeter' && inParallel(net, m.id, x.id))) return;
+        if (net.edges.some((x) => x.type !== 'voltmeter' && inSeries(net, m.id, x.id))) out.push({ id: m.id, type: 'voltmeter' });
+      });
+    }
+    return out;
+  }
+
+  // the resistance between two labelled dots, as an ohmmeter reads it (cells taken out): Infinity with no path
+  function resistanceBetween(spec, parts, A, B) {
+    if (!own(spec.nodes, A) || !own(spec.nodes, B)) return NaN;
+    const net = netOf(parts, 'goal');
+    const a = net.at(spec.nodes[A]), b = net.at(spec.nodes[B]);
+    if (a === b) return 0;
+    const rs = net.edges.filter((e) => (e.type === 'resistor' || e.type === 'bulb') && e.u !== e.v);
+    if (!linked(rs, [], a, b)) return Infinity;
+    // the piece with a and b in it, b as the reference; one ampere in at a
+    const reach = new Set([a]);
+    let grew = true;
+    while (grew) { grew = false; rs.forEach((e) => { if (reach.has(e.u) !== reach.has(e.v)) { reach.add(e.u); reach.add(e.v); grew = true; } }); }
+    const names = [...reach].filter((x) => x !== b);
+    const ix = new Map(names.map((x, i) => [x, i]));
+    const n = names.length;
+    const A2 = new Float64Array(n * n), rhs = new Float64Array(n);
+    rs.forEach((e) => {
+      if (!reach.has(e.u)) return;
+      const g = 1 / e.value, p = ix.has(e.u) ? ix.get(e.u) : -1, q = ix.has(e.v) ? ix.get(e.v) : -1;
+      if (p >= 0) { A2[p * n + p] += g; if (q >= 0) A2[p * n + q] -= g; }
+      if (q >= 0) { A2[q * n + q] += g; if (p >= 0) A2[q * n + p] -= g; }
+    });
+    rhs[ix.get(a)] = 1;
+    const x = gauss(A2, rhs, n);
+    return x ? round(x[ix.get(a)]) : Infinity;
+  }
+
+  // The build, solved: everything run() gives, and the build's own readouts
+  //   total      the current from the supply (one cell or battery, or cells all in series), or null
+  //   ohms       the resistance between spec.resistance's two dots
+  //   misplaced  meters in the wrong place;  open: a supply and parts, but no current anywhere
+  function solveBuild(spec, parts) {
+    const sol = compileBuild(spec, parts);
+    const r = run(compile(sol), { s: {}, v: {}, w: null });
+    r.sol = sol;
+    r.total = null;
+    r.misplaced = [];
+    r.open = false;
+    const cells = parts.filter((p) => TYPES[p.type].source);
+    if (!r.short) {
+      r.misplaced = meterProblems(parts);
+      if (cells.length) {
+        const net = cells.length > 1 ? netOf(parts, 'goal') : null;
+        if (cells.length === 1 || cells.slice(1).every((c) => inSeries(net, cells[0].id, c.id))) r.total = Math.abs(r.I[cells[0].id] || 0);
+        const loads = parts.filter((p) => ['resistor', 'bulb', 'led', 'ammeter'].includes(p.type));
+        r.open = loads.length > 0 && parts.every((p) => p.type === 'wire' || p.type === 'voltmeter' || !r.I[p.id]);
+      }
+    }
+    if (spec.resistance) r.ohms = resistanceBetween(spec, parts, spec.resistance[0], spec.resistance[1]);
+    return r;
+  }
+
+  // A network of resistors between two dots as a sum, when it is one: "R1 + (R2 ∥ R3)", or null
+  function seriesParallel(spec, parts, A, B) {
+    const net = netOf(parts, 'goal');
+    const a = net.at(spec.nodes[A]), b = net.at(spec.nodes[B]);
+    let es = net.edges.filter((e) => (e.type === 'resistor' || e.type === 'bulb') && e.u !== e.v).map((e) => ({ u: e.u, v: e.v, s: e.id, k: 'one', r: e.value }));
+    for (let guard = 0; guard < 80 && es.length > 1; guard++) {
+      const deg = new Map();
+      es.forEach((e) => { deg.set(e.u, (deg.get(e.u) || 0) + 1); deg.set(e.v, (deg.get(e.v) || 0) + 1); });
+      // a loose end that leads nowhere
+      const dead = es.findIndex((e) => (deg.get(e.u) === 1 && e.u !== a && e.u !== b) || (deg.get(e.v) === 1 && e.v !== a && e.v !== b));
+      if (dead >= 0) { es.splice(dead, 1); continue; }
+      let done = false;
+      for (let i = 0; i < es.length && !done; i++) for (let j = i + 1; j < es.length && !done; j++) {
+        const e = es[i], f = es[j];
+        if ((e.u === f.u && e.v === f.v) || (e.u === f.v && e.v === f.u)) {
+          const w = (x) => (x.k === 'ser' ? '(' + x.s + ')' : x.s);
+          es[i] = { u: e.u, v: e.v, s: w(e) + ' ∥ ' + w(f), k: 'par', r: 1 / (1 / e.r + 1 / f.r) };
+          es.splice(j, 1);
+          done = true;
+        }
+      }
+      if (done) continue;
+      const mid = [...deg.keys()].find((x) => x !== a && x !== b && deg.get(x) === 2);
+      if (mid == null) break;
+      const two = es.filter((e) => e.u === mid || e.v === mid);
+      const far = (e) => (e.u === mid ? e.v : e.u);
+      const w = (x) => (x.k === 'par' ? '(' + x.s + ')' : x.s);
+      es = es.filter((e) => !two.includes(e));
+      es.push({ u: far(two[0]), v: far(two[1]), s: w(two[0]) + ' + ' + w(two[1]), k: 'ser', r: two[0].r + two[1].r });
+    }
+    if (es.length !== 1 || !((es[0].u === a && es[0].v === b) || (es[0].u === b && es[0].v === a))) return null;
+    return { text: es[0].s, ohms: round(es[0].r) };
+  }
+
+  /* build goals */
+
+  const BUILD_GOALS = {
+    lit: ['lit', 'light', 'lights', 'lamp', 'lamps', 'bulb', 'bulbs', 'on', 'glow', 'bright', 'brightness'],
+    series: ['series', 'in series'],
+    parallel: ['parallel', 'in parallel'],
+    reading: ['reading', 'read', 'meter', 'value'],
+    equivalent: ['equivalent', 'resistance', 'equivalent resistance', 'effective resistance', 'total resistance', 'ohms', 'combination'],
+    measure: ['measure', 'place', 'placement', 'place meter', 'meter placement', 'use meter', 'connect meter'],
+    control: ['control', 'controls', 'switch', 'switches']
+  };
+  function buildGoalType(v) {
+    const s = typeof v === 'string' ? v.trim().toLowerCase().replace(/[_-]/g, ' ') : '';
+    return Object.keys(BUILD_GOALS).find((k) => BUILD_GOALS[k].includes(s)) || '';
+  }
+  // a number to reach, with a tolerance: 2% unless given, never more than 10%
+  function target(raw, keys, floor, max, what) {
+    const k = keys.find((key) => raw[key] != null);
+    const value = k ? parseNum(raw[k]) : NaN;
+    if (!Number.isFinite(value) || value < 0 || value > max) fail(`the goal needs ${what} as a number`);
+    let tol = raw.tolerance != null ? parseNum(raw.tolerance) : NaN;
+    if (!Number.isFinite(tol) || tol <= 0) tol = Math.max(0.02 * value, floor);
+    tol = Math.min(tol, Math.max(0.1 * value, floor));
+    return { value: round(value), tolerance: round(tol) };
+  }
+
+  function normBuildGoal(spec, raw) {
+    const type = buildGoalType(raw.type != null ? raw.type : raw.kind);
+    if (!type) fail(`unknown goal type "${show(raw.type)}" for a build (lit, series, parallel, reading, equivalent, measure or control)`);
+    const all = new Map();
+    spec.parts.forEach((p) => { if (p.type !== 'wire') all.set(p.id, p.type); });
+    spec.palette.forEach((g) => (g.ids || []).forEach((id) => all.set(id, g.type)));
+    const one = (v, what, ok, kind) => {
+      const id = typeof v === 'string' ? v.trim() : '';
+      if (!all.has(id)) fail(`the goal's "${what}" names ${show(id) || 'nothing'}, which is not a part (the spec's and palette's are ${[...all.keys()].join(', ') || 'none'})`);
+      if (!ok(all.get(id))) fail(`the goal's "${what}" names ${id}, a ${all.get(id)}: it must be ${kind}`);
+      return id;
+    };
+    const many = (v, what, ok, kind) => [...new Set(list(v).map((x) => one(x, what, ok, kind)))];
+    const lamp = (t) => Boolean(TYPES[t].lamp), meter = (t) => Boolean(TYPES[t].meter);
+    const lamps = [...all.keys()].filter((id) => lamp(all.get(id)));
+    const sameKind = (ids, what) => { if (new Set(ids.map((id) => all.get(id))).size > 1) fail(`"${what}" compares bulbs with bulbs, or LEDs with LEDs`); };
+    const goal = { type };
+    if (type === 'lit') {
+      const on = raw.on != null ? raw.on : raw.lit != null ? raw.lit : raw.lamps != null ? raw.lamps : raw.bulbs;
+      goal.on = on == null || on === 'all' ? lamps.slice() : many(on, 'on', lamp, 'a bulb or LED');
+      goal.off = raw.off != null ? many(raw.off, 'off', lamp, 'a bulb or LED') : [];
+      if (raw.order != null) {
+        goal.order = many(raw.order, 'order', lamp, 'a bulb or LED');
+        if (goal.order.length < 2) fail('"order" lists two or more lamps, brightest first');
+        sameKind(goal.order, 'order');
+        goal.order.forEach((id) => { if (!goal.on.includes(id)) goal.on.push(id); });
+      }
+      const eq = raw.equal != null ? raw.equal : raw.same;
+      if (Array.isArray(eq) || parseBool(eq, false) === true) {
+        if (goal.order) fail('a goal has "order" or "equal", not both');
+        goal.equal = Array.isArray(eq) ? many(eq, 'equal', lamp, 'a bulb or LED') : goal.on.slice();
+        if (goal.equal.length < 2) fail('"equal" needs two or more lamps');
+        sameKind(goal.equal, 'equal');
+        goal.equal.forEach((id) => { if (!goal.on.includes(id)) goal.on.push(id); });
+      }
+      if (!goal.on.length) fail('the goal names no bulb or LED to light');
+      if (goal.on.some((id) => goal.off.includes(id))) fail('a lamp is both "on" and "off" in the goal');
+    } else if (type === 'series' || type === 'parallel') {
+      goal.parts = many(raw.parts != null ? raw.parts : raw.ids != null ? raw.ids : raw.items, 'parts', (t) => LOADS.includes(t), 'a resistor, bulb, LED or cell');
+      if (goal.parts.length < 2) fail(`a ${type} goal names two or more "parts"`);
+    } else if (type === 'reading') {
+      goal.meter = one(raw.meter, 'meter', meter, 'an ammeter or voltmeter');
+      Object.assign(goal, target(raw, ['value', 'reads', 'reading'], 1e-3, 1e4, 'the reading'));
+    } else if (type === 'equivalent') {
+      const pair = list(raw.between != null ? raw.between : raw.points != null ? raw.points : raw.nodes).map(nodeName);
+      if (pair.length !== 2 || pair[0] === pair[1] || !pair.every((n) => own(spec.nodes, n))) fail('an equivalent goal needs "between": two labelled points of the spec\'s "nodes", like ["P", "Q"]');
+      goal.between = pair;
+      Object.assign(goal, target(raw, ['value', 'ohms', 'resistance'], 0.01, 1e6, 'the resistance in ohms'));
+      if (!(goal.value > 0)) fail('the goal needs the resistance in ohms, above 0');
+    } else if (type === 'measure') {
+      goal.meter = one(raw.meter, 'meter', meter, 'an ammeter or voltmeter');
+      const volt = all.get(goal.meter) === 'voltmeter';
+      const tgt = raw.across != null ? raw.across : raw.through != null ? raw.through : raw.part != null ? raw.part : raw.with;
+      goal.part = one(tgt, volt ? 'across' : 'through', (t) => LOADS.includes(t), 'a resistor, bulb, LED or cell');
+    } else if (type === 'control') {
+      goal.switch = one(raw.switch != null ? raw.switch : raw.part, 'switch', (t) => t === 'switch', 'a switch');
+      goal.on = many(raw.on != null ? raw.on : raw.lamps != null ? raw.lamps : raw.controls, 'on', lamp, 'a bulb or LED');
+      if (!goal.on.length) fail('a control goal names in "on" the lamps the switch turns on and off');
+    }
+    return goal;
+  }
+
+  // brightness, to compare: a bulb's power, an LED's current
+  function bright(r, parts, id) {
+    const p = parts.find((x) => x.id === id);
+    const i = Math.abs(r.I[id] || 0);
+    return p && p.type === 'bulb' ? i * i * p.value : i;
+  }
+  const differ = (x, y, rel) => Math.abs(x - y) > rel * Math.max(Math.abs(x), Math.abs(y)) + 1e-9;
+
+  // does this build meet the goal? why not, if not (ids as they are)
+  function evalBuild(spec, goal, parts) {
+    const has = new Set(parts.map((p) => p.id));
+    const no = (why) => ({ ok: false, why });
+    const ids = (goal.on || []).concat(goal.parts || [], goal.meter ? [goal.meter] : [], goal.part ? [goal.part] : [], goal.switch ? [goal.switch] : []);
+    if (goal.type === 'equivalent') {
+      const R = resistanceBetween(spec, parts, goal.between[0], goal.between[1]);
+      return Math.abs(R - goal.value) <= goal.tolerance + 1e-12 ? { ok: true } : no({ req: R });
+    }
+    if (goal.type === 'control') {
+      // every lamp is on the board (a lamp left off is no test of "only")
+      const lampIds = spec.parts.filter((p) => TYPES[p.type].lamp).map((p) => p.id)
+        .concat(...spec.palette.filter((g) => TYPES[g.type].lamp).map((g) => g.ids));
+      const missing = ids.concat(lampIds).find((id) => !has.has(id));
+      if (missing) return no({ missing });
+      const set = (closed) => parts.map((p) => (p.id === goal.switch ? Object.assign({}, p, { closed }) : p));
+      const r1 = solveBuild(spec, set(true)), r0 = solveBuild(spec, set(false));
+      if (r1.short || r0.short) return no({ short: true, when: r1.short ? 'closed' : 'open' });
+      for (const id of goal.on) {
+        if (!r1.lit[id]) return no({ ctl: 'on', lamp: id });
+        if (r0.lit[id]) return no({ ctl: 'off', lamp: id });
+      }
+      for (const p of parts) {
+        if (!TYPES[p.type].lamp || goal.on.includes(p.id)) continue;
+        if (Boolean(r1.lit[p.id]) !== Boolean(r0.lit[p.id])) return no({ ctl: 'other', lamp: p.id });
+        if (!r1.lit[p.id]) return no({ ctl: 'dark', lamp: p.id });
+      }
+      return { ok: true };
+    }
+    const r = solveBuild(spec, parts);
+    if (r.short) return no({ short: true });
+    const missing = ids.find((id) => !has.has(id));
+    if (missing) return no({ missing });
+    if (goal.type === 'lit') {
+      for (const id of goal.on) if (!r.lit[id]) return no({ lamp: id, want: true });
+      for (const id of goal.off) if (r.lit[id]) return no({ lamp: id, want: false });
+      const burnt = goal.on.find((id) => r.burn.includes(id));
+      if (burnt) return no({ burn: burnt });
+      if (goal.order) for (let i = 0; i + 1 < goal.order.length; i++) {
+        const x = goal.order[i], y = goal.order[i + 1];
+        if (!(bright(r, parts, x) > bright(r, parts, y) && differ(bright(r, parts, x), bright(r, parts, y), 0.03))) return no({ order: [x, y] });
+      }
+      if (goal.equal) for (const id of goal.equal.slice(1)) {
+        if (differ(bright(r, parts, goal.equal[0]), bright(r, parts, id), 0.02)) return no({ equal: [goal.equal[0], id] });
+      }
+      return { ok: true };
+    }
+    const wrong = goal.meter && r.misplaced.find((m) => m.id === goal.meter);
+    if (wrong) return no({ misplaced: goal.meter, across: wrong.across || null });
+    const dead = (goal.parts || (goal.type === 'measure' ? [goal.part] : [])).find((id) => !(Math.abs(r.I[id] || 0) > 1e-6));
+    if (dead) return no({ nocurrent: dead });
+    if (goal.type === 'series' || goal.type === 'parallel') {
+      const net = netOf(parts, 'goal');
+      const [first, ...rest] = goal.parts;
+      for (const id of rest) {
+        const s = inSeries(net, first, id), p = inParallel(net, first, id);
+        if (goal.type === 'series' && !s) return no({ series: [first, id], par: p });
+        if (goal.type === 'parallel' && !p) return no({ parallel: [first, id], ser: s });
+      }
+      return { ok: true };
+    }
+    if (goal.type === 'reading') {
+      const got = r.read[goal.meter] || 0;
+      return Math.abs(got - goal.value) <= goal.tolerance + 1e-12 ? { ok: true } : no({ meter: goal.meter, got });
+    }
+    if (goal.type === 'measure') {
+      const volt = parts.find((p) => p.id === goal.meter).type === 'voltmeter';
+      if (volt) return inParallel(netOf(parts, 'volt'), goal.meter, goal.part) ? { ok: true } : no({ across: [goal.meter, goal.part] });
+      return inSeries(netOf(parts, 'amm'), goal.meter, goal.part) ? { ok: true } : no({ through: [goal.meter, goal.part] });
+    }
+    return no({});
+  }
+
+  // the ids a goal names
+  const goalIds = (g) => new Set([...(g.on || []), ...(g.off || []), ...(g.parts || []), g.meter, g.part, g.switch].filter(Boolean));
+
+  // Parts the palette has more than one of, alike, may be swapped: a goal met with L1 and L2 the other way
+  // round is met. Every way of naming the placed ones (with the group's names) is tried, up to 720 in all.
+  function namings(spec, goal, parts) {
+    const named = goalIds(goal);
+    const groups = pools(spec).groups.filter((g) => g.ids.length > 1 && g.ids.some((id) => named.has(id)));
+    const sets = [];
+    let count = 1;
+    for (const g of groups) {
+      const placed = g.ids.filter((id) => parts.some((p) => p.id === id));
+      if (!placed.length) continue;
+      const ways = [];
+      const pick = (left, acc) => {
+        if (ways.length > 720) return;
+        if (acc.length === placed.length) { ways.push(acc.slice()); return; }
+        left.forEach((id, i) => pick(left.filter((_, j) => j !== i), acc.concat(id)));
+      };
+      pick(g.ids, []);
+      count *= ways.length;
+      if (count > 720) return [];
+      sets.push(ways.map((w) => new Map(placed.map((id, i) => [id, w[i]]))));
+    }
+    let out = [new Map()];
+    for (const s of sets) out = out.flatMap((m) => s.map((x) => new Map([...m, ...x])));
+    return out.filter((m) => [...m].some(([a, b]) => a !== b));
+  }
+  function meetsBuild(spec, goal, parts) {
+    const first = evalBuild(spec, goal, parts);
+    if (first.ok) return first;
+    for (const m of namings(spec, goal, parts)) {
+      if (evalBuild(spec, goal, parts.map((p) => (m.has(p.id) ? Object.assign({}, p, { id: m.get(p.id) }) : p))).ok) return { ok: true };
+    }
+    return first;
+  }
+
+  // why a build fails its goal, in words for the AI (the page has its own, for the learner)
+  function whyBuild(spec, goal, why) {
+    const sig3 = (x) => String(Number(Number(x).toPrecision(3)));
+    if (!why) return 'it does not meet the goal';
+    if (why.short) return 'it is a short circuit' + (why.when ? ` with ${goal.switch} ${why.when}` : '');
+    if (why.missing) return `${why.missing} is not placed`;
+    if (why.lamp && why.want) return `${why.lamp} is not lit`;
+    if (why.lamp) return `${why.lamp} is lit, but should not be`;
+    if (why.burn) return `${why.burn} has too much current (an LED needs a resistor in series)`;
+    if (why.order) return `${why.order[0]} is not brighter than ${why.order[1]}`;
+    if (why.equal) return `${why.equal[0]} and ${why.equal[1]} are not equally bright`;
+    if (why.nocurrent) return `no current flows through ${why.nocurrent}`;
+    if (why.series) return `${why.series[0]} and ${why.series[1]} are not in series${why.par ? ' (they are in parallel)' : ''}`;
+    if (why.parallel) return `${why.parallel[0]} and ${why.parallel[1]} are not in parallel${why.ser ? ' (they are in series)' : ''}`;
+    if (why.misplaced) return `${why.misplaced} is in the wrong place (an ammeter goes in series, a voltmeter across a part)`;
+    if (why.meter) return `${why.meter} reads ${sig3(why.got)}, not ${goal.value}`;
+    if (why.req != null) return why.req === Infinity ? `there is no path between ${goal.between[0]} and ${goal.between[1]}` : `the resistance between ${goal.between[0]} and ${goal.between[1]} is ${sig3(why.req)} ohms, not ${goal.value}`;
+    if (why.across) return `${why.across[0]} is not across ${why.across[1]} (its two ends on ${why.across[1]}'s two ends)`;
+    if (why.through) return `${why.through[0]} is not in series with ${why.through[1]}`;
+    if (why.ctl === 'on') return `with ${goal.switch} closed, ${why.lamp} is not lit`;
+    if (why.ctl === 'off') return `with ${goal.switch} open, ${why.lamp} is still lit`;
+    if (why.ctl === 'other') return `${goal.switch} also turns ${why.lamp} on and off`;
+    if (why.ctl === 'dark') return `${why.lamp} is not lit`;
+    return 'it does not meet the goal';
+  }
+
+  // the build as the learner's answer would hold it
+  const partOut = (p) => {
+    const q = { id: p.id, type: p.type, from: p.from.slice(), to: p.to.slice() };
+    if (p.value != null) q.value = p.value;
+    if (p.closed != null) q.closed = p.closed;
+    if (p.color) q.color = p.color;
+    if (q.type === 'wire') delete q.id;
+    return q;
+  };
+
+  /* A build that meets a goal, made by the app when the AI's "answer" is missing or wrong (grids are hard to
+     write by hand): the source standing in column 0, rails along its top and bottom rows, the goal's parts in
+     a loop along the top rail or in branches between the rails. Tried only on a board that starts empty or
+     with one fixed cell or battery in column 0, and for every goal but "equivalent" (its labelled dots are
+     where the AI put them). Each try is checked like any answer; null if none meets the goal. */
+  function suggestBuild(spec, goal) {
+    const W = spec.grid[0], H = spec.grid[1];
+    if (goal.type === 'equivalent' || spec.parts.some((p) => !p.locked) || spec.parts.length > 1) return null;
+    const fixedSrc = spec.parts[0] || null;
+    if (fixedSrc && !(TYPES[fixedSrc.type].source && fixedSrc.from[0] === 0 && fixedSrc.to[0] === 0)) return null;
+    const pl = pools(spec);
+    const byId = new Map();
+    pl.groups.forEach((g) => g.ids.forEach((id) => byId.set(id, g)));
+    const srcGroup = fixedSrc ? null : pl.groups.find((g) => TYPES[g.type].source);
+    if (!fixedSrc && !srcGroup) return null;
+    const src = fixedSrc ? { id: fixedSrc.id, type: fixedSrc.type } : { id: srcGroup.ids[0], type: srcGroup.type, value: srcGroup.values[0] };
+    const plusTop = fixedSrc ? fixedSrc.to[1] < fixedSrc.from[1] : true;
+    const typeOfId = (id) => (byId.get(id) || {}).type;
+    // a part of the answer from a to b; an LED or a cell points the way the current goes: with + on top, along
+    // the top rail and down each branch (from a to b), and the other way round with + at the bottom
+    const part = (id, a, b, value) => {
+      const type = typeOfId(id);
+      const [f, t] = !(type === 'led' || (type && TYPES[type].source)) || plusTop ? [a, b] : [b, a];
+      const p = { id, type, from: f, to: t };
+      if (value != null) p.value = value;
+      if (type === 'switch') p.closed = true;
+      return p;
+    };
+    const wire = (a, b) => ({ type: 'wire', from: a, to: b });
+    let yt = 0, yb = 0;
+    // main: ids in a row along the top rail, from column 0; branches: lists of ids, each a column between the rails
+    const layOut = (main, branches, vals) => {
+      const out = fixedSrc ? [] : [{ id: src.id, type: src.type, from: [0, yb], to: [0, yt], value: src.value }];
+      let x = 0;
+      for (const id of main) { if (x + 1 > W) return null; out.push(part(id, [x, yt], [x + 1, yt], vals[id])); x++; }
+      if (!branches.length) {
+        if (!x) return null;
+        out.push(wire([x, yt], [x, yb]), wire([x, yb], [0, yb]));
+        return out;
+      }
+      if (x + branches.length > W) return null;
+      out.push(wire([x, yt], [x + branches.length, yt]), wire([0, yb], [x + branches.length, yb]));
+      for (let i = 0; i < branches.length; i++) {
+        const col = x + 1 + i, br = branches[i];
+        if (br.length > yb - yt) return null;
+        for (let j = 0; j < br.length; j++) out.push(part(br[j], [col, yt + j], [col, j === br.length - 1 ? yb : yt + j + 1], vals[br[j]]));
+      }
+      return out;
+    };
+    const lampIds = pl.groups.filter((g) => TYPES[g.type].lamp).flatMap((g) => g.ids);
+    const loads = pl.groups.filter((g) => g.type === 'resistor' || g.type === 'bulb');
+    const tries = []; // [main, branches, values]
+    const plain = (ids) => ids.filter((id) => id !== src.id);
+    if (goal.type === 'series') tries.push([plain(goal.parts), []]);
+    else if (goal.type === 'parallel') {
+      if (goal.parts.includes(src.id)) return null;
+      tries.push([[], goal.parts.map((id) => [id])]);
+    } else if (goal.type === 'lit') {
+      const spare = loads.filter((g) => g.type === 'resistor').flatMap((g) => g.ids).filter((id) => !goal.on.includes(id));
+      tries.push([goal.on, []], [[], goal.on.map((id) => [id])]);
+      // an LED needs a resistor in series
+      if (spare.length) tries.push([[spare[0], ...goal.on], []], [[spare[0]], goal.on.map((id) => [id])]);
+      // brightest first: the others behind a resistor each
+      if (goal.order && spare.length >= goal.order.length - 1) tries.push([[], goal.order.map((id, i) => (i ? [spare[i - 1], id] : [id]))]);
+    } else if (goal.type === 'control') {
+      const others = lampIds.filter((id) => !goal.on.includes(id));
+      if (!others.length) tries.push([[goal.switch], goal.on.map((id) => [id])], [[goal.switch, ...goal.on], []]);
+      tries.push([[], [[goal.switch, ...goal.on], ...others.map((id) => [id])]]);
+    } else if (goal.type === 'measure') {
+      const volt = typeOfId(goal.meter) === 'voltmeter';
+      const filler = goal.part === src.id ? loads.flatMap((g) => g.ids).concat(lampIds).find((id) => id !== goal.meter) : null;
+      if (volt) tries.push([goal.part === src.id ? (filler ? [filler] : []) : [goal.part], [], {}, goal.part]);
+      else tries.push([[goal.meter].concat(goal.part === src.id ? (filler ? [filler] : []) : [goal.part]), []]);
+    } else if (goal.type === 'reading') {
+      // one or two loads in a loop, at each value they can take; a voltmeter across the first
+      const opts = loads.flatMap((g) => g.ids.map((id) => ({ id, values: g.values })));
+      const volt = typeOfId(goal.meter) === 'voltmeter';
+      const combos = [];
+      opts.forEach((a) => a.values.forEach((va) => combos.push([[a.id, va]])));
+      opts.forEach((a, i) => opts.slice(i + 1).forEach((b) => a.values.forEach((va) => b.values.forEach((vb) => combos.push([[a.id, va], [b.id, vb]])))));
+      for (const c of combos.slice(0, 200)) {
+        const vals = Object.fromEntries(c);
+        const ids = c.map((x) => x[0]);
+        tries.push(volt ? [ids, [], vals, ids[0]] : [[goal.meter, ...ids], [], vals]);
+      }
+    }
+    // the rails: the fixed source's two ends, or rows 0 and 2 (all the rows, for a branch that needs more)
+    const rails = fixedSrc ? [[Math.min(fixedSrc.from[1], fixedSrc.to[1]), Math.max(fixedSrc.from[1], fixedSrc.to[1])]]
+      : [[0, Math.min(H, 2)]].concat(H > 2 ? [[0, H]] : []);
+    for (const [top, bottom] of rails) for (const [main, branches, vals = {}, across] of tries) {
+      yt = top; yb = bottom;
+      const list = layOut(main, branches, vals);
+      if (!list) continue;
+      if (across) { // a voltmeter on the same two dots as what it measures
+        const t = across === src.id ? (fixedSrc || list[0]) : list.find((p) => p.id === across);
+        if (!t) continue;
+        list.push({ id: goal.meter, type: 'voltmeter', from: t.from, to: t.to });
+      }
+      let built;
+      try { built = readBuild(spec, list, true); } catch (err) { continue; }
+      if (meetsBuild(spec, goal, built).ok) return built;
+    }
+    return null;
+  }
+
+  function normBuildTask(rawSpec, rawGoal) {
+    const spec = normBuildSpec(rawSpec, {});
+    const goal = normBuildGoal(spec, rawGoal);
+    const ans = rawGoal.answer != null ? rawGoal.answer : rawGoal.build != null ? rawGoal.build : rawGoal.reference != null ? rawGoal.reference : rawGoal.solution;
+    // the AI's answer, checked; when it's missing or wrong, one the app can make instead (or the reason)
+    let built = null, problem = 'a build goal needs "answer": the parts of one correct build, each with "from" and "to" dots';
+    if (ans != null) {
+      try {
+        built = readBuild(spec, ans, true);
+        const m = meetsBuild(spec, goal, built);
+        if (!m.ok) { problem = `the goal's "answer" does not meet it: ${whyBuild(spec, goal, m.why)}`; built = null; }
+      } catch (err) {
+        if (!(err instanceof CircuitError)) throw err;
+        problem = err.message;
+      }
+    }
+    const made = !built;
+    if (!built) built = suggestBuild(spec, goal);
+    if (!built) fail(problem);
+    if (meetsBuild(spec, goal, startBuild(spec)).ok) fail('the circuit already meets the goal as it starts: leave something for the learner to build');
+    goal.answer = built.map(partOut);
+    const out = { spec, goal };
+    // for the server's log: the app made the answer, and why the AI's wasn't used (not part of the task itself)
+    if (made) Object.defineProperty(out, 'made', { value: problem, enumerable: false });
+    return out;
+  }
+
+  // the learner's build, checked: { correct, invalid?, why? }
+  function checkBuild(spec, goal, value) {
+    const parts = value == null ? null : readBuild(spec, value, false);
+    if (!parts) return { correct: false, invalid: true };
+    const m = meetsBuild(spec, goal, parts);
+    return { correct: m.ok, why: m.ok ? null : m.why || null };
   }
 
   /* ---------------- numbers, as a textbook writes them ---------------- */
@@ -667,6 +1694,9 @@
   return {
     GRID, LIMITS, TYPES, COLORS, VF, CircuitError,
     normSpec, normTask, stateOf, solve, check, solution, settings,
-    lampsOf, metersOf, hasValue, fmtValue, unitOf, parseNum, text: txt
+    lampsOf, metersOf, hasValue, fmtValue, unitOf, parseNum, text: txt,
+    // build mode
+    BUILD, ID_PREFIX, PLACE_WHY, isBuild, startBuild, pools, readBuild, placeWhy, wireRoute, along, compileBuild, solveBuild,
+    netOf, inSeries, inParallel, meterProblems, resistanceBetween, seriesParallel, evalBuild, whyBuild, suggestBuild
   };
 });

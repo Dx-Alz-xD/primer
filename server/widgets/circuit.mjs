@@ -3,14 +3,19 @@
 // circuit diagram with textbook symbols (cells, resistors, bulbs, switches,
 // LEDs, ammeters and voltmeters) that the learner switches and adjusts,
 // and tasks done in it: light the right bulbs, make a meter read a value,
-// add the missing wire.
+// add the missing wire. In build mode ("build": true and a "palette") the
+// learner places the parts on a grid of dots themselves, and build tasks
+// are checked on whatever they build: bulbs lit (equally, or in an order),
+// parts in series or in parallel, a reading, an equivalent resistance, a
+// meter placed right, a switch that controls only some lamps.
 //
 // The checks and the solver are shared with the page, in
 // assets/js/widgets/circuit-core.js: every circuit the AI writes must be
 // whole (known parts, sensible values, nodes that exist, no loose ends,
 // a cell, not a short circuit as it starts), and every task must be
 // possible (some setting of its switches and sliders meets the goal) and
-// not already done. Anything else is left out of the lesson.
+// not already done. A build task's goal carries "answer", a build from the
+// palette that is checked to meet it. Anything else is left out of the lesson.
 //
 // PRIMER_WIDGET_DEBUG=1 logs why a circuit was left out.
 // =====================================================================
@@ -87,28 +92,24 @@ export function match(text) {
 }
 
 export const prompt = String.raw`
-Circuit ("kind": "circuit"): a live circuit diagram drawn with textbook symbols. The app solves it (Ohm's law, series and parallel) and shows the current moving, bulbs glowing by their power and meters reading live; the learner taps switches and drags sliders.
-"spec": {"nodes": {...}, "parts": [...], "controls": [...], "labels": [...]}
-- "nodes": named points on a grid, {"a": [x, y], ...}, x from 0 to 8 and y from 0 to 6, y growing downward (about 6 across and 4 down reads best on a phone); never two at the same point. Lay it out like a textbook diagram: a rectangle for a series circuit; for parallel, a ladder whose branches each join the same two rails (as in the block example); every part on a straight row or column between two nodes 2 to 4 apart, and no part passing over another node.
-- "parts": each {"id": "R1", "type": ..., "from": "a", "to": "b"}, and:
-  "cell", or "battery" (drawn as two cells): "value" in volts; "to" is its + terminal.
-  "resistor", "bulb": "value" in ohms.
-  "switch": "closed": true or false.
-  "led": lights only when current flows from "from" to "to"; about 2 V across it; give it a resistor in series (about 200 ohms).
-  "ammeter": in series, reads the current. "voltmeter": across what it measures, and it may share both its nodes with that part (the app draws it alongside); reads the voltage.
-  "wire": no id needed.
-  Every node joins at least two parts. At most 16 parts besides wires; at least one cell or battery; ids like B1, S1, L1, R1, A1, V1. A cell's two ends must never be joined by only wires, switches or ammeters (a short circuit).
-- "controls" (optional): what the learner may change: a switch's id, or a slider {"part": "R1", "min": 2, "max": 20, "step": 2} for a cell's, resistor's or bulb's value. Without "controls", every switch can be tapped; [] for none.
-- "labels" (optional): [{"at": [x, y], "text": "a few words"}].
-Every circuit needs something to see (a bulb, an LED or a meter), and a block something to try (a switch, or a slider).
-Block example: {"t": "widget", "kind": "circuit", "caption": "Close S1, then S2: L2 joins in parallel and L1 stays just as bright.", "spec": {"nodes": {"a": [0, 0], "b": [3, 0], "c": [6, 0], "d": [0, 4], "e": [3, 4], "f": [6, 4]}, "parts": [{"id": "B1", "type": "battery", "from": "d", "to": "a", "value": 6}, {"id": "S1", "type": "switch", "from": "a", "to": "b", "closed": false}, {"id": "L1", "type": "bulb", "from": "b", "to": "e", "value": 12}, {"id": "S2", "type": "switch", "from": "b", "to": "c", "closed": false}, {"id": "L2", "type": "bulb", "from": "c", "to": "f", "value": 12}, {"type": "wire", "from": "f", "to": "e"}, {"id": "A1", "type": "ammeter", "from": "e", "to": "d"}]}}
-A task is something the learner does in the circuit, not a sum to work out (for a calculation, ask a "numeric" question). Its goal ("goal") is one of:
-- {"type": "light", "on": ["L2"]}: set the switches (and sliders) so exactly these bulbs or LEDs light and the others don't (or add "off": [...] to name the only ones that must stay off).
-- {"type": "reading", "meter": "A1", "value": 0.5, "tolerance": 0.02}: set the sliders (and switches) so the meter reads this, in amperes or volts. "meter" is an ammeter or voltmeter in the spec (to measure a current through an LED or a bulb, put an ammeter in series with it).
-- {"type": "connect", "terminals": ["p", "q", "r"], "on": ["L1"]}: the spec leaves one wire out, so its two ends are loose; the learner joins two of these 3 to 6 nodes with one wire so the named lamps light with no short circuit, and some choices must not work. Leave "controls" out.
-For "light" and "reading", the spec must have controls, and must start wrong (switches open, a slider at another value): the app tries every setting (each switch both ways, each slider at each step), and leaves out a task already done at the start or that no setting can do. Work every number out exactly (6 V across 12 ohms is 0.5 A).
-Task example: {"type": "task", "kind": "circuit", "prompt": "Set R1 so the ammeter reads 0.5 A.", "spec": {"nodes": {"a": [0, 0], "b": [4, 0], "c": [4, 3], "d": [0, 3]}, "parts": [{"id": "B1", "type": "cell", "from": "d", "to": "a", "value": 6}, {"id": "A1", "type": "ammeter", "from": "a", "to": "b"}, {"id": "R1", "type": "resistor", "from": "b", "to": "c", "value": 4}, {"type": "wire", "from": "c", "to": "d"}], "controls": [{"part": "R1", "min": 2, "max": 20, "step": 2}]}, "goal": {"type": "reading", "meter": "A1", "value": 0.5}, "hint": "I = V / R, so R = V / I.", "explain": "R = 6 V / 0.5 A = 12 ohms."}
-Use a block to show an idea and let the learner explore it (a switch in one branch, series against parallel, what a voltmeter across a bulb reads), and tasks to test it (which switches light only L2? set R so the ammeter reads 0.5 A; where does the missing wire go?). Build circuits for this lesson's own idea and numbers; the examples only show the format. Use the circuit only in lessons on electricity.`.trim();
+Circuit ("kind": "circuit"): a textbook circuit diagram the app solves live: moving current, glowing bulbs, meters.
+Diagram: "spec": {"nodes": {"a": [x, y]}, "parts": [...], "controls": [...], "labels": [{"at": [x, y], "text": "..."}]}; nodes x 0-8, y 0-6 (y down; about 6 by 4), one per point. Draw like a textbook (series: a rectangle; parallel: a ladder between two rails), parts along rows or columns, 2-4 apart, never over a node.
+Parts {"id": "R1", "type": ..., "from": "a", "to": "b"}: "cell"/"battery" ("value" volts, "to" is +), "resistor"/"bulb" ("value" ohms), "switch" ("closed"), "led" (lit by current "from" to "to"; 200 ohms in series), "ammeter" (in series), "voltmeter" (across a part), "wire" (no id). Nodes join 2+ parts; at most 16 parts besides wires; no cell shorted by wires, switches or ammeters.
+"controls": switch ids and sliders {"part": "R1", "min": 2, "max": 20, "step": 2} (default: every switch). A circuit needs a bulb, LED or meter, a diagram block a switch or slider.
+Block example: {"t":"widget","kind":"circuit","caption":"Close S1, then S2: L1 stays as bright.","spec":{"nodes":{"a":[0,0],"b":[3,0],"c":[6,0],"d":[0,4],"e":[3,4],"f":[6,4]},"parts":[{"id":"B1","type":"battery","from":"d","to":"a","value":6},{"id":"S1","type":"switch","from":"a","to":"b"},{"id":"L1","type":"bulb","from":"b","to":"e","value":12},{"id":"S2","type":"switch","from":"b","to":"c"},{"id":"L2","type":"bulb","from":"c","to":"f","value":12},{"type":"wire","from":"f","to":"e"},{"id":"A1","type":"ammeter","from":"e","to":"d"}]}}
+Tasks are done in the circuit (sums are "numeric"). Diagram goals start unmet; the app tries every setting:
+- {"type": "light", "on": ["L2"]}: set so exactly these lamps light ("off": [...]: only these stay dark)
+- {"type": "reading", "meter": "A1", "value": 0.5}: a meter reads this (A or V)
+- {"type": "connect", "terminals": ["p", "q", "r"], "on": ["L1"]}: one wire left out (ends loose); one pair of these 3-6 nodes lights the lamps. No "controls".
+Build mode: the learner places the parts. "spec": {"build": true, "grid": [6, 4], "palette": {...}}: dots at whole x 0-6, y 0-4; each part, wires too, straight along a row or column between two dots; a wire joins every dot it passes, a part only its ends. "parts" ([x, y] points) start fixed; "nodes" ({"P": [0, 1]}) are labelled dots. "palette": {"cell": [6], "resistor": [4, 4], "bulb": {"count": 2, "value": 6}, "switch": 1, "led": ["red"], "ammeter": 1, "voltmeter": 1, "wire": 12} ("values": [2, 4] to choose); ids follow the spec's (R1, R2...). A build block: a sandbox, or a circuit to finish. Build goals, checked on whatever is built, hold "answer": the parts a right build adds, from the palette:
+- {"type": "lit", "on": ["L1", "L2"], "equal": true} (or "order": brightest first)
+- {"type": "series", "parts": ["L1", "L2"]}, or "parallel"
+- {"type": "reading", "meter": "A1", "value": 0.5}
+- {"type": "equivalent", "between": ["P", "Q"], "value": 6}
+- {"type": "measure", "meter": "V1", "across": "R2"} ("through" for an ammeter)
+- {"type": "control", "switch": "S1", "on": ["L2"]}: S1 turns L2, and no other lamp, on and off
+Task example: {"type":"task","kind":"circuit","prompt":"Connect L1 and L2 in parallel across the cell.","spec":{"build":true,"grid":[4,2],"parts":[{"id":"B1","type":"cell","from":[0,2],"to":[0,0],"value":3}],"palette":{"bulb":{"count":2,"value":6},"wire":8}},"goal":{"type":"parallel","parts":["L1","L2"],"answer":[{"type":"wire","from":[0,0],"to":[2,0]},{"id":"L1","type":"bulb","from":[1,0],"to":[1,2]},{"id":"L2","type":"bulb","from":[2,0],"to":[2,2]},{"type":"wire","from":[0,2],"to":[2,2]}]}}
+Blocks show ideas, tasks test them. A lesson on series and parallel, equivalent resistance, meters or Ohm's law gets at least one build task. Use the lesson's own idea and numbers; examples show only the format. Only for electricity.`.trim();
 
 const debug = () => Boolean(process.env.PRIMER_WIDGET_DEBUG);
 function note(what, err, data) {
@@ -134,6 +135,8 @@ function withSlider(spec, out) {
 export function block(spec) {
   try {
     let out = core.normSpec(spec);
+    // a circuit to build is something to try already (normSpec checked it has a palette and something to see)
+    if (out.build) return out;
     // a block is for trying things; one with no switch or slider is only a picture (lessons have figures for that),
     // so it gets a slider if it has a value to change, and is left out if it hasn't
     if (!out.controls || !out.controls.length) out = withSlider(spec, out);
@@ -148,7 +151,12 @@ export function block(spec) {
 
 // A task's spec and goal, checked: the goal must be reachable and not met at the start; null leaves it out.
 export function task(spec, goal) {
-  try { return core.normTask(spec, goal); } catch (err) {
+  try {
+    const out = core.normTask(spec, goal);
+    // a build task kept with an answer the app made, the AI's being missing or wrong
+    if (out.made && debug()) console.log(`[widgets] circuit task kept with the app's own answer (the AI's: ${out.made})`);
+    return out;
+  } catch (err) {
     if (!(err instanceof core.CircuitError)) throw err;
     note('task', err, { spec, goal });
     return null;
@@ -176,12 +184,13 @@ export function withTexts(spec, words) {
   return out;
 }
 
-// Why a spec (and goal) would be left out, or '' if it holds together: for tests and the debug log.
+// Why a spec (and goal) would be left out, or '' if it holds together: for tests, the debug log, and the
+// repair round (server/ai.mjs sends a failed part back to the model with this reason).
 export function why(spec, goal) {
   try {
     if (goal === undefined) {
       const out = core.normSpec(spec);
-      if ((!out.controls || !out.controls.length) && !withSlider(spec, out)) return 'a block needs something to try: give it "controls" (a switch, or a slider for a value)';
+      if (!out.build && (!out.controls || !out.controls.length) && !withSlider(spec, out)) return 'a block needs something to try: give it "controls" (a switch, or a slider for a value)';
     } else core.normTask(spec, goal);
     return '';
   } catch (err) { return err.message; }
