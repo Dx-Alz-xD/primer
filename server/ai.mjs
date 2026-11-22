@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { HttpError } from './http.mjs';
 import { promptNote, safetyKey } from './safety.mjs';
 import { lengthRule, lengthKey, enforceLength } from './length.mjs';
-import { widgetKinds, widgetPrompt, normWidgetBlock, normTask, widgetTexts, widgetWithTexts, widgetWhy, PROMPT_VERSION as WIDGETS_PROMPT_VERSION } from './widgets.mjs';
+import { widgetKinds, widgetPrompt, normWidgetBlock, normTask, widgetTexts, widgetWithTexts, widgetWhy, available, PROMPT_VERSION as WIDGETS_PROMPT_VERSION } from './widgets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache');
@@ -498,10 +498,12 @@ async function repairWidgets(lesson, failed, { kinds, lessonTitle }) {
       || `it failed the app's checks: check every detail against the rules for "${kind}" above`;
     return { n: i + 1, where: f.where, kind, problem, part: r };
   });
-  const offered = [...new Set(items.map((x) => x.kind).filter((k) => kinds.includes(k)))];
+  // the failed parts' kinds, and any kind a reason points to ('use the "breadboard" kind'), so a part can move to it
+  const pointed = available().filter((k) => items.some((x) => x.problem.includes(`"${k}" kind`)));
+  const offered = [...new Set([...items.map((x) => x.kind).filter((k) => kinds.includes(k)), ...pointed])];
   const system = 'You fix the interactive parts of a lesson that failed the app\'s checks.\n'
     + widgetPrompt(offered.length ? offered : kinds)
-    + '\n\nReturn ONLY a JSON object: {"parts": [...]}, one entry for each part you are given, in the same order: the corrected part in exactly the same form (a block stays {"t": "widget", ...}, a task stays {"type": "task", ...}), or null if it can\'t be made right. Each part failed, so never return one unchanged: fix the problem named (rebuild the piece it names from scratch, in the simplest correct way) and anything else that is wrong; keep the part\'s idea and its kind, check every detail against the rules above, and keep every text in the language it is written in.';
+    + '\n\nReturn ONLY a JSON object: {"parts": [...]}, one entry for each part you are given, in the same order: the corrected part in exactly the same form (a block stays {"t": "widget", ...}, a task stays {"type": "task", ...}), or null if it can\'t be made right. Each part failed, so never return one unchanged: fix the problem named (rebuild the piece it names from scratch, in the simplest correct way) and anything else that is wrong; keep the part\'s idea, and its kind unless the problem says another kind suits it, check every detail against the rules above, and keep every text in the language it is written in.';
   const user = `The lesson: "${lessonTitle}"\n\n` + items.map((x) => `Part ${x.n}: a ${x.where === 'task' ? 'task question' : 'block'} of kind "${x.kind}"\nProblem: ${x.problem}\n${JSON.stringify(x.part)}`).join('\n\n');
   let fixed = 0;
   try {

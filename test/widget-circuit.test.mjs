@@ -780,3 +780,13 @@ test('build mode through server/widgets.mjs, and the prompt\'s build example', (
   assert.deepEqual(circuit.texts(s), ['build here', 'Lamp A']);
   assert.equal(circuit.withTexts(s, ['यहाँ बनाइए', 'लैंप A']).parts[0].label, 'लैंप A');
 });
+
+test('a part only the breadboard has sends the AI there', async () => {
+  const circuit = await import('../server/widgets/circuit.mjs');
+  const spec = { nodes: { a: [0, 0], b: [4, 0], c: [4, 3], d: [0, 3] }, parts: [
+    { id: 'B1', type: 'cell', from: 'd', to: 'a', value: 6 }, { id: 'C1', type: 'capacitor', from: 'a', to: 'b', value: 100 },
+    { id: 'R1', type: 'resistor', from: 'b', to: 'c', value: 10 }, { type: 'wire', from: 'c', to: 'd' }] };
+  assert.match(circuit.why(spec), /use|rebuild this part with the "breadboard" kind/);
+  assert.match(circuit.why({ ...spec, parts: [spec.parts[0], { id: 'X1', type: 'flux capacitor', from: 'a', to: 'b' }, ...spec.parts.slice(2)] }), /breadboard/);
+  assert.doesNotMatch(circuit.why({ ...spec, parts: [spec.parts[0], { id: 'X1', type: 'banana', from: 'a', to: 'b' }, ...spec.parts.slice(2)] }), /breadboard/);
+});

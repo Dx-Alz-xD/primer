@@ -193,5 +193,12 @@ export function why(spec, goal) {
       if (!out.build && (!out.controls || !out.controls.length) && !withSlider(spec, out)) return 'a block needs something to try: give it "controls" (a switch, or a slider for a value)';
     } else core.normTask(spec, goal);
     return '';
-  } catch (err) { return err.message; }
+  } catch (err) {
+    // parts this diagram doesn't have, which the breadboard does: say where they belong
+    const m = /unknown part type "([^"]+)"/.exec(err.message);
+    if (m && /capacit|transistor|npn|pnp|mosfet|diode|zener|servo|relay|sensor|tmp36|ldr|potentio|buzzer|motor|arduino|seg|lcd/i.test(m[1])) {
+      return `${err.message}: the "circuit" kind has no ${m[1]}s; rebuild this part with the "breadboard" kind, which has capacitors, transistors, diodes, motors, sensors and an Arduino`;
+    }
+    return err.message;
+  }
 }

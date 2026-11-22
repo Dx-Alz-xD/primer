@@ -56,7 +56,7 @@ export const available = () => [...mods.keys()];
 // Part of every lesson's cache key (server/ai.mjs): raise it when what lessons are asked for changes a lot,
 // so a lesson cached under the old prompt is written again instead of served. 2: interactive parts in most
 // sections, the repair round, and the new kinds.
-export const PROMPT_VERSION = 2;
+export const PROMPT_VERSION = 3; // 3: logic gates, the circuit builder, and the breadboard's new parts
 
 // The kinds a lesson is offered: those whose words appear in what the lesson is about.
 export function widgetKinds({ topic, title, desc, instructions } = {}) {
