@@ -39,7 +39,7 @@
   'use strict';
   const P = window.Primer;
   if (!P) return;
-  const KINDS = ['chess', 'circuit', 'graph', 'music', 'arrange', 'chem'];
+  const KINDS = ['chess', 'circuit', 'graph', 'music', 'arrange', 'chem', 'optics'];
   const impls = {};
   const loading = {};
   const t = (s) => (P.t ? P.t(s) : s);

@@ -34,7 +34,7 @@
 // half-broken. A lesson on a subject with no widget is written as before.
 // =====================================================================
 
-export const KINDS = ['chess', 'circuit', 'graph', 'music', 'arrange', 'chem'];
+export const KINDS = ['chess', 'circuit', 'graph', 'music', 'arrange', 'chem', 'optics'];
 
 const mods = new Map(); // kind -> module, for the kinds whose file exists
 await Promise.all(KINDS.map(async (kind) => {

@@ -1,0 +1,86 @@
+/* =====================================================================
+   The optics bench (assets/js/widgets/optics.js), on the lesson's
+   parchment: ink for the bench, glass in a pale blue, light in warm gold
+   and red, gold for what the learner can move. The drawing's own colours
+   are attributes (so a still picture in the book needs none of this);
+   this adds the stage, the handles, the readouts and the controls.
+   ===================================================================== */
+.opt{position:relative;color:var(--ink,#2b1d11);font-family:var(--font-body,Georgia,serif);font-size:1.02rem;line-height:1.4;font-variant-numeric:lining-nums tabular-nums}
+
+/* the stage: drawn at its own pixel size (the script sets the viewBox from its width) */
+.opt-stage{position:relative;border:1px solid var(--parchment-edge,#c9b48a);border-radius:5px;background:#f6eedb;overflow:hidden;box-shadow:inset 0 0 24px rgba(150,110,60,.12)}
+.opt-svg{display:block;width:100%;height:auto;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;font-family:var(--font-body,Georgia,serif);font-weight:600;font-variant-numeric:lining-nums}
+.opt-svg text{font-family:var(--font-body,Georgia,serif)}
+.opt-svg .opt-scale{font-weight:500}
+.opt-svg .opt-mlabel{font-weight:600}
+
+/* what the learner drags: a big, invisible hit area, with a gold ring when focused or hovered */
+.opt-handle{outline:none;cursor:grab}
+.opt-handle:active{cursor:grabbing}
+.opt-hit{fill:transparent;stroke:none;touch-action:none}
+.opt-ring{fill:none;stroke:var(--ink-gold,#8a6128);stroke-width:2;stroke-dasharray:4 3;opacity:0;transition:opacity .15s}
+.opt-handle:hover .opt-ring{opacity:.45}
+.opt.is-focus .opt-ring{opacity:1}
+.opt--bench .opt-handle{cursor:ew-resize}
+.opt.is-locked .opt-handle{cursor:default}
+.opt.is-locked .opt-ring{opacity:0 !important}
+
+/* the readouts: numbers as chips, then the formula and what it means */
+.opt-read{display:flex;flex-wrap:wrap;gap:.3rem .45rem;margin-top:.55rem}
+.opt-chip{display:inline-flex;align-items:baseline;gap:.25rem;padding:.12rem .62rem .16rem;border:1px solid var(--parchment-edge,#c9b48a);border-radius:999px;background:rgba(255,250,235,.55);font-size:1rem;line-height:1.35;white-space:nowrap}
+.opt-sym{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:700;color:var(--ink-gold,#8a6128)}
+.opt-val{font-weight:600;color:var(--ink,#2b1d11)}
+.opt-rows{margin-top:.35rem}
+.opt-rows p{margin:.18rem 0 0}
+.opt-formula{color:var(--ink-soft,#5b4730);font-size:.98rem;overflow-wrap:anywhere}
+.opt-say{color:var(--ink-soft,#5b4730)}
+.opt-say.is-key{color:var(--ink,#2b1d11);font-weight:600}
+.opt-say.is-tir{color:var(--ink-red,#9a3324)}
+.opt-say.is-good{color:var(--ink-green,#3d6a2c);font-weight:600}
+
+/* sliders: big enough for a thumb */
+.opt-sliders{display:grid;gap:.15rem;margin-top:.5rem}
+.opt-slider{display:grid;grid-template-columns:minmax(7.5rem,max-content) minmax(0,1fr) 5.6rem;align-items:center;gap:.2rem .8rem}
+.opt-slider__name{color:var(--ink,#2b1d11);overflow-wrap:anywhere}
+.opt-slider__out{text-align:right;white-space:nowrap;color:var(--ink,#2b1d11);font-weight:600}
+.opt-range{-webkit-appearance:none;appearance:none;width:100%;height:44px;margin:0;background:transparent;cursor:pointer;touch-action:pan-y}
+.opt-range:focus{outline:none}
+.opt-range::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(#c9b48a,#d8c69f);box-shadow:inset 0 1px 1px rgba(91,71,48,.35)}
+.opt-range::-moz-range-track{height:6px;border-radius:3px;background:#cdb98f;box-shadow:inset 0 1px 1px rgba(91,71,48,.35)}
+.opt-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;margin-top:-10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#c99a52,#8a6128 70%);border:2px solid #f6eedb;box-shadow:0 1px 3px rgba(43,29,17,.45);transition:transform .12s}
+.opt-range::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#c99a52,#8a6128 70%);border:2px solid #f6eedb;box-shadow:0 1px 3px rgba(43,29,17,.45)}
+.opt-range:active::-webkit-slider-thumb{transform:scale(1.12)}
+.opt-range:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px rgba(138,97,40,.45),0 1px 3px rgba(43,29,17,.45)}
+.opt-range:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(138,97,40,.45)}
+.opt-range:disabled{cursor:default;opacity:.7}
+.opt-select{min-height:40px;padding:.2rem .5rem;border:1px solid var(--parchment-edge,#c9b48a);border-radius:4px;background:#fbf6e8;color:var(--ink,#2b1d11);font:inherit;grid-column:2 / -1}
+.opt-select:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:1px}
+
+/* the hint, Reset and Record */
+.opt-foot{display:flex;flex-wrap:wrap;align-items:baseline;gap:.25rem 1rem;margin-top:.45rem;font-size:.98rem;line-height:1.4}
+.opt-hint{font-style:italic;color:var(--ink-soft,#5b4730);margin-right:auto}
+.opt-btn{background:none;border:0;padding:.35rem 0;font:inherit;color:var(--ink-gold,#8a6128);border-bottom:1px solid rgba(138,97,40,.45);cursor:pointer;min-height:36px}
+.opt-btn:hover{border-bottom-color:var(--ink-gold,#8a6128)}
+.opt-btn:disabled{opacity:.5;cursor:default}
+.opt-btn--rec{font-weight:600}
+
+/* the lab notebook */
+.opt-logbox{margin-top:.4rem;overflow-x:auto}
+.opt-log{border-collapse:collapse;min-width:16rem;font-size:.98rem}
+.opt-log caption{text-align:left;font-style:italic;color:var(--ink-soft,#5b4730);padding-bottom:.15rem}
+.opt-log th,.opt-log td{padding:.18rem .7rem;border-bottom:1px solid rgba(91,71,48,.22);text-align:right;white-space:nowrap}
+.opt-log th{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:700;color:var(--ink-gold,#8a6128);border-bottom-color:rgba(91,71,48,.45)}
+.opt-log.is-empty thead{opacity:.55}
+
+.opt .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+
+@media (max-width:520px){
+  .opt-slider{grid-template-columns:minmax(0,1fr) auto;gap:0 .6rem}
+  .opt-slider .opt-range{grid-column:1 / -1;grid-row:2}
+  .opt-select{grid-column:1 / -1}
+  .opt-chip{font-size:.96rem;padding:.1rem .5rem .14rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .opt-ring,.opt-range::-webkit-slider-thumb{transition:none}
+  .opt-range:active::-webkit-slider-thumb{transform:none}
+}
