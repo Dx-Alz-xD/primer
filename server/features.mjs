@@ -14,6 +14,7 @@ export default [
   () => import('./review.mjs'),
   () => import('./placement.mjs'),
   () => import('./marking.mjs'),
+  () => import('./working.mjs'), // "Check my working": a photographed working, checked step by step
   () => import('./offline.mjs'),
   () => import('./photos.mjs'),
   () => import('./sources-in.mjs'),

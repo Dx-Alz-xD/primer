@@ -305,6 +305,9 @@
   /* ------------------------------------------------------------------
      Questions
   ------------------------------------------------------------------ */
+  // "Check my working" (assets/js/working.js): the lesson a photographed working belongs to
+  const wctx = { course: () => course, n, lessonTitle: meta.title, lang: () => (lesson && lesson.translated ? P.lang : P.api.lessonLang(course)) };
+
   // ctx (optional, Watch mode): { section: what to revise after a wrong answer, reread() and
   // rereadLabel: going back to the video, onAnswered(q): called once the question is answered }.
   // A question that isn't one of the lesson's own checkpoints is rendered with secIdx null.
@@ -339,6 +342,7 @@
       e.preventDefault();
       check(q, w, secIdx, ctx);
     });
+    if (P.working) P.working.attach(q, w, wctx); // a camera button on questions worked on paper
 
     const done = prog.answered[q.id];
     if (q.type === 'task') {
@@ -461,6 +465,7 @@
         <button class="textlink" type="button" data-reread>${ctx && ctx.rereadLabel ? T(ctx.rereadLabel) : T('Re-read the section')}</button>
         ${tries >= 3 ? `<button class="textlink" type="button" data-reveal>${T('Show the answer')}</button>` : ''}
       </div>`;
+    if (P.working) P.working.offer(q, w, panel, wctx); // "Photograph your working and I'll find the mistake"
     panel.hidden = false;
     P.math(panel);
     panel.querySelector('[data-retry]').addEventListener('click', () => retry(q, w));
