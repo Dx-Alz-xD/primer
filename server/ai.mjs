@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { HttpError } from './http.mjs';
 import { promptNote, safetyKey } from './safety.mjs';
 import { lengthRule, lengthKey, enforceLength } from './length.mjs';
-import { widgetKinds, widgetPrompt, normWidgetBlock, normTask, widgetTexts, widgetWithTexts, widgetWhy } from './widgets.mjs';
+import { widgetKinds, widgetPrompt, normWidgetBlock, normTask, widgetTexts, widgetWithTexts, widgetWhy, PROMPT_VERSION as WIDGETS_PROMPT_VERSION } from './widgets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache');
@@ -922,7 +922,7 @@ export async function generateLesson(input) {
     ...(input.syllabus ? { syllabus: 1 } : {}), // its prompt says the course follows a syllabus
     ...(input.update ? { update: createHash('sha256').update(norm(input.update)).digest('hex').slice(0, 16) } : {}), // revised with new information
     ...(ground ? { ground: ground.key } : {}),   // written from these sources
-    ...(kinds.length ? { w: kinds.join(',') } : {}) // offered these interactive parts
+    ...(kinds.length ? { w: kinds.join(','), wv: WIDGETS_PROMPT_VERSION } : {}) // offered these interactive parts, asked for this way
   };
   return cached('lesson', key, async () => {
     const failed = []; // interactive parts that failed their checks, from the reply that was used
