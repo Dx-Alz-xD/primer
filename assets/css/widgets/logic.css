@@ -1,0 +1,109 @@
+/* =====================================================================
+   The logic gates lab (assets/js/widgets/logic.js), on the lesson's
+   parchment: ink lines, gold for a wire carrying 1 (dark ink for 0),
+   rust for what is chosen, red for a warning. The board's own colours
+   are attributes (so a still picture in the book needs none of this);
+   this adds the palette, the truth table and what responds to a tap.
+   ===================================================================== */
+.lg{position:relative;color:var(--ink,#2b1d11);font-family:var(--font-body);font-variant-numeric:lining-nums;-webkit-tap-highlight-color:transparent}
+
+/* the toolbar: the palette of gates, then the tools */
+.lg-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.45rem .6rem;margin:0 0 .55rem}
+.lg-pal{display:flex;flex-wrap:wrap;gap:.35rem}
+.lg-tools{display:flex;flex-wrap:wrap;gap:.35rem;margin-inline-start:auto}
+.lg-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.3rem;min-height:2.4rem;min-width:2.4rem;
+  font-family:var(--font-head);font-size:.98rem;line-height:1.1;color:var(--ink,#2b1d11);
+  background:#f2e8d0;border:1px solid #b39a6b;border-radius:4px;padding:.3rem .65rem;cursor:pointer;
+  transition:background-color .15s,border-color .15s,box-shadow .15s;
+}
+.lg-btn:hover{border-color:var(--ink-gold,#8a6128);background:#efdfb8}
+.lg-btn:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:2px}
+.lg-btn:disabled{opacity:.5;cursor:default}
+.lg-btn[aria-pressed="true"],.lg-btn.is-on{background:#e2cc98;border-color:var(--ink-gold,#8a6128);box-shadow:inset 0 2px 3px rgba(91,71,48,.25)}
+.lg-btn--small{min-height:2.1rem;padding:.2rem .55rem;font-family:Arial,Helvetica,sans-serif;font-size:.86rem;font-weight:700;letter-spacing:.02em}
+.lg-btn--go{color:var(--gold-ink,#24160a);border-color:#8a6128;background:linear-gradient(180deg,#f3d38f 0%,#d6a554 55%,#b07f3a 100%)}
+.lg-btn--go:hover{background:linear-gradient(180deg,#f3d38f 0%,#d6a554 55%,#b07f3a 100%);filter:brightness(1.06)}
+.lg-pbtn{padding:.2rem .5rem .2rem .35rem;gap:.25rem;touch-action:none;user-select:none;-webkit-user-select:none}
+.lg-pbtn__icon{display:inline-flex;line-height:0}
+.lg-pbtn__icon svg{display:block;width:34px;height:19px}
+.lg-pbtn__name{font-family:Arial,Helvetica,sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.03em}
+.lg-pbtn__count{font-family:Arial,Helvetica,sans-serif;font-size:.74rem;color:var(--ink-soft,#5b4730)}
+.lg-pbtn__count:empty{display:none}
+.lg-pbtn[aria-pressed="true"]{box-shadow:0 0 0 2px #f6c445,inset 0 2px 3px rgba(91,71,48,.25)}
+.lg-ghost{position:fixed;z-index:50;left:0;top:0;width:52px;height:30px;margin:-15px 0 0 -26px;pointer-events:none;opacity:.85;filter:drop-shadow(0 3px 4px rgba(43,29,17,.35))}
+.lg-ghost svg{width:52px;height:30px}
+
+/* a fix task: the chosen gate's types */
+.lg-fix{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem;margin:0 0 .55rem;padding:.4rem .55rem;border:1px dashed rgba(180,86,28,.55);border-radius:5px;background:rgba(214,165,84,.1)}
+.lg-fix[hidden]{display:none}
+.lg-fix__label{margin-inline-end:.25rem;color:var(--ink-soft,#5b4730);font-size:1rem}
+
+/* the board beside its truth table; below it on a narrow page */
+.lg-main{display:flex;flex-wrap:wrap;align-items:flex-start;gap:.8rem}
+.lg-stage{flex:1 1 20rem;min-width:0;overflow-x:auto;overflow-y:hidden;border:1px solid #c4ad80;border-radius:6px;background:rgba(255,250,235,.42);-webkit-overflow-scrolling:touch}
+.lg-svg{display:block;width:100%;height:auto;margin:0 auto;outline:none;touch-action:pan-x pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.lg-svg [data-key]{outline:none}
+.lg-switch,.lg-pin,.lg-gate[role],.lg-lamp[role="button"],.lg-wire{cursor:pointer}
+.lg-switch.is-off{cursor:default}
+.lg-pin,.lg-gate[role]{touch-action:none}
+.lg-switch:focus-visible rect:first-child,.lg-gate:focus-visible rect:first-child,.lg-lamp:focus-visible rect:first-child{stroke:#d6a554;stroke-width:2.5;stroke-dasharray:4 3}
+.lg-switch:hover rect:first-child,.lg-gate[role]:hover rect:first-child,.lg-lamp[role="button"]:hover rect:first-child{fill:rgba(214,165,84,.12)}
+.lg-pin:hover .lg-pin__hit,.lg-pin:focus-visible .lg-pin__hit{fill:rgba(214,165,84,.35)}
+.lg-pin:focus-visible .lg-pin__hit{stroke:#b4561c;stroke-width:1.5}
+.lg-wire:hover path:nth-child(2){stroke-dasharray:6 3}
+.lg.is-locked .lg-svg *{cursor:default !important}
+/* a board drawn small (a phone): its names larger, in the drawing's own units */
+.lg.is-small .lg-svg .lg-name{font-size:20px}
+.lg.is-small .lg-svg .lg-id{font-size:12px}
+
+/* the truth table */
+.lg-side{flex:0 1 15rem;min-width:min(100%,11rem);max-width:100%}
+.lg-tt-wrap{max-height:22rem;overflow:auto;border:1px solid #c4ad80;border-radius:6px;background:rgba(255,250,235,.55)}
+.lg-tt{width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:.9rem;line-height:1.2;text-align:center}
+.lg-tt th,.lg-tt td{padding:.22rem .45rem;border-bottom:1px solid rgba(179,154,107,.35)}
+.lg-tt thead th{position:sticky;top:0;z-index:1;background:#efe3c6;color:var(--ink,#2b1d11);font-weight:700}
+.lg-tt thead tr:nth-child(2) th{top:1.55rem}
+.lg-tt__group th{font-family:var(--font-body);font-size:.88rem;font-weight:600;color:var(--ink-soft,#5b4730);font-style:italic}
+.lg-tt td{color:var(--ink-soft,#5b4730)}
+.lg-tt .is-first{border-left:2px solid #b39a6b}
+.lg-tt td.lg-tt__out{font-weight:700;color:var(--ink,#2b1d11)}
+.lg-tt td.lg-tt__out.is-1{color:#8a5300;background:rgba(246,196,69,.25)}
+.lg-tt td.lg-tt__goal{color:var(--ink-soft,#5b4730);font-weight:700;background:rgba(201,180,138,.16)}
+.lg-tt td.is-miss{color:var(--ink-red,#9a3324);background:rgba(154,51,36,.1)}
+.lg-tt td.is-miss::after{content:"✗";margin-inline-start:.2rem;font-size:.78em}
+.lg-tt tbody tr{cursor:pointer}
+.lg-tt tbody tr:hover td{background-color:rgba(214,165,84,.12)}
+.lg-tt tr.is-now td{background:rgba(214,165,84,.32);box-shadow:inset 0 1px 0 #d6a554,inset 0 -1px 0 #d6a554}
+.lg-tt__fill{padding:.12rem .25rem !important}
+.lg-cell{min-width:2.4rem;min-height:2.05rem;padding:0 .4rem;font:700 .95rem/1 Arial,Helvetica,sans-serif;color:var(--ink,#2b1d11);background:#fffaf0;border:1px solid #b39a6b;border-radius:4px;cursor:pointer}
+.lg-cell.is-blank{color:#a8946e;border-style:dashed}
+.lg-cell:hover{border-color:var(--ink-gold,#8a6128)}
+.lg-cell:focus-visible{outline:2px solid var(--ink-gold,#8a6128);outline-offset:1px}
+.lg-cell:disabled{cursor:default;opacity:.8}
+.lg-tt__note{margin:.35rem .1rem 0;font-size:.95rem;line-height:1.35;color:var(--ink-soft,#5b4730);font-style:italic}
+.lg-tt__note.is-ok{color:var(--ink-green,#3d6a2c);font-style:normal;font-weight:600}
+.lg-tt__expr{display:flex;flex-wrap:wrap;gap:.2rem .9rem;margin:0 0 .4rem;font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:.98rem;color:var(--ink,#2b1d11)}
+.lg-tt__rule{margin:0 0 .35rem;font-size:.95rem;color:var(--ink-gold,#8a6128);font-weight:600}
+
+/* the timing diagram, for a circuit that remembers */
+.lg-timing{border:1px solid #c4ad80;border-radius:6px;background:rgba(255,250,235,.55);padding:.35rem .4rem .2rem;overflow-x:auto}
+.lg-timing__head{margin:0 0 .2rem;font-size:.9rem;line-height:1.3;color:var(--ink-soft,#5b4730);font-style:italic}
+.lg-timing__svg{display:block;max-width:none;height:auto}
+
+/* what is wrong, and what to do next */
+.lg-status{margin:.55rem auto 0;max-width:36rem;padding:.4rem .75rem;border:1px solid rgba(154,51,36,.5);border-radius:4px;background:rgba(154,51,36,.08);color:var(--ink-red,#9a3324);font-size:1rem;line-height:1.4;text-align:center}
+.lg-status[hidden]{display:none}
+.lg-hint{margin:.45rem 0 0;font-size:.98rem;line-height:1.4;color:var(--ink-soft,#5b4730);font-style:italic;text-align:center}
+.lg-hint[hidden]{display:none}
+
+@media (max-width:560px){
+  .lg-bar{gap:.35rem}
+  .lg-tools{margin-inline-start:0}
+  .lg-btn{min-height:2.5rem;font-size:.95rem;padding:.3rem .55rem}
+  .lg-side{flex:1 1 100%}
+  .lg-tt-wrap{max-height:18rem}
+}
+@media (prefers-reduced-motion: reduce){
+  .lg-btn{transition:none}
+}
