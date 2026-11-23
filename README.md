@@ -4,13 +4,31 @@
 
 Primer turns one topic into a full course. You name the subject, say where to start and stop, and how you like to be taught. Primer plans the lessons in the order to learn them, writes each lesson the first time you open it, and checks that you understood each part before the next one opens.
 
+**Try it live: [primer-production-0d8d43b4.up.railway.app](https://primer-production-0d8d43b4.up.railway.app)** (sign-up invite code: `PRIMER`). Built by Team Crimson for Lean In Hacks 8.0, for UN SDG 4 (quality education) and SDG 10 (reduced inequalities).
+
 ![A Primer lesson: the course in a sidebar, a parchment page with typeset maths and an “explain like I’m 5” callout](docs/lesson.webp)
 
 ## What it does
 
 - **Plans a course from one topic.** Topic, an optional range (“from limits to the chain rule”) and teaching instructions (LaTeX, mnemonics, worked examples, “teach me like I’m 5”). The outline is as long as the range needs.
 - **Writes each lesson when you open it**, with typeset maths (KaTeX), worked examples, callouts and diagrams, then keeps it.
-- **Lessons you can play with.** Where doing teaches better than reading, a lesson draws something to use: a chess board to watch and move on, a circuit whose switches and sliders light bulbs and move meters, a graph with sliders and points to drag, a piano (with sargam names) and drums or tabla to play, or cards to put in order, match or sort, for any subject. Some checkpoint questions are done in them (find the mate, light only L2, set the slope to −2, play the G major chord). Every one is checked on the server, so an impossible position, a broken circuit or a wrong answer key is left out rather than shown.
+- **Lessons you can play with.** Where doing teaches better than reading, a lesson draws something to use, and most sections get one. There are 13 kinds:
+  - a **chess board** to watch and move on;
+  - a **circuit** whose switches and sliders light bulbs and move meters, with a build mode to place cells, resistors, bulbs, switches, LEDs, meters and wires yourself;
+  - a **breadboard bench** (like Tinkercad): an Arduino with LEDs and RGB LEDs, resistors, diodes, capacitors, transistors, sensors, a servo, a 7-segment display and an LCD to wire up and run;
+  - a **logic gates lab**: switches, AND, OR, NOT, NAND, NOR, XOR and XNOR gates, lamps and a live truth table;
+  - a **physics sandbox** with every value live: falling with and without air, launches, two balls colliding, ramps, springs, pendulums, a ball against a brick wall, bodies in water. Drag and throw the objects, move the sliders;
+  - a **coding window** that runs real Python (or a subset of JavaScript) in the page, with an output console and tests;
+  - a **graph** with sliders and points to drag;
+  - a **chemistry lab**: balance equations, build atoms and ions, write formulae;
+  - an **optics bench**: a live ray diagram for lenses and mirrors, and refraction with a laser;
+  - a **geometry board**: drag points and lines, circles and angles follow, with live measurements;
+  - **number tools**: fraction shapes, a number line, place-value blocks;
+  - a **piano** (with sargam names) and **drums or tabla** to play;
+  - **cards** to put in order, match or sort, for any subject.
+
+  Checkpoint questions are done in them too: find the mate, light only L2, make the LED glow, set the slope to −2, break the wall, fix the bug in the code. Every one is checked on the server, so an impossible position, a broken circuit, a task that can’t be done or a wrong answer key never reaches the page. A part that fails its check is sent back to the AI with the exact reason and put back once it passes.
+- **Check my working.** Work a problem out on paper and photograph it. Primer reads your working line by line, checks every step of arithmetic and algebra exactly (not by asking an AI), and shows the first line that went wrong and why, with a hint that doesn’t give the answer away. A chatbot solves the problem for you; this checks how you solved it. The photos are never stored.
 - **Checks you as you go.** Every part of a lesson ends with a checkpoint, and the next part isn’t on the page until you answer. A wrong answer brings back that part’s key points; a second miss adds a hint; a third lets you see the answer.
 - **Doubts where they happen.** Select a sentence, or circle something on the whiteboard, and ask. The tutor answers using that part of the lesson.
 - **A tutor that remembers.** A conversation on every page that knows your courses, your doubts and the questions you got wrong, so it can point out a pattern.
@@ -43,6 +61,8 @@ Primer turns one topic into a full course. You name the subject, say where to st
 - **A knowledge map** of each course: every lesson marked mastered, shaky, in progress, not started or locked, and the ones worth another look.
 - **Your course grows.** Each course is drawn as a gilded vine that puts out leaves for every finished lesson and a crimson flower for every finished unit, and blooms when the course is done.
 - **Accounts that keep everything**: courses, progress, notes, doubts and the tutor’s memory follow you to any device.
+- **Unlock entire outline**, for demos and judging: a button on every course and lesson opens all lessons and units at once, without answering the checkpoints. Add `?debug=0` to the address to hide it.
+- **Who it’s for**, on the home page: four learners Primer reaches (illustrative) and how it narrows the gap, in every interface language.
 - **Risky topics are taught safely, not turned away.** A request like “bomb making” becomes a course on the chemistry and safety of explosives, and a hateful premise becomes critical history. Lessons and the tutor stay at textbook level and never give instructions for causing harm. Someone who seems to be struggling gets a supportive answer with a helpline. The only thing always refused is sexual content involving children.
 
 ## Running it
@@ -57,6 +77,10 @@ npm start
 ```
 
 Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` in `.env` (the example uses `PRIMER`; leave it empty to let anyone sign up). Run the tests with `npm test`.
+
+### Deploying
+
+The `Dockerfile` runs Primer on any container host. The live site runs it on [Railway](https://railway.com), with a volume mounted at `/app/data` so the database and saved audio survive redeploys. Set your AI keys as the service’s variables; the Dockerfile already sets `HOST=0.0.0.0` and `PRIMER_TRUST_PROXY=1`.
 
 ### Settings (`.env`)
 
@@ -77,6 +101,7 @@ Open http://127.0.0.1:5173 and sign up. The invite code is set by `INVITE_CODE` 
 | `PRIMER_EXAM_PAUSE_MINUTES` | How long to wait before retaking a failed exam (default 10). |
 | `WIKIMEDIA_CONTACT` | Optional: your email or web page, sent to Wikimedia so photo lookups get a higher rate limit. |
 | `PORT`, `HOST` | Where the server listens (default `127.0.0.1:5173`). |
+| `PRIMER_TRUST_PROXY` | Set to `1` behind a host’s proxy, so rate limits use the visitor’s address from `X-Forwarded-For`. |
 
 ## How it’s built
 
@@ -111,7 +136,8 @@ server/auth.mjs                                 accounts and sessions (argon2id)
 server/data.mjs                                 courses, lessons, progress, notes, doubts
 server/ai.mjs                                   AI providers: plan, write, translate, repair, check, cache
 server/widgets.mjs, server/widgets/             interactive parts of lessons: which lessons get them, the AI's instructions, the checks
-assets/js/widgets.js, assets/js/widgets/        the chess board, circuit, graph, piano and drums, and cards, drawn and played in the page
+assets/js/widgets.js, assets/js/widgets/        the 13 interactive parts, drawn and played in the page (each *-core.js is shared with the server's checks)
+server/working.mjs, assets/js/working.js        Check my working: reading a photographed working and checking each step
 server/langs.mjs                                interface and course languages
 server/videos.mjs, assets/js/video.js           Watch mode: YouTube picks, quizzes, Primer’s own videos, sign language
 server/tutor.mjs                                doubt answers and the tutor
@@ -139,4 +165,5 @@ assets/js/garden.js, typegarden.js              the course garden; the topic in 
 assets/js/landing-fx.js                         the landing page's motion
 assets/vendor/gsap                              GSAP (core, ScrollTrigger, SplitText, ScrambleText)
 docs/                                           images for this README
+Dockerfile                                      the container the live site runs in
 ```
